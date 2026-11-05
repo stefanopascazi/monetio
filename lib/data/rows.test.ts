@@ -27,6 +27,7 @@ describe("entryTransaction", () => {
     source: "contribution",
     ruleId: "c1",
     date: "2026-11-28",
+    occurrenceDate: "2026-11-28",
     accountId: "ste",
     counterpartAccountId: "joint",
     categoryId: null,
@@ -35,7 +36,12 @@ describe("entryTransaction", () => {
     amountCents: -95000,
     overdue: false,
     estimated: true,
+    confirmed: false,
   };
+
+  it("links the scheduled occurrence even when the due date moved", () => {
+    expect(entryTransaction({ ...entry, date: "2026-12-02" }, { householdId: "h", userId: "u" }).occurrenceDate).toBe("2026-11-28");
+  });
 
   it("links the occurrence and accepts overrides", () => {
     expect(entryTransaction(entry, { householdId: "h", userId: "u" }, { amountCents: -96000, bookedOn: "2026-11-30" })).toMatchObject({

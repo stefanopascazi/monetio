@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { contribution, rule, txn } from "./fixtures";
 import { type ProjectionInput, projectBalances } from "./projection";
-import { ruleKey } from "./schedule";
+import { overrideMap, ruleKey } from "./schedule";
 
 const base: ProjectionInput = {
   today: "2026-11-05",
@@ -53,5 +53,12 @@ describe("projectBalances", () => {
     const planned = [txn({ accountId: "joint", amountCents: -5000, bookedOn: "2026-12-10", status: "planned" })];
     const res = projectBalances({ ...base, months: 2, rules: [luce], planned });
     expect(res.map((p) => p.byAccount.joint)).toEqual([90000, 85000]);
+  });
+
+  it("uses actual amounts entered for an occurrence", () => {
+    const luce = rule({ id: "l", accountId: "joint", amountCents: -10000, schedule: "due", dayOfMonth: 15, startDate: "2026-11-01", endDate: "2026-11-30" });
+    const overrides = overrideMap([{ ruleId: "l", period: "2026-11", amountCents: -8740, dueDate: "2026-12-02", note: null }]);
+    const res = projectBalances({ ...base, months: 2, rules: [luce], overrides });
+    expect(res.map((p) => p.byAccount.joint)).toEqual([100000, 91260]);
   });
 });

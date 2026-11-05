@@ -15,6 +15,7 @@ describe("page views", () => {
       source: "contribution",
       ruleId: "c1",
       date: "2026-11-28",
+      occurrenceDate: "2026-11-28",
       accountId: "asha",
       counterpartAccountId: "joint",
       categoryId: null,
@@ -23,6 +24,7 @@ describe("page views", () => {
       amountCents: -95000,
       overdue: false,
       estimated: true,
+      confirmed: false,
     };
     expect(dueViews([e], [], accounts)[0]).toMatchObject({ accountName: "Conto privato → Cointestato", payable: false, frequency: "monthly" });
   });

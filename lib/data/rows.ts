@@ -68,7 +68,7 @@ export function entryTransaction(
     source: e.source === "rule" ? "rule" : "contribution",
     recurringRuleId: e.source === "rule" ? e.ruleId : null,
     contributionRuleId: e.source === "contribution" ? e.ruleId : null,
-    occurrenceDate: e.date,
+    occurrenceDate: e.occurrenceDate,
     createdBy: ctx.userId,
   };
 }

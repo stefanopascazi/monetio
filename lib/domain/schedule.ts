@@ -1,7 +1,7 @@
 import { type ContributionSpending, contributionAmount, contributionBase } from "./contribution";
 import { addDays, endOfMonth, makeDate, monthKey, parseISO } from "./dates";
 import { occurrences } from "./recurrence";
-import type { ContributionRule, ISODate, RecurringRule, RuleFrequency, Transaction } from "./types";
+import type { ContributionRule, ISODate, OccurrenceOverride, RecurringRule, RuleFrequency, Transaction } from "./types";
 
 /**
  * Period an occurrence belongs to: its month for month-based schedules, the date for weekly ones.
@@ -27,11 +27,21 @@ export function bookedOccurrences(
   return set;
 }
 
+export type OverrideMap = Map<string, OccurrenceOverride>;
+
+/** Overrides keyed like rule occurrences (`r:<rule>|<period>`). */
+export function overrideMap(list: OccurrenceOverride[]): OverrideMap {
+  return new Map(list.map((o) => [`r:${o.ruleId}|${o.period}`, o]));
+}
+
 export interface DueEntry {
   key: string;
   source: "rule" | "contribution";
   ruleId: string;
+  /** Effective due date (the actual one when entered, otherwise the scheduled one). */
   date: ISODate;
+  /** Scheduled occurrence date: links the payment to its period. */
+  occurrenceDate: ISODate;
   accountId: string;
   counterpartAccountId: string | null;
   categoryId: string | null;
@@ -42,22 +52,31 @@ export interface DueEntry {
   overdue: boolean;
   /** Amount still depends on spending not yet booked. */
   estimated: boolean;
+  /** Actual amount/date entered for this occurrence (e.g. the bill arrived). */
+  confirmed: boolean;
+  note?: string | null;
 }
 
-function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate): DueEntry {
+function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate, overrides?: OverrideMap): DueEntry {
+  const key = ruleKey(r.id, date, r.frequency);
+  const o = overrides?.get(key);
+  const effective = o?.dueDate ?? date;
   return {
-    key: ruleKey(r.id, date, r.frequency),
+    key,
     source: "rule",
     ruleId: r.id,
-    date,
+    date: effective,
+    occurrenceDate: date,
     accountId: r.accountId,
     counterpartAccountId: r.counterpartAccountId,
     categoryId: r.categoryId,
     kind: r.kind,
     description: r.description,
-    amountCents: r.amountCents,
-    overdue: date < today,
+    amountCents: o?.amountCents ?? r.amountCents,
+    overdue: effective < today,
     estimated: false,
+    confirmed: !!o,
+    note: o?.note ?? null,
   };
 }
 
@@ -78,6 +97,7 @@ export function contributionEntry(c: ContributionRule, date: ISODate, today: ISO
     source: "contribution",
     ruleId: c.id,
     date,
+    occurrenceDate: date,
     accountId: c.fromAccountId,
     counterpartAccountId: c.toAccountId,
     categoryId: null,
@@ -87,6 +107,7 @@ export function contributionEntry(c: ContributionRule, date: ISODate, today: ISO
     overdue: date < today,
     // The share keeps changing until the referenced month closes.
     estimated,
+    confirmed: false,
   };
 }
 
@@ -97,6 +118,7 @@ function contributionDates(c: ContributionRule, from: ISODate, to: ISODate): ISO
 export interface DueOptions {
   lookbackDays?: number;
   horizonDays?: number;
+  overrides?: OverrideMap;
 }
 
 /** Unpaid deadlines (due rules and contributions) from the lookback window to the horizon. */
@@ -106,13 +128,13 @@ export function dueEntries(
   booked: Set<string>,
   today: ISODate,
   spending: SpendingLookup,
-  { lookbackDays = 90, horizonDays = 31 }: DueOptions = {},
+  { lookbackDays = 90, horizonDays = 31, overrides }: DueOptions = {},
 ): DueEntry[] {
   const from = addDays(today, -lookbackDays);
   const to = addDays(today, horizonDays);
   const fromRules = rules
     .filter((r) => r.active && r.schedule === "due")
-    .flatMap((r) => occurrences(r, from, to).filter((d) => !booked.has(ruleKey(r.id, d, r.frequency))).map((d) => ruleEntry(r, d, today)));
+    .flatMap((r) => occurrences(r, from, to).filter((d) => !booked.has(ruleKey(r.id, d, r.frequency))).map((d) => ruleEntry(r, d, today, overrides)));
   const fromContributions = contributions
     .filter((c) => c.active)
     .flatMap((c) =>

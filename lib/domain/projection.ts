@@ -1,7 +1,7 @@
 import { contributionAmount, contributionBase } from "./contribution";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
 import { occurrences } from "./recurrence";
-import { contributionKey, ruleKey } from "./schedule";
+import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
 import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
 
 export interface ProjectionInput {
@@ -21,6 +21,8 @@ export interface ProjectionInput {
   planned: Transaction[];
   /** How far back unpaid deadlines are still expected to happen. */
   lookbackDays?: number;
+  /** Actual amounts/dates entered for single occurrences. */
+  overrides?: OverrideMap;
 }
 
 export interface ProjectionMonth {
@@ -64,7 +66,10 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       continue;
     }
     for (const d of occurrences(r, from, end)) {
-      if (!booked.has(ruleKey(r.id, d, r.frequency))) push(d, r.accountId, r.amountCents, counterpart);
+      const key = ruleKey(r.id, d, r.frequency);
+      if (booked.has(key)) continue;
+      const o = input.overrides?.get(key);
+      push(o?.dueDate ?? d, r.accountId, o?.amountCents ?? r.amountCents, counterpart);
     }
   }
 

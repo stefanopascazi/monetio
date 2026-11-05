@@ -20,6 +20,10 @@ export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: 
     accountName: e.counterpartAccountId ? `${nameOf(accounts, e.accountId)} → ${nameOf(accounts, e.counterpartAccountId)}` : nameOf(accounts, e.accountId),
     frequency: (e.source === "rule" ? (rules.find((r) => r.id === e.ruleId)?.frequency ?? "monthly") : "monthly") as RuleFrequency,
     estimated: e.estimated,
+    confirmed: e.confirmed,
+    note: e.note ?? null,
+    /** Only rule occurrences accept an actual amount (contributions are computed). */
+    canConfirm: e.source === "rule",
     payable: visible.has(e.accountId),
   }));
 }

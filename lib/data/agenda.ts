@@ -2,10 +2,10 @@ import "server-only";
 import { cache } from "react";
 import { addDays, addMonthsToKey, monthKey, startOfMonth, todayISO } from "../domain/dates";
 import { projectBalances } from "../domain/projection";
-import { bookedOccurrences, dueEntries, upcomingOccurrences } from "../domain/schedule";
+import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
 import { getContext } from "./context";
 import { categorySpentFrom, contributionSpendingFrom } from "./flows";
-import { listAccounts, listBookedOccurrences, listContributions, listFlows, listRules, listTransactions } from "./queries";
+import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
 import { syncAutoRules } from "./sync";
 
 const LOOKBACK_DAYS = 90;
@@ -22,20 +22,23 @@ export const loadAgenda = cache(async () => {
   await ensureSynced();
   const today = todayISO();
   const since = addDays(today, -LOOKBACK_DAYS);
-  const [rules, contributions, occ, flows] = await Promise.all([
+  const [rules, contributions, occ, flows, overrideList] = await Promise.all([
     listRules(),
     listContributions(),
     listBookedOccurrences(since),
     listFlows(startOfMonth(monthKey(since))),
+    listOverrides(),
   ]);
   const booked = bookedOccurrences(occ, rules);
+  const overrides = overrideMap(overrideList);
   return {
     today,
     rules,
     contributions,
     booked,
     flows,
-    due: dueEntries(rules, contributions, booked, today, contributionSpendingFrom(flows), { lookbackDays: LOOKBACK_DAYS, horizonDays: 31 }),
+    overrides,
+    due: dueEntries(rules, contributions, booked, today, contributionSpendingFrom(flows), { lookbackDays: LOOKBACK_DAYS, horizonDays: 31, overrides }),
     upcoming: upcomingOccurrences(
       rules.filter((r) => r.schedule === "auto"),
       booked,
@@ -66,6 +69,7 @@ export const loadProjection = cache(async (months: number) => {
     categorySpent: categorySpentFrom(monthFlows),
     planned: planned.filter((t) => ids.has(t.accountId)),
     lookbackDays: LOOKBACK_DAYS,
+    overrides: agenda.overrides,
   });
   // Movements towards accounts the viewer cannot see (e.g. a private one) are dropped.
   for (const p of projection) {

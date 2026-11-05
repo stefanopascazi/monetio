@@ -74,6 +74,17 @@ export interface RecurringRule {
   active: boolean;
 }
 
+/** Actual amount/due date of one occurrence of a rule, entered before paying (e.g. a bill). */
+export interface OccurrenceOverride {
+  ruleId: string;
+  /** `YYYY-MM` for month-based rules, the date for weekly ones. */
+  period: string;
+  /** Signed from the point of view of the rule's account. */
+  amountCents: number;
+  dueDate: ISODate;
+  note: string | null;
+}
+
 export interface ContributionRule {
   id: string;
   fromAccountId: string;

@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import type { Account, Category, ContributionRule, ISODate, RecurringRule, Transaction } from "../domain/types";
+import type { Account, Category, ContributionRule, ISODate, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
 import { createClient } from "../supabase/server";
 import { type MonthlyFlow, mapFlow } from "./flows";
 import { mapAccount, mapCategory, mapContribution, mapRule, mapTransaction } from "./mappers";
@@ -137,3 +137,16 @@ export async function balanceBefore(accountId: string, date: ISODate): Promise<n
   if (error) throw error;
   return Number(data ?? 0);
 }
+
+export const listOverrides = cache(async (): Promise<OccurrenceOverride[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("rule_occurrence_overrides").select("rule_id, period, amount_cents, due_date, note");
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    ruleId: String(r.rule_id),
+    period: String(r.period),
+    amountCents: Number(r.amount_cents),
+    dueDate: String(r.due_date),
+    note: r.note == null ? null : String(r.note),
+  }));
+});

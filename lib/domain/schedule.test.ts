@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contribution, rule, txn } from "./fixtures";
-import { autoBookings, bookedOccurrences, contributionKey, dueEntries, horizonEnd, ruleKey, upcomingOccurrences } from "./schedule";
+import { autoBookings, bookedOccurrences, contributionKey, dueEntries, horizonEnd, overrideMap, ruleKey, upcomingOccurrences } from "./schedule";
 
 const today = "2026-11-05";
 
@@ -78,5 +78,14 @@ describe("upcomingOccurrences", () => {
 describe("horizonEnd", () => {
   it("returns the end of the target month", () => {
     expect(horizonEnd(today, 3)).toBe("2027-02-28");
+  });
+});
+
+describe("occurrence overrides", () => {
+  it("uses the actual bill amount and due date", () => {
+    const luce = rule({ id: "luce", amountCents: -10000, schedule: "due", dayOfMonth: 15, startDate: "2026-11-01" });
+    const overrides = overrideMap([{ ruleId: "luce", period: "2026-11", amountCents: -8740, dueDate: "2026-12-02", note: null }]);
+    const [e] = dueEntries([luce], [], new Set(), today, () => 0, { lookbackDays: 0, horizonDays: 20, overrides });
+    expect(e).toMatchObject({ date: "2026-12-02", occurrenceDate: "2026-11-15", amountCents: -8740, confirmed: true, key: ruleKey("luce", "2026-11-15") });
   });
 });
