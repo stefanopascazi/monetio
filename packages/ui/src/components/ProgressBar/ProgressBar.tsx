@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cx } from "../../utils/cx";
 import { formatMoney } from "../../utils/format";
+import { messages } from "../../i18n";
 
 export interface ProgressBarProps {
   label: ReactNode;
@@ -32,18 +33,18 @@ export function ProgressBar({ label, valueCents, maxCents, mode = "budget", curr
   const note =
     mode === "budget"
       ? remaining >= 0
-        ? `${fmt(remaining)} left`
-        : `${fmt(-remaining)} over`
+        ? messages.progress.left(fmt(remaining))
+        : messages.progress.over(fmt(-remaining))
       : remaining > 0
-        ? `${fmt(remaining)} to go`
-        : "Goal reached";
+        ? messages.progress.toGo(fmt(remaining))
+        : messages.progress.reached;
 
   return (
     <div className={cx("mio-progress", `mio-progress--${severity}`, className)}>
       <div className="mio-progress__head">
         <span className="mio-progress__label">{label}</span>
         <span className="mio-progress__value">
-          {fmt(valueCents)} <span className="mio-progress__of">of {fmt(maxCents)}</span>
+          {fmt(valueCents)} <span className="mio-progress__of">{messages.progress.of} {fmt(maxCents)}</span>
         </span>
       </div>
       <div

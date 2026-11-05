@@ -4,6 +4,7 @@ import { cx } from "../../utils/cx";
 import { formatPercent } from "../../utils/format";
 import { Amount } from "../Amount/Amount";
 import { AvatarGroup } from "../Avatar/Avatar";
+import { messages } from "../../i18n";
 
 export type AccountType = "checking" | "savings" | "investment" | "card" | "cash";
 
@@ -34,13 +35,7 @@ const ICONS: Record<AccountType, ReactNode> = {
   cash: <Banknote aria-hidden="true" />,
 };
 
-const TYPE_LABEL: Record<AccountType, string> = {
-  checking: "Checking",
-  savings: "Savings",
-  investment: "Investments",
-  card: "Credit card",
-  cash: "Cash",
-};
+const TYPE_LABEL: Record<AccountType, string> = messages.accountType;
 
 /** Summary of one account with its balance and who shares it. */
 export function AccountCard({
@@ -76,7 +71,7 @@ export function AccountCard({
         ) : (
           <span className="mio-account__private">
             <Lock aria-hidden="true" />
-            Private
+            {messages.private}
           </span>
         )}
       </div>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { cx } from "../../utils/cx";
 import { Button } from "../Button/Button";
+import { messages } from "../../i18n";
 
 export interface InlineConfirmProps {
   /** Label of the initial trigger button. */
@@ -23,8 +24,8 @@ export function InlineConfirm({
   triggerLabel,
   triggerIcon,
   message,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel = messages.confirm,
+  cancelLabel = messages.cancel,
   tone = "danger",
   onConfirm,
   className,
@@ -53,7 +54,7 @@ export function InlineConfirm({
   }
 
   return (
-    <div role="group" aria-label="Confirm action" className={cx("mio-confirm", `mio-confirm--${tone}`, className)}>
+    <div role="group" aria-label={messages.confirmAction} className={cx("mio-confirm", `mio-confirm--${tone}`, className)}>
       <p className="mio-confirm__msg">{message}</p>
       <div className="mio-confirm__actions">
         <Button ref={cancelRef} variant="ghost" size="sm" onClick={() => setAsking(false)} disabled={busy}>

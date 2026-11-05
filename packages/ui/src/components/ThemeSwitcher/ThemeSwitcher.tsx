@@ -4,6 +4,7 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "../../hooks/useTheme";
 import type { ThemePreference } from "../../utils/theme";
 import { SegmentedControl } from "../SegmentedControl/SegmentedControl";
+import { messages } from "../../i18n";
 
 export interface ThemeSwitcherProps {
   /** Show text labels next to the icons. */
@@ -18,15 +19,15 @@ export function ThemeSwitcher({ showLabels = false, size = "sm", className }: Th
   const label = (text: string) => (showLabels ? text : <span className="mio-visually-hidden">{text}</span>);
   return (
     <SegmentedControl<ThemePreference>
-      aria-label="Theme"
+      aria-label={messages.theme.label}
       size={size}
       className={className}
       value={preference}
       onChange={setPreference}
       options={[
-        { value: "system", label: label("System"), icon: <Monitor aria-hidden="true" /> },
-        { value: "light", label: label("Light"), icon: <Sun aria-hidden="true" /> },
-        { value: "dark", label: label("Dark"), icon: <Moon aria-hidden="true" /> },
+        { value: "system", label: label(messages.theme.system), icon: <Monitor aria-hidden="true" /> },
+        { value: "light", label: label(messages.theme.light), icon: <Sun aria-hidden="true" /> },
+        { value: "dark", label: label(messages.theme.dark), icon: <Moon aria-hidden="true" /> },
       ]}
     />
   );

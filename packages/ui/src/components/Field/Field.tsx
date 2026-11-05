@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cx } from "../../utils/cx";
+import { messages } from "../../i18n";
 
 export interface FieldProps {
   label: ReactNode;
@@ -17,7 +18,7 @@ export function Field({ label, htmlFor, hint, error, optional, className, childr
     <div className={cx("mio-field", error ? "is-invalid" : undefined, className)}>
       <label className="mio-field__label" htmlFor={htmlFor}>
         {label}
-        {optional && <span className="mio-field__optional">Optional</span>}
+        {optional && <span className="mio-field__optional">{messages.optional}</span>}
       </label>
       {children}
       {error ? (

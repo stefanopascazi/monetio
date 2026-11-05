@@ -6,6 +6,7 @@ import { barPath, linearScale, niceTicks } from "../../utils/chart";
 import { cx } from "../../utils/cx";
 import { formatMoney } from "../../utils/format";
 import { ChartLegend, ChartTable, ChartTooltip } from "../ChartParts/ChartParts";
+import { messages } from "../../i18n";
 
 export interface CashflowPoint {
   label: string;
@@ -25,7 +26,7 @@ export interface CashflowChartProps {
 const M = { top: 8, right: 4, bottom: 24, left: 44 };
 
 /** Income vs expense per period as paired columns from one baseline. */
-export function CashflowChart({ data, height = 220, currency, title = "Cash flow", className }: CashflowChartProps) {
+export function CashflowChart({ data, height = 220, currency, title = messages.chart.cashflow, className }: CashflowChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -43,8 +44,8 @@ export function CashflowChart({ data, height = 220, currency, title = "Cash flow
     <div className={cx("mio-chart", className)} ref={ref}>
       <ChartLegend
         items={[
-          { label: "Income", color: "var(--mio-chart-1)" },
-          { label: "Expenses", color: "var(--mio-chart-2)" },
+          { label: messages.chart.income, color: "var(--mio-chart-1)" },
+          { label: messages.chart.expenses, color: "var(--mio-chart-2)" },
         ]}
       />
       <div className="mio-chart__plot">
@@ -87,16 +88,16 @@ export function CashflowChart({ data, height = 220, currency, title = "Cash flow
           containerWidth={width}
           title={data[hover].label}
           rows={[
-            { label: "Income", color: "var(--mio-chart-1)", value: money(data[hover].incomeCents) },
-            { label: "Expenses", color: "var(--mio-chart-2)", value: money(data[hover].expenseCents) },
-            { label: "Net", value: formatMoney(data[hover].incomeCents - data[hover].expenseCents, { currency, whole: true, signDisplay: "always" }) },
+            { label: messages.chart.income, color: "var(--mio-chart-1)", value: money(data[hover].incomeCents) },
+            { label: messages.chart.expenses, color: "var(--mio-chart-2)", value: money(data[hover].expenseCents) },
+            { label: messages.chart.net, value: formatMoney(data[hover].incomeCents - data[hover].expenseCents, { currency, whole: true, signDisplay: "always" }) },
           ]}
         />
       )}
       </div>
       <ChartTable
         caption={title}
-        headers={["Period", "Income", "Expenses", "Net"]}
+        headers={[messages.chart.period, messages.chart.income, messages.chart.expenses, messages.chart.net]}
         rows={data.map((d) => [d.label, money(d.incomeCents), money(d.expenseCents), money(d.incomeCents - d.expenseCents)])}
       />
     </div>

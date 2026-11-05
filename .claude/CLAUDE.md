@@ -15,7 +15,7 @@ Questo file e' il contesto operativo rapido per agenti AI che lavorano su Shoots
 - Per modifiche dentro repo git, eseguire `git add` e `git commit` con messaggio coerente.
 - I commit devono seguire sempre la semantic release.
 - Never include your signature in commits or commit descriptions.
-- usa sempre e solamente testi in inglese per la UI
+- Testi UI (label, messaggi, copy) sempre in italiano: il progetto e' a uso familiare. Codice, identificatori e commenti restano in inglese.
 - Ad ogni nuova funzione va creato il suo unitTest
 - Ad ogni modifica, va verificato anche il suo unitTest
 - Non creare mai nuovi branch

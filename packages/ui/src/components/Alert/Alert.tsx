@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Info, OctagonAlert, X } from "lucide-react";
 import { cx } from "../../utils/cx";
+import { messages } from "../../i18n";
 
 export type AlertTone = "info" | "success" | "warning" | "danger";
 
@@ -32,7 +33,7 @@ export function Alert({ tone = "info", title, children, action, onDismiss, class
         {action && <div className="mio-alert__action">{action}</div>}
       </div>
       {onDismiss && (
-        <button type="button" className="mio-alert__close" aria-label="Dismiss" onClick={onDismiss}>
+        <button type="button" className="mio-alert__close" aria-label={messages.dismiss} onClick={onDismiss}>
           <X aria-hidden="true" />
         </button>
       )}

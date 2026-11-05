@@ -7,6 +7,7 @@ import { bandPath, linePath, linearScale, niceTicks } from "../../utils/chart";
 import { cx } from "../../utils/cx";
 import { formatMoney } from "../../utils/format";
 import { ChartLegend, ChartTable, ChartTooltip } from "../ChartParts/ChartParts";
+import { messages } from "../../i18n";
 
 export interface ProjectionPoint {
   label: string;
@@ -30,7 +31,7 @@ export interface ProjectionChartProps {
 const M = { top: 12, right: 72, bottom: 24, left: 52 };
 
 /** Balance history (solid) continuing into a forecast (dashed) with a confidence band. */
-export function ProjectionChart({ data, height = 240, currency, title = "Balance projection", className }: ProjectionChartProps) {
+export function ProjectionChart({ data, height = 240, currency, title = messages.chart.projectionTitle, className }: ProjectionChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
   if (data.length < 2) return null;
@@ -65,8 +66,8 @@ export function ProjectionChart({ data, height = 240, currency, title = "Balance
     <div className={cx("mio-chart", className)} ref={ref}>
       <ChartLegend
         items={[
-          { label: "Balance", color: "var(--mio-ink)", shape: "line" },
-          { label: "Projection", color: "var(--mio-forecast)", shape: "dashed" },
+          { label: messages.chart.balance, color: "var(--mio-ink)", shape: "line" },
+          { label: messages.chart.projection, color: "var(--mio-forecast)", shape: "dashed" },
         ]}
       />
       <div className="mio-chart__plot">
@@ -118,9 +119,9 @@ export function ProjectionChart({ data, height = 240, currency, title = "Balance
             containerWidth={width}
             title={`${data[hover].label}${data[hover].projected ? " · projected" : ""}`}
             rows={[
-              { label: data[hover].projected ? "Expected" : "Balance", value: money(data[hover].valueCents) },
+              { label: data[hover].projected ? messages.chart.expected : messages.chart.balance, value: money(data[hover].valueCents) },
               ...(data[hover].projected && data[hover].lowCents != null
-                ? [{ label: "Range", value: `${money(data[hover].lowCents!)} – ${money(data[hover].highCents ?? data[hover].valueCents)}` }]
+                ? [{ label: messages.chart.range, value: `${money(data[hover].lowCents!)} – ${money(data[hover].highCents ?? data[hover].valueCents)}` }]
                 : []),
             ]}
           />
@@ -128,7 +129,7 @@ export function ProjectionChart({ data, height = 240, currency, title = "Balance
       </div>
       <ChartTable
         caption={title}
-        headers={["Period", "Balance", "Low", "High"]}
+        headers={[messages.chart.period, messages.chart.balance, messages.chart.low, messages.chart.high]}
         rows={data.map((d) => [
           `${d.label}${d.projected ? " (projected)" : ""}`,
           money(d.valueCents),

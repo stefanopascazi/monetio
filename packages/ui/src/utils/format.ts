@@ -1,4 +1,5 @@
 // Money and date formatting shared by every component.
+import { messages } from "../i18n";
 export interface MoneyFormatOptions {
   currency?: string;
   locale?: string;
@@ -9,7 +10,7 @@ export interface MoneyFormatOptions {
   whole?: boolean;
 }
 
-export const DEFAULT_LOCALE = "en-IE";
+export const DEFAULT_LOCALE = messages.locale;
 export const DEFAULT_CURRENCY = "EUR";
 
 /** Converts integer cents to a localized currency string. */
@@ -65,11 +66,10 @@ export function daysUntil(date: Date | string, from: Date = new Date()): number 
 
 /** Human label for a due date: "Today", "Tomorrow", "In 5 days", "3 days overdue". */
 export function relativeDueLabel(days: number): string {
-  if (days === 0) return "Today";
-  if (days === 1) return "Tomorrow";
-  if (days === -1) return "1 day overdue";
-  if (days < 0) return `${Math.abs(days)} days overdue`;
-  return `In ${days} days`;
+  if (days === 0) return messages.today;
+  if (days === 1) return messages.tomorrow;
+  if (days < 0) return messages.daysOverdue(Math.abs(days));
+  return messages.inDays(days);
 }
 
 /** Short date like "5 Nov" or "5 Nov 2025" when the year differs. */

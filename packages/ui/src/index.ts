@@ -1,5 +1,6 @@
 // Public API of @monetio/ui.
 export * from "./tokens";
+export * from "./i18n";
 export * from "./utils/cx";
 export * from "./utils/format";
 export * from "./utils/chart";

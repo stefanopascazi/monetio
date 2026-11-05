@@ -6,14 +6,31 @@ import { defineConfig } from "vitest/config";
 // (Object.assign: NODE_ENV is typed read-only by @types/node / Next.)
 Object.assign(process.env, { NODE_ENV: "test" });
 
+const shared = {
+  environment: "jsdom",
+  globals: false,
+  css: false,
+  env: { NODE_ENV: "test" },
+} as const;
+
 export default defineConfig({
   plugins: [react()],
+  resolve: { alias: { "@monetio/ui": new URL("./packages/ui/src/index.ts", import.meta.url).pathname.replace(/^\/(\w:)/, "$1") } },
   test: {
-    environment: "jsdom",
-    globals: false,
-    setupFiles: ["./vitest.setup.ts"],
-    include: ["packages/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}"],
-    css: false,
-    env: { NODE_ENV: "test" },
+    projects: [
+      {
+        extends: true,
+        test: { ...shared, name: "ui", include: ["packages/**/*.test.{ts,tsx}"], setupFiles: ["./vitest.setup.ts", "./packages/ui/vitest.setup.en.ts"] },
+      },
+      {
+        extends: true,
+        test: {
+          ...shared,
+          name: "app",
+          include: ["app/**/*.test.{ts,tsx}", "lib/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,tsx}", "components/**/*.test.{ts,tsx}"],
+          setupFiles: ["./vitest.setup.ts"],
+        },
+      },
+    ],
   },
 });

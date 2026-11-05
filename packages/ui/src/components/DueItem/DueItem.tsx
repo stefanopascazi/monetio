@@ -5,8 +5,9 @@ import { DEFAULT_LOCALE, daysUntil, relativeDueLabel } from "../../utils/format"
 import { Amount } from "../Amount/Amount";
 import { Badge } from "../Badge/Badge";
 import { Button } from "../Button/Button";
+import { messages } from "../../i18n";
 
-export type Frequency = "weekly" | "monthly" | "bimonthly" | "quarterly" | "yearly" | "once";
+export type Frequency = "weekly" | "monthly" | "bimonthly" | "quarterly" | "semiannual" | "yearly" | "once";
 
 export interface DueItemProps {
   title: string;
@@ -27,14 +28,7 @@ export interface DueItemProps {
   className?: string;
 }
 
-const FREQ: Record<Frequency, string> = {
-  weekly: "Weekly",
-  monthly: "Monthly",
-  bimonthly: "Every 2 months",
-  quarterly: "Quarterly",
-  yearly: "Yearly",
-  once: "One-off",
-};
+const FREQ: Record<Frequency, string> = messages.frequency;
 
 /** Due-soon threshold in days. */
 export const DUE_SOON_DAYS = 3;
@@ -83,7 +77,7 @@ export function DueItem({
         <span className="mio-due__status">
           {status === "paid" && (
             <Badge tone="success" size="sm" icon={<Check aria-hidden="true" />}>
-              Paid
+              {messages.paid}
             </Badge>
           )}
           {status === "overdue" && (
@@ -110,7 +104,7 @@ export function DueItem({
             {action}
             {onMarkPaid && (
               <Button variant="secondary" size="sm" iconStart={<Check aria-hidden="true" />} onClick={onMarkPaid}>
-                Mark as paid
+                {messages.markAsPaid}
               </Button>
             )}
           </div>

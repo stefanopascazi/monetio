@@ -5,6 +5,7 @@ import { arcPath } from "../../utils/chart";
 import { cx } from "../../utils/cx";
 import { formatMoney } from "../../utils/format";
 import { ChartTable } from "../ChartParts/ChartParts";
+import { messages } from "../../i18n";
 
 export interface CategorySlice {
   label: string;
@@ -27,7 +28,7 @@ export function foldSlices(data: CategorySlice[], max = 6): CategorySlice[] {
   if (sorted.length <= max) return sorted;
   const head = sorted.slice(0, max - 1);
   const other = sorted.slice(max - 1).reduce((s, d) => s + d.valueCents, 0);
-  return [...head, { label: "Other", valueCents: other }];
+  return [...head, { label: messages.chart.other, valueCents: other }];
 }
 
 /** Start/end angles (radians, clockwise from 12 o'clock) for each slice. */
@@ -41,7 +42,7 @@ export function sliceAngles(slices: CategorySlice[], total: number): { a0: numbe
 }
 
 /** Spending split by category with total in the center and a value legend. */
-export function CategoryDonut({ data, caption = "Spent", size = 168, currency, title = "Spending by category", className }: CategoryDonutProps) {
+export function CategoryDonut({ data, caption = messages.chart.spent, size = 168, currency, title = messages.chart.byCategory, className }: CategoryDonutProps) {
   const [hover, setHover] = useState<number | null>(null);
   const slices = foldSlices(data);
   const total = slices.reduce((s, d) => s + d.valueCents, 0);
@@ -88,7 +89,7 @@ export function CategoryDonut({ data, caption = "Spent", size = 168, currency, t
           </li>
         ))}
       </ul>
-      <ChartTable caption={title} headers={["Category", "Amount"]} rows={slices.map((s) => [s.label, money(s.valueCents)])} />
+      <ChartTable caption={title} headers={[messages.chart.category, messages.chart.amount]} rows={slices.map((s) => [s.label, money(s.valueCents)])} />
     </div>
   );
 }

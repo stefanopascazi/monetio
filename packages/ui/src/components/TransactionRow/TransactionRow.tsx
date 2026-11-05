@@ -4,6 +4,7 @@ import { cx } from "../../utils/cx";
 import { formatShortDate } from "../../utils/format";
 import { Amount } from "../Amount/Amount";
 import { Avatar } from "../Avatar/Avatar";
+import { messages } from "../../i18n";
 
 export interface TransactionRowProps {
   payee: string;
@@ -61,8 +62,8 @@ export function TransactionRow({
       <span className="mio-txn__main">
         <span className="mio-txn__payee">
           {payee}
-          {recurring && <Repeat className="mio-txn__flag" aria-label="Recurring" />}
-          {pending && <Clock className="mio-txn__flag" aria-label="Pending" />}
+          {recurring && <Repeat className="mio-txn__flag" aria-label={messages.recurring} />}
+          {pending && <Clock className="mio-txn__flag" aria-label={messages.pending} />}
         </span>
         <span className="mio-txn__meta">{meta}</span>
       </span>

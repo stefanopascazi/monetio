@@ -1,5 +1,6 @@
 import { cx } from "../../utils/cx";
 import { type MoneyFormatOptions, formatMoney, splitMoney } from "../../utils/format";
+import { messages } from "../../i18n";
 
 export type AmountTone = "auto" | "income" | "expense" | "transfer" | "neutral";
 
@@ -25,7 +26,7 @@ export function Amount({ cents, tone = "auto", size = "md", showSign, hidden, cu
 
   if (hidden) {
     return (
-      <span className={cx("mio-amount", `mio-amount--${size}`, "mio-amount--hidden", className)} aria-label="Amount hidden">
+      <span className={cx("mio-amount", `mio-amount--${size}`, "mio-amount--hidden", className)} aria-label={messages.amountHidden}>
         ••••••
       </span>
     );

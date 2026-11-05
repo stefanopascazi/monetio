@@ -5,6 +5,7 @@ import { cx } from "../../utils/cx";
 import { Avatar } from "../Avatar/Avatar";
 import { Chip } from "../Chip/Chip";
 import { SegmentedControl } from "../SegmentedControl/SegmentedControl";
+import { messages } from "../../i18n";
 
 export interface HouseholdMember {
   id: string;
@@ -37,15 +38,15 @@ export function resolveViewers(v: Visibility, members: HouseholdMember[], ownerI
 }
 
 /** Chooses who in the household can see an account, budget or transaction. */
-export function VisibilityPicker({ members, ownerId, value, onChange, label = "Who can see this", className }: VisibilityPickerProps) {
+export function VisibilityPicker({ members, ownerId, value, onChange, label = messages.visibility.label, className }: VisibilityPickerProps) {
   const others = members.filter((m) => m.id !== ownerId);
   const viewers = resolveViewers(value, members, ownerId);
   const summary =
     value.mode === "private"
-      ? "Only you"
+      ? messages.visibility.onlyYou
       : value.mode === "household"
-        ? "Everyone in the household"
-        : `You and ${viewers.length - 1} other${viewers.length - 1 === 1 ? "" : "s"}`;
+        ? messages.visibility.everyone
+        : messages.visibility.youAnd(viewers.length - 1);
 
   return (
     <fieldset className={cx("mio-visibility", className)}>
@@ -56,13 +57,13 @@ export function VisibilityPicker({ members, ownerId, value, onChange, label = "W
         value={value.mode}
         onChange={(mode) => onChange({ ...value, mode })}
         options={[
-          { value: "private", label: "Private", icon: <Lock aria-hidden="true" /> },
-          { value: "household", label: "Household", icon: <Users aria-hidden="true" /> },
-          { value: "custom", label: "Choose", icon: <UserCheck aria-hidden="true" /> },
+          { value: "private", label: messages.visibility.private, icon: <Lock aria-hidden="true" /> },
+          { value: "household", label: messages.visibility.household, icon: <Users aria-hidden="true" /> },
+          { value: "custom", label: messages.visibility.choose, icon: <UserCheck aria-hidden="true" /> },
         ]}
       />
       {value.mode === "custom" && (
-        <div className="mio-visibility__members" role="group" aria-label="Members">
+        <div className="mio-visibility__members" role="group" aria-label={messages.visibility.members}>
           {others.map((m) => {
             const on = value.memberIds.includes(m.id);
             return (
