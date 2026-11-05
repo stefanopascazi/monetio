@@ -1,0 +1,91 @@
+// Domain types shared by the server data layer, pure logic and UI.
+
+/** Calendar date as `YYYY-MM-DD` (no time zone). */
+export type ISODate = string;
+
+export type AccountType = "checking" | "savings" | "investment" | "cash";
+export type Visibility = "shared" | "private";
+export type TransactionKind = "income" | "expense" | "transfer" | "adjustment";
+export type TransactionStatus = "booked" | "planned";
+export type RuleFrequency = "weekly" | "monthly" | "bimonthly" | "quarterly" | "semiannual" | "yearly";
+export type RuleSchedule = "auto" | "due" | "estimate";
+
+export interface Member {
+  id: string;
+  displayName: string;
+  email: string | null;
+  userId: string | null;
+  role: "owner" | "member";
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  institution: string | null;
+  type: AccountType;
+  visibility: Visibility;
+  ownerMemberId: string | null;
+  openingBalanceCents: number;
+  openingDate: ISODate;
+  sortOrder: number;
+  archived: boolean;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  kind: "income" | "expense" | "both";
+  icon: string | null;
+  colorIndex: 1 | 2 | 3 | 4 | 5 | 6;
+}
+
+export interface Transaction {
+  id: string;
+  accountId: string;
+  counterpartAccountId: string | null;
+  categoryId: string | null;
+  kind: TransactionKind;
+  status: TransactionStatus;
+  amountCents: number;
+  bookedOn: ISODate;
+  description: string;
+  notes: string | null;
+  transferGroupId: string | null;
+  recurringRuleId: string | null;
+  contributionRuleId: string | null;
+  occurrenceDate: ISODate | null;
+  source: "manual" | "import" | "rule" | "contribution";
+}
+
+export interface RecurringRule {
+  id: string;
+  accountId: string;
+  counterpartAccountId: string | null;
+  categoryId: string | null;
+  kind: "income" | "expense" | "transfer";
+  description: string;
+  /** Signed from the point of view of accountId. */
+  amountCents: number;
+  frequency: RuleFrequency;
+  schedule: RuleSchedule;
+  dayOfMonth: number;
+  startDate: ISODate;
+  endDate: ISODate | null;
+  active: boolean;
+}
+
+export interface ContributionRule {
+  id: string;
+  fromAccountId: string;
+  toAccountId: string;
+  description: string;
+  fixedCents: number;
+  sharePercent: number;
+  categoryIds: string[];
+  roundingCents: number;
+  dayOfMonth: number;
+  estimatedSpendingCents: number;
+  startDate: ISODate;
+  endDate: ISODate | null;
+  active: boolean;
+}
