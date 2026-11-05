@@ -1,40 +1,46 @@
 "use client";
 
-import { useActionState } from "react";
-import { Alert, Button, Tabs, TextField } from "@monetio/ui";
-import { signIn, signUp } from "@/app/actions/auth";
+import { useActionState, useState } from "react";
+import { Alert, Button, TextField } from "@monetio/ui";
+import { requestPasswordReset, signIn } from "@/app/actions/auth";
 
-function CredentialsForm({ mode }: { mode: "login" | "signup" }) {
-  const [state, action, pending] = useActionState(mode === "login" ? signIn : signUp, {});
+// Public sign-up is disabled for now: people join by invite from Impostazioni.
+// To re-enable it, restore a "Registrati" tab using the `signUp` action in app/actions/auth.ts.
+
+function LoginForm({ onForgot }: { onForgot: () => void }) {
+  const [state, action, pending] = useActionState(signIn, {});
   return (
-    <form action={action} className="flex flex-col gap-4 pt-4">
-      {state.message && <Alert tone={state.ok ? "success" : "danger"}>{state.message}</Alert>}
-      <TextField name="email" type="email" label="Email" autoComplete="email" required error={state.errors?.email} />
-      <TextField
-        name="password"
-        type="password"
-        label="Password"
-        autoComplete={mode === "login" ? "current-password" : "new-password"}
-        hint={mode === "signup" ? "Almeno 8 caratteri" : undefined}
-        required
-        error={state.errors?.password}
-      />
+    <form action={action} className="flex flex-col gap-4">
+      {state.message && <Alert tone="danger">{state.message}</Alert>}
+      <TextField name="email" type="email" label="Email" autoComplete="email" required />
+      <TextField name="password" type="password" label="Password" autoComplete="current-password" required />
       <Button type="submit" loading={pending} block>
-        {mode === "login" ? "Accedi" : "Crea account"}
+        Accedi
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={onForgot}>
+        Password dimenticata?
+      </Button>
+    </form>
+  );
+}
+
+function ResetForm({ onBack }: { onBack: () => void }) {
+  const [state, action, pending] = useActionState(requestPasswordReset, {});
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      {state.message && <Alert tone={state.ok ? "success" : "danger"}>{state.message}</Alert>}
+      <TextField name="email" type="email" label="Email" autoComplete="email" hint="Ti inviamo un link per scegliere una nuova password" required />
+      <Button type="submit" loading={pending} block>
+        Invia link
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+        Torna all&apos;accesso
       </Button>
     </form>
   );
 }
 
 export function AuthForms() {
-  return (
-    <Tabs
-      aria-label="Accesso"
-      variant="pill"
-      tabs={[
-        { id: "login", label: "Accedi", content: <CredentialsForm mode="login" /> },
-        { id: "signup", label: "Registrati", content: <CredentialsForm mode="signup" /> },
-      ]}
-    />
-  );
+  const [mode, setMode] = useState<"login" | "reset">("login");
+  return mode === "login" ? <LoginForm onForgot={() => setMode("reset")} /> : <ResetForm onBack={() => setMode("login")} />;
 }

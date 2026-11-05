@@ -3,6 +3,7 @@ import { Avatar, Badge, Button, Card, PageHeader, ThemeSwitcher } from "@monetio
 import { signOut } from "@/app/actions/auth";
 import { getContext } from "@/lib/data/context";
 import { listCategories } from "@/lib/data/queries";
+import { InviteForm } from "./InviteForm";
 import { CategoryManager, ProfileForm } from "./SettingsForms";
 
 export async function SettingsView() {
@@ -32,8 +33,9 @@ export async function SettingsView() {
             <div className="flex flex-col gap-1 rounded-[14px] bg-surface-sunken p-4">
               <span className="text-sm text-ink-muted">Codice invito</span>
               <span className="font-mono text-xl font-semibold tracking-widest">{ctx.inviteCode}</span>
-              <span className="text-sm text-ink-muted">Chi si registra lo inserisce in &quot;Ho un codice&quot; e sceglie il proprio nome.</span>
+              <span className="text-sm text-ink-muted">Alternativa all&apos;invito: chi ha già un account lo inserisce in &quot;Ho un codice&quot;.</span>
             </div>
+            {ctx.me.role === "owner" && <InviteForm pending={ctx.members.filter((m) => !m.userId).map((m) => ({ id: m.id, name: m.displayName }))} />}
           </div>
         </Card>
         <Card title="Aspetto">

@@ -32,10 +32,14 @@ try {
 
     const memberIds: Record<"ste" | "asha", string> = { ste: "", asha: "" };
     for (const [key, name, email] of [
-      ["ste", "Ste", values["ste-email"]],
+      ["ste", "Stefano", values["ste-email"]],
       ["asha", "Asha", values["asha-email"]],
     ] as const) {
-      const [m] = await tx<{ id: string }[]>`select id from household_members where household_id = ${householdId} and display_name = ${name}`;
+      // Match by email first, then by name (also the former short name "Ste").
+      const [m] = await tx<{ id: string }[]>`
+        select id from household_members where household_id = ${householdId}
+          and (lower(email) = ${email?.toLowerCase() ?? ""} or display_name in (${name}, ${name === "Stefano" ? "Ste" : name}))
+        order by (lower(email) = ${email?.toLowerCase() ?? ""}) desc limit 1`;
       memberIds[key] = m
         ? m.id
         : (

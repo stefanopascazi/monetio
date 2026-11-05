@@ -13,7 +13,8 @@
     "ds:tokens": "node packages/ui/scripts/build-tokens.ts",
     "ds:artifact": "node packages/ui/scripts/build-tokens.ts && node packages/ui/scripts/build-artifact.ts",
     "db:migrate": "node --env-file=.env.local scripts/db/migrate.ts",
-    "db:import": "node --env-file=.env.local scripts/import/run-import.ts"
+    "db:import": "node --env-file=.env.local scripts/import/run-import.ts",
+    "auth:invite": "node --env-file=.env.local scripts/dev/invite.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
