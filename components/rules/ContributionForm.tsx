@@ -93,7 +93,7 @@ export function ContributionForm({ action, accounts, categories, contribution: c
       <Select
         name="roundingCents"
         label="Arrotonda per eccesso a"
-        defaultValue={String(c?.roundingCents ?? 1000)}
+        defaultValue={String(c?.roundingCents ?? 1)}
         options={[
           { value: "1", label: "Centesimo (importo esatto)" },
           { value: "100", label: "1 €" },

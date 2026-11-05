@@ -88,7 +88,7 @@ export function mapContribution(r: Row): ContributionRule {
     fixedCents: num(r.fixed_cents),
     sharePercent: num(r.share_percent),
     categoryIds: Array.isArray(r.category_ids) ? r.category_ids.map(String) : [],
-    roundingCents: num(r.rounding_cents) || 1000,
+    roundingCents: num(r.rounding_cents) || 1,
     dayOfMonth: num(r.day_of_month),
     estimatedSpendingCents: num(r.estimated_spending_cents),
     spendingAccountId: str(r.spending_account_id),

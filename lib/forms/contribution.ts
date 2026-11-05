@@ -26,7 +26,7 @@ export function parseContributionForm(fd: FormData): ParseResult<ContributionInp
   const description = text(fd, "description");
   const spendingAccount = text(fd, "spendingAccountId");
   const offset = Number(text(fd, "spendingMonthOffset") || "0");
-  const rounding = Number(text(fd, "roundingCents") || "1000");
+  const rounding = Number(text(fd, "roundingCents") || "1");
 
   return new Checker()
     .check(isUUID(from), "fromAccountId", "Scegli il conto che versa")

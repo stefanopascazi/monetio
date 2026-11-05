@@ -122,7 +122,7 @@ try {
            estimated_spending_cents, start_date, spending_account_id, spending_month_offset, rounding_cents)
           values (${householdId}, ${accountIds[c.from]}, ${accountIds[c.to]}, ${c.description}, ${c.fixedCents}, ${c.sharePercent},
                   ${c.categories.map((n) => categoryIds[n])}, ${c.dayOfMonth}, ${c.estimatedSpendingCents}, ${c.startDate},
-                  ${c.spendingAccount ? accountIds[c.spendingAccount] : null}, ${c.spendingMonthOffset ?? 0}, ${c.roundingCents ?? 1000})`;
+                  ${c.spendingAccount ? accountIds[c.spendingAccount] : null}, ${c.spendingMonthOffset ?? 0}, ${c.roundingCents ?? 1})`;
       }
       console.log(`Ricorrenze: ${SEED_RULES.length}, quote automatiche: ${SEED_CONTRIBUTIONS.length}`);
     } else {

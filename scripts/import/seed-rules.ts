@@ -71,10 +71,10 @@ export const SEED_RULES: SeedRule[] = [
 ];
 
 // Grocery of month M is on the Conad card; its statement (≈ day 1-2 of M+1) is charged on the joint
-// account on day 5, and each person transfers CEILING(statement / 2, 10) with their fixed quota.
-const CARD = { spendingAccount: "conad" as const, spendingMonthOffset: -1 as const, categories: ["Spesa"], estimatedSpendingCents: 45000, startDate: "2026-12-01" };
+// account on day 5, and each person transfers exactly half of it together with their fixed quota.
+const CARD = { spendingAccount: "conad" as const, spendingMonthOffset: -1 as const, categories: ["Spesa"], estimatedSpendingCents: 45000, startDate: "2026-12-01", roundingCents: 1 };
 export const SEED_CONTRIBUTIONS: SeedContribution[] = [
-  { ...CARD, from: "joint", to: "conad", description: "Estratto conto Carta Conad", fixedCents: 0, sharePercent: 100, dayOfMonth: 5, roundingCents: 1 },
+  { ...CARD, from: "joint", to: "conad", description: "Estratto conto Carta Conad", fixedCents: 0, sharePercent: 100, dayOfMonth: 5 },
   { ...CARD, from: "ste", to: "joint", description: "Quota spesa Ste", fixedCents: 0, sharePercent: 50, dayOfMonth: 3 },
   { ...CARD, from: "asha", to: "joint", description: "Quota spesa Asha", fixedCents: 0, sharePercent: 50, dayOfMonth: 10 },
 ];
