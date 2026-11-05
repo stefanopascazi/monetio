@@ -1,0 +1,19 @@
+.mio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding-inline: 14px;
+  border: 1px solid var(--mio-border);
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-surface-raised);
+  color: var(--mio-ink);
+  font: 500 14px/18px var(--mio-font-sans);
+  cursor: pointer;
+  transition: background-color var(--mio-duration-fast) var(--mio-ease), border-color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-chip:hover { border-color: var(--mio-border-strong); }
+.mio-chip.is-selected { background: var(--mio-brand); border-color: var(--mio-brand); color: var(--mio-on-brand); font-weight: 600; }
+.mio-chip svg { width: 16px; height: 16px; stroke-width: 2.25; }
+.mio-chip:has(.mio-avatar) { padding-left: 5px; }
+.mio-chip.is-selected:has(.mio-chip__check) { padding-left: 12px; }

@@ -1,0 +1,57 @@
+/* Each account type has its own pastel block, so the accounts row reads at a glance. */
+.mio-account {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mio-space-6);
+  width: 100%;
+  min-width: 0;
+  padding: var(--mio-space-5);
+  background: var(--mio-brand-soft);
+  border: 0;
+  border-radius: var(--mio-radius-xl);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.mio-account--savings { background: var(--mio-forecast-soft); }
+.mio-account--investment { background: var(--mio-transfer-soft); }
+.mio-account--card { background: var(--mio-accent-soft); }
+.mio-account--cash { background: var(--mio-warning-soft); }
+.mio-account.is-interactive { cursor: pointer; transition: transform var(--mio-duration-fast) var(--mio-ease); }
+.mio-account.is-interactive:hover { transform: translateY(-2px); }
+.mio-account.is-selected { box-shadow: 0 0 0 2px var(--mio-ink); }
+.mio-account__top { display: flex; align-items: center; gap: var(--mio-space-3); }
+.mio-account__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-surface-raised);
+  color: var(--mio-ink);
+}
+.mio-account__icon svg { width: 20px; height: 20px; stroke-width: 2; }
+.mio-account__id { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.mio-account__name { font: 700 16px/20px var(--mio-font-display); letter-spacing: -0.01em; color: var(--mio-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mio-account__meta { font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-account__private {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-surface-raised);
+  font: 600 12px/16px var(--mio-font-sans);
+  color: var(--mio-ink-muted);
+}
+.mio-account__private svg { width: 12px; height: 12px; stroke-width: 2.25; }
+.mio-account__bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--mio-space-2); flex-wrap: wrap; }
+.mio-account__aside { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.mio-account__change { font: 600 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); font-variant-numeric: tabular-nums; }
+.mio-account__change.is-up { color: var(--mio-income); }
+.mio-account__change.is-down { color: var(--mio-expense); }
+.mio-account__ref { font: 400 12px/16px var(--mio-font-mono); color: var(--mio-ink-muted); }
+.mio-account__footer { padding-top: var(--mio-space-3); border-top: 1px solid var(--mio-border); }
+.mio-account .mio-avatar-group > .mio-avatar { box-shadow: 0 0 0 2px var(--mio-surface-raised); }

@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "../packages/ui/src/styles/index.css";
+@import "../packages/ui/src/styles/tailwind-theme.css";
+
+/* Bind next/font families (self-hosted) to the design-system font tokens. */
+:root {
+  --mio-font-display: var(--font-gabarito), "Segoe UI", system-ui, sans-serif;
+  --mio-font-sans: var(--font-onest), "Segoe UI", system-ui, sans-serif;
+  --mio-font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+html,
+body {
+  background: var(--mio-bg);
+  color: var(--mio-ink);
+}

@@ -1,0 +1,4 @@
+.mio-visibility { display: flex; flex-direction: column; gap: var(--mio-space-2); min-width: 0; margin: 0; padding: 0; border: 0; }
+.mio-visibility__legend { padding: 0; margin-bottom: 6px; font: 600 13px/16px var(--mio-font-sans); color: var(--mio-ink); }
+.mio-visibility__members { display: flex; flex-wrap: wrap; gap: var(--mio-space-2); }
+.mio-visibility__summary { margin: 0; font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); }

@@ -1,0 +1,16 @@
+.mio-amount-input {
+  height: 72px;
+  padding-inline: var(--mio-space-5);
+  gap: var(--mio-space-1);
+  border-radius: var(--mio-radius-lg);
+}
+.mio-amount-input input {
+  font: 700 34px/38px var(--mio-font-display);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.mio-amount-input__currency { font: 600 26px/30px var(--mio-font-display); color: var(--mio-ink-subtle); }
+.mio-amount-input__sign { font: 700 28px/30px var(--mio-font-display); width: 0.8em; text-align: center; }
+.mio-amount-input--expense .mio-amount-input__sign { color: var(--mio-expense); }
+.mio-amount-input--income .mio-amount-input__sign { color: var(--mio-income); }
+.mio-amount-input--transfer .mio-amount-input__sign { color: var(--mio-transfer); }

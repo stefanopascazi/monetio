@@ -1,0 +1,15 @@
+.mio-page-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--mio-space-4); }
+.mio-page-header__text { min-width: 0; flex: 1 1 280px; }
+.mio-page-header__eyebrow { margin: 0 0 var(--mio-space-1); font: 500 14px/20px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-page-header__title {
+  margin: 0;
+  font: 700 28px/32px var(--mio-font-display);
+  letter-spacing: -0.025em;
+  color: var(--mio-ink);
+  text-wrap: balance;
+}
+.mio-page-header__desc { margin: var(--mio-space-2) 0 0; font: 400 15px/22px var(--mio-font-sans); color: var(--mio-ink-muted); max-width: 60ch; }
+.mio-page-header__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mio-space-2); }
+@media (min-width: 768px) {
+  .mio-page-header__title { font-size: 40px; line-height: 44px; letter-spacing: -0.03em; }
+}

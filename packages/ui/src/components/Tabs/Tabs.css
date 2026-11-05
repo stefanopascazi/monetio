@@ -1,0 +1,36 @@
+.mio-tabs__list { display: flex; gap: var(--mio-space-1); overflow-x: auto; scrollbar-width: none; }
+.mio-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--mio-ink-muted);
+  font: 600 14px/18px var(--mio-font-sans);
+  cursor: pointer;
+  transition: color var(--mio-duration-fast) var(--mio-ease), background-color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-tabs__tab:hover { color: var(--mio-ink); }
+.mio-tabs__count {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-surface-sunken);
+  color: var(--mio-ink-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.mio-tabs__panel { padding-top: var(--mio-space-4); }
+.mio-tabs__panel:focus-visible { outline-offset: 4px; border-radius: var(--mio-radius-sm); }
+
+/* pill (default): selected tab is a mint pill */
+.mio-tabs--pill .mio-tabs__tab { height: 38px; padding: 0 16px; border-radius: var(--mio-radius-pill); }
+.mio-tabs--pill .mio-tabs__tab:hover { background: var(--mio-surface); }
+.mio-tabs--pill .mio-tabs__tab.is-selected { background: var(--mio-brand); color: var(--mio-on-brand); }
+.mio-tabs--pill .mio-tabs__tab.is-selected .mio-tabs__count { background: var(--mio-on-brand); color: var(--mio-brand); }
+
+/* line: for long page sections */
+.mio-tabs--line .mio-tabs__list { border-bottom: 1px solid var(--mio-border); gap: var(--mio-space-5); }
+.mio-tabs--line .mio-tabs__tab { height: 46px; padding: 0 2px; box-shadow: inset 0 -3px 0 transparent; }
+.mio-tabs--line .mio-tabs__tab.is-selected { color: var(--mio-ink); box-shadow: inset 0 -3px 0 var(--mio-brand); }

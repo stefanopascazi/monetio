@@ -1,0 +1,44 @@
+.mio-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mio-field__label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--mio-space-2);
+  font: 600 13px/16px var(--mio-font-sans);
+  color: var(--mio-ink-muted);
+}
+.mio-field__optional { font-weight: 400; color: var(--mio-ink-subtle); }
+.mio-field__hint,
+.mio-field__error { margin: 0; font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-field__error { color: var(--mio-danger); }
+
+/* Shared control shell used by TextField, AmountInput and Select. */
+.mio-control {
+  display: flex;
+  align-items: center;
+  gap: var(--mio-space-2);
+  height: var(--mio-control-md);
+  padding-inline: var(--mio-space-4);
+  background: var(--mio-surface-raised);
+  border: 1px solid var(--mio-border-strong);
+  border-radius: var(--mio-radius-md);
+  color: var(--mio-ink);
+  transition: border-color var(--mio-duration-fast) var(--mio-ease), box-shadow var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-control:hover { border-color: var(--mio-ink-muted); }
+.mio-control:focus-within { border-color: var(--mio-ink); box-shadow: 0 0 0 3px var(--mio-brand-soft); }
+.mio-control:has(:focus-visible) :focus-visible { outline: none; }
+.mio-field.is-invalid .mio-control { border-color: var(--mio-danger); }
+.mio-control input,
+.mio-control select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: 500 15px/22px var(--mio-font-sans);
+}
+.mio-control input::placeholder { color: var(--mio-ink-subtle); font-weight: 400; }
+.mio-control__affix { display: inline-flex; color: var(--mio-ink-muted); font-size: 14px; }
+.mio-control__affix svg { width: 18px; height: 18px; stroke-width: 2; }

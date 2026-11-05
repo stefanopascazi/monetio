@@ -1,0 +1,54 @@
+.mio-txn {
+  display: flex;
+  align-items: center;
+  gap: var(--mio-space-3);
+  width: 100%;
+  min-height: 68px;
+  padding: var(--mio-space-3) var(--mio-space-4);
+  border: 0;
+  border-radius: var(--mio-radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.mio-txn.is-interactive { cursor: pointer; transition: background-color var(--mio-duration-fast) var(--mio-ease); }
+.mio-txn.is-interactive:hover { background: var(--mio-surface-raised); }
+.mio-txn.is-selected { background: var(--mio-brand-soft); }
+.mio-txn:focus-visible { outline-offset: -2px; }
+.mio-txn.is-pending .mio-txn__payee,
+.mio-txn.is-pending .mio-amount { opacity: 0.65; }
+
+/* Category bubble: soft tint of the category's chart color, icon in full color. */
+.mio-txn__icon {
+  --mio-cat: var(--mio-chart-1);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--mio-radius-pill);
+  background: color-mix(in srgb, var(--mio-cat) 18%, transparent);
+  color: var(--mio-cat);
+}
+.mio-txn__icon svg { width: 20px; height: 20px; stroke-width: 2; }
+.mio-txn__icon--c2 { --mio-cat: var(--mio-chart-2); }
+.mio-txn__icon--c3 { --mio-cat: var(--mio-chart-3); }
+.mio-txn__icon--c4 { --mio-cat: var(--mio-chart-4); }
+.mio-txn__icon--c5 { --mio-cat: var(--mio-chart-5); }
+.mio-txn__icon--c6 { --mio-cat: var(--mio-chart-6); }
+
+.mio-txn__main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.mio-txn__payee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 15px/20px var(--mio-font-sans);
+  color: var(--mio-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mio-txn__flag { flex: none; width: 14px; height: 14px; stroke-width: 2.25; color: var(--mio-ink-subtle); }
+.mio-txn__meta { font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mio-txn__end { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }

@@ -1,0 +1,23 @@
+.mio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mio-space-1);
+  border-radius: var(--mio-radius-pill);
+  font-family: var(--mio-font-sans);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mio-badge--sm { height: 22px; padding-inline: 8px; font-size: 11px; }
+.mio-badge--md { height: 26px; padding-inline: 10px; font-size: 12px; }
+.mio-badge svg { width: 14px; height: 14px; stroke-width: 2.25; }
+.mio-badge--neutral { background: var(--mio-surface-sunken); color: var(--mio-ink-muted); }
+.mio-badge--brand { background: var(--mio-brand-soft); color: var(--mio-brand-ink); }
+.mio-badge--accent { background: var(--mio-accent-soft); color: var(--mio-accent-ink); }
+.mio-badge--forecast { background: var(--mio-forecast-soft); color: var(--mio-forecast-ink); }
+.mio-badge--income { background: var(--mio-income-soft); color: var(--mio-income); }
+.mio-badge--expense { background: var(--mio-expense-soft); color: var(--mio-expense); }
+.mio-badge--transfer { background: var(--mio-transfer-soft); color: var(--mio-transfer); }
+.mio-badge--success { background: var(--mio-success-soft); color: var(--mio-success); }
+.mio-badge--warning { background: var(--mio-warning-soft); color: var(--mio-warning); }
+.mio-badge--danger { background: var(--mio-danger-soft); color: var(--mio-danger); }
+.mio-badge--info { background: var(--mio-info-soft); color: var(--mio-info); }

@@ -1,0 +1,8 @@
+.mio-spark { display: block; max-width: 100%; overflow: visible; }
+.mio-spark__end { stroke: var(--mio-surface); stroke-width: 2; }
+.mio-spark--brand { color: var(--mio-brand-ink); }
+.mio-spark--income { color: var(--mio-income); }
+.mio-spark--expense { color: var(--mio-expense); }
+.mio-spark--accent { color: var(--mio-accent-ink); }
+.mio-spark--forecast { color: var(--mio-forecast); }
+.mio-spark--muted { color: var(--mio-ink-muted); }

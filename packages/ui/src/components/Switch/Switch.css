@@ -1,0 +1,30 @@
+.mio-switch { display: flex; align-items: center; justify-content: space-between; gap: var(--mio-space-4); }
+.mio-switch.is-disabled { opacity: 0.45; }
+.mio-switch__text { min-width: 0; }
+.mio-switch__label { font: 600 15px/20px var(--mio-font-sans); color: var(--mio-ink); cursor: pointer; }
+.mio-switch__desc { margin: 2px 0 0; font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-switch__track {
+  position: relative;
+  flex: none;
+  width: 50px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--mio-border-strong);
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-surface-sunken);
+  cursor: pointer;
+  transition: background-color var(--mio-duration-fast) var(--mio-ease), border-color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-ink-muted);
+  transition: transform var(--mio-duration-base) var(--mio-ease), background-color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-switch__track[aria-checked="true"] { background: var(--mio-brand); border-color: var(--mio-brand); }
+.mio-switch__track[aria-checked="true"] .mio-switch__thumb { transform: translateX(20px); background: var(--mio-on-brand); }
+.mio-switch__track:disabled { cursor: not-allowed; }

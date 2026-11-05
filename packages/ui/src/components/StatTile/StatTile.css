@@ -1,0 +1,29 @@
+.mio-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mio-space-1);
+  min-width: 0;
+  padding: var(--mio-space-4) var(--mio-space-5);
+  background: var(--mio-surface);
+  border-radius: var(--mio-radius-lg);
+}
+.mio-stat--mint { background: var(--mio-brand-soft); }
+.mio-stat--coral { background: var(--mio-accent-soft); }
+.mio-stat--forecast { background: var(--mio-forecast-soft); }
+.mio-stat__label { margin: 0; font: 500 14px/20px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-stat__foot { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--mio-space-2); min-height: 28px; }
+.mio-stat__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px 2px 4px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-surface-raised);
+  font: 600 13px/18px var(--mio-font-sans);
+  color: var(--mio-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mio-stat__delta svg { width: 16px; height: 16px; stroke-width: 2.25; }
+.mio-stat__delta.is-good { color: var(--mio-income); }
+.mio-stat__delta.is-bad { color: var(--mio-expense); }
+.mio-stat__delta-label { margin-left: var(--mio-space-1); font-weight: 400; color: var(--mio-ink-muted); }

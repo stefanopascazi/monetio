@@ -1,0 +1,41 @@
+/* Base layer: system font, focus ring and motion preferences. */
+.mio-root,
+.mio-root * {
+  box-sizing: border-box;
+}
+
+.mio-root {
+  font-family: var(--mio-font-sans);
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--mio-ink);
+  background: var(--mio-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.mio-root :focus-visible {
+  outline: 2px solid var(--mio-focus);
+  outline-offset: 2px;
+}
+
+.mio-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.mio-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mio-root *,
+  .mio-root *::before,
+  .mio-root *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

@@ -1,0 +1,13 @@
+.mio-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mio-space-2) var(--mio-space-4);
+  padding: 6px 6px 6px var(--mio-space-4);
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-surface-sunken);
+}
+.mio-confirm--danger { background: var(--mio-danger-soft); }
+.mio-confirm__msg { margin: 0; font: 600 14px/20px var(--mio-font-sans); color: var(--mio-ink); }
+.mio-confirm__actions { display: flex; gap: var(--mio-space-1); }

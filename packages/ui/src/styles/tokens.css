@@ -1,0 +1,281 @@
+/* MonetIO Design System — generated from tokens.json */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --mio-bg: #fbfcfb;
+  --mio-surface: #f1f4f3;
+  --mio-surface-raised: #ffffff;
+  --mio-surface-sunken: #e7ecea;
+  --mio-border: #e1e7e4;
+  --mio-border-strong: #77857f;
+  --mio-ink: #0e1a16;
+  --mio-ink-muted: #4b5853;
+  --mio-ink-subtle: #57645f;
+  --mio-brand: #3ddc97;
+  --mio-brand-hover: #2bc985;
+  --mio-brand-soft: #d8f7e9;
+  --mio-on-brand: #05261a;
+  --mio-brand-ink: #0a7448;
+  --mio-accent: #ff7a59;
+  --mio-accent-soft: #ffe7df;
+  --mio-on-accent: #3a0f02;
+  --mio-accent-ink: #b23a1b;
+  --mio-forecast: #7b6cf0;
+  --mio-forecast-soft: #ece9fe;
+  --mio-forecast-ink: #5242cc;
+  --mio-income: #0a7448;
+  --mio-income-soft: #d8f7e9;
+  --mio-expense: #bf3a1a;
+  --mio-expense-soft: #ffe7df;
+  --mio-transfer: #2f62c8;
+  --mio-transfer-soft: #e2eafb;
+  --mio-warning: #985700;
+  --mio-warning-soft: #fff1d6;
+  --mio-danger: #c0281c;
+  --mio-danger-soft: #fde3e0;
+  --mio-success: #0a7448;
+  --mio-success-soft: #d8f7e9;
+  --mio-info: #2f62c8;
+  --mio-info-soft: #e2eafb;
+  --mio-focus: #0e1a16;
+  --mio-chart-1: #12a372;
+  --mio-chart-2: #f0643c;
+  --mio-chart-3: #3d6fe0;
+  --mio-chart-4: #cf9a10;
+  --mio-chart-5: #8a5cf0;
+  --mio-chart-6: #d6487e;
+  --mio-chart-grid: #e3e9e6;
+  --mio-shadow-sm: 0 1px 2px rgba(14,26,22,0.06);
+  --mio-shadow-md: 0 10px 30px rgba(14,26,22,0.08), 0 2px 6px rgba(14,26,22,0.05);
+  --mio-shadow-lg: 0 18px 48px rgba(14,26,22,0.14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  --mio-bg: #0b0f0e;
+  --mio-surface: #151b19;
+  --mio-surface-raised: #1d2522;
+  --mio-surface-sunken: #070a09;
+  --mio-border: #26302d;
+  --mio-border-strong: #6c7b75;
+  --mio-ink: #eef4f1;
+  --mio-ink-muted: #a7b4af;
+  --mio-ink-subtle: #8b9893;
+  --mio-brand: #4ff0a8;
+  --mio-brand-hover: #78f5bd;
+  --mio-brand-soft: #103a29;
+  --mio-on-brand: #04150d;
+  --mio-brand-ink: #5fe8a9;
+  --mio-accent: #ff8a6b;
+  --mio-accent-soft: #3d1a10;
+  --mio-on-accent: #2a0a00;
+  --mio-accent-ink: #ff9e84;
+  --mio-forecast: #a397ff;
+  --mio-forecast-soft: #241f4d;
+  --mio-forecast-ink: #b6acff;
+  --mio-income: #4fe0a0;
+  --mio-income-soft: #0f3426;
+  --mio-expense: #ff8a6b;
+  --mio-expense-soft: #3d1a10;
+  --mio-transfer: #86abff;
+  --mio-transfer-soft: #16264a;
+  --mio-warning: #f2b84b;
+  --mio-warning-soft: #36280b;
+  --mio-danger: #ff5f73;
+  --mio-danger-soft: #3e1512;
+  --mio-success: #4fe0a0;
+  --mio-success-soft: #0f3426;
+  --mio-info: #86abff;
+  --mio-info-soft: #16264a;
+  --mio-focus: #5fe8a9;
+  --mio-chart-1: #1fae86;
+  --mio-chart-2: #e2643f;
+  --mio-chart-3: #5a82e6;
+  --mio-chart-4: #b8890f;
+  --mio-chart-5: #9270ee;
+  --mio-chart-6: #cc4f82;
+  --mio-chart-grid: #222b28;
+  --mio-shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+  --mio-shadow-md: 0 10px 30px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4);
+  --mio-shadow-lg: 0 18px 48px rgba(0,0,0,0.65);
+  }
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --mio-bg: #0b0f0e;
+  --mio-surface: #151b19;
+  --mio-surface-raised: #1d2522;
+  --mio-surface-sunken: #070a09;
+  --mio-border: #26302d;
+  --mio-border-strong: #6c7b75;
+  --mio-ink: #eef4f1;
+  --mio-ink-muted: #a7b4af;
+  --mio-ink-subtle: #8b9893;
+  --mio-brand: #4ff0a8;
+  --mio-brand-hover: #78f5bd;
+  --mio-brand-soft: #103a29;
+  --mio-on-brand: #04150d;
+  --mio-brand-ink: #5fe8a9;
+  --mio-accent: #ff8a6b;
+  --mio-accent-soft: #3d1a10;
+  --mio-on-accent: #2a0a00;
+  --mio-accent-ink: #ff9e84;
+  --mio-forecast: #a397ff;
+  --mio-forecast-soft: #241f4d;
+  --mio-forecast-ink: #b6acff;
+  --mio-income: #4fe0a0;
+  --mio-income-soft: #0f3426;
+  --mio-expense: #ff8a6b;
+  --mio-expense-soft: #3d1a10;
+  --mio-transfer: #86abff;
+  --mio-transfer-soft: #16264a;
+  --mio-warning: #f2b84b;
+  --mio-warning-soft: #36280b;
+  --mio-danger: #ff5f73;
+  --mio-danger-soft: #3e1512;
+  --mio-success: #4fe0a0;
+  --mio-success-soft: #0f3426;
+  --mio-info: #86abff;
+  --mio-info-soft: #16264a;
+  --mio-focus: #5fe8a9;
+  --mio-chart-1: #1fae86;
+  --mio-chart-2: #e2643f;
+  --mio-chart-3: #5a82e6;
+  --mio-chart-4: #b8890f;
+  --mio-chart-5: #9270ee;
+  --mio-chart-6: #cc4f82;
+  --mio-chart-grid: #222b28;
+  --mio-shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+  --mio-shadow-md: 0 10px 30px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.4);
+  --mio-shadow-lg: 0 18px 48px rgba(0,0,0,0.65);
+}
+
+:root {
+  --mio-space-0-5: 2px;
+  --mio-space-1: 4px;
+  --mio-space-2: 8px;
+  --mio-space-3: 12px;
+  --mio-space-4: 16px;
+  --mio-space-5: 20px;
+  --mio-space-6: 24px;
+  --mio-space-8: 32px;
+  --mio-space-10: 40px;
+  --mio-space-12: 48px;
+  --mio-radius-xs: 4px;
+  --mio-radius-sm: 8px;
+  --mio-radius-md: 14px;
+  --mio-radius-lg: 22px;
+  --mio-radius-xl: 28px;
+  --mio-radius-pill: 999px;
+  --mio-control-sm: 32px;
+  --mio-control-md: 44px;
+  --mio-control-lg: 52px;
+  --mio-content-max: 1120px;
+  --mio-duration-fast: 120ms;
+  --mio-duration-base: 200ms;
+  --mio-duration-slow: 320ms;
+  --mio-ease: cubic-bezier(0.2, 0, 0, 1);
+  --mio-z-sticky: 10;
+  --mio-z-nav: 20;
+  --mio-font-display: "Gabarito", "Segoe UI", system-ui, sans-serif;
+  --mio-font-sans: "Onest", "Segoe UI", system-ui, sans-serif;
+  --mio-font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+}
+
+.mio-text-display-lg {
+  font-family: var(--mio-font-display);
+  font-size: 44px;
+  line-height: 46px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.mio-text-display-md {
+  font-family: var(--mio-font-display);
+  font-size: 34px;
+  line-height: 38px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.mio-text-title-lg {
+  font-family: var(--mio-font-display);
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.mio-text-title-md {
+  font-family: var(--mio-font-sans);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.mio-text-title-sm {
+  font-family: var(--mio-font-sans);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.mio-text-body-lg {
+  font-family: var(--mio-font-sans);
+  font-size: 17px;
+  line-height: 26px;
+  font-weight: 400;
+}
+.mio-text-body {
+  font-family: var(--mio-font-sans);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 400;
+}
+.mio-text-body-sm {
+  font-family: var(--mio-font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+.mio-text-label {
+  font-family: var(--mio-font-sans);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+.mio-text-overline {
+  font-family: var(--mio-font-sans);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mio-text-amount-xl {
+  font-family: var(--mio-font-display);
+  font-size: 48px;
+  line-height: 50px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+.mio-text-amount-lg {
+  font-family: var(--mio-font-display);
+  font-size: 26px;
+  line-height: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.mio-text-amount-md {
+  font-family: var(--mio-font-sans);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.mio-text-mono {
+  font-family: var(--mio-font-mono);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}

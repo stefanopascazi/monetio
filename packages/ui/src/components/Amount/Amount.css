@@ -1,0 +1,14 @@
+.mio-amount { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--mio-ink); }
+.mio-amount--sm { font: 600 13px/18px var(--mio-font-sans); }
+.mio-amount--md { font: 600 15px/20px var(--mio-font-sans); }
+.mio-amount--lg { font: 700 26px/30px var(--mio-font-display); letter-spacing: -0.02em; }
+.mio-amount--xl { font: 700 48px/50px var(--mio-font-display); letter-spacing: -0.035em; }
+.mio-amount--lg .mio-amount__fraction,
+.mio-amount--xl .mio-amount__fraction { font-size: 0.55em; color: var(--mio-ink-subtle); letter-spacing: -0.01em; }
+.mio-amount--income { color: var(--mio-income); }
+.mio-amount--expense { color: var(--mio-expense); }
+.mio-amount--transfer { color: var(--mio-transfer); }
+.mio-amount--income .mio-amount__fraction,
+.mio-amount--expense .mio-amount__fraction,
+.mio-amount--transfer .mio-amount__fraction { color: inherit; }
+.mio-amount--hidden { color: var(--mio-ink-subtle); letter-spacing: 0.1em; }

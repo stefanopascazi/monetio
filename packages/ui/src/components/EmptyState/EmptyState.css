@@ -1,0 +1,24 @@
+.mio-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mio-space-2);
+  padding: var(--mio-space-10) var(--mio-space-5);
+  text-align: center;
+  background: var(--mio-surface);
+  border-radius: var(--mio-radius-xl);
+}
+.mio-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--mio-space-2);
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-brand);
+  color: var(--mio-on-brand);
+}
+.mio-empty__icon svg { width: 28px; height: 28px; stroke-width: 2; }
+.mio-empty__title { margin: 0; font: 700 20px/26px var(--mio-font-display); letter-spacing: -0.015em; color: var(--mio-ink); text-wrap: balance; }
+.mio-empty__desc { margin: 0; max-width: 42ch; font: 400 15px/22px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-empty__action { margin-top: var(--mio-space-3); }

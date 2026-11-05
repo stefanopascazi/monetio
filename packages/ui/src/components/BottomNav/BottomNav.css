@@ -1,0 +1,69 @@
+/* Mobile: floating pill bar above the home indicator. */
+.mio-nav {
+  position: fixed;
+  left: max(var(--mio-space-3), env(safe-area-inset-left, 0px));
+  right: max(var(--mio-space-3), env(safe-area-inset-right, 0px));
+  bottom: calc(var(--mio-space-3) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--mio-z-nav);
+  display: flex;
+  align-items: center;
+  gap: var(--mio-space-2);
+  padding: 6px;
+  background: var(--mio-surface-raised);
+  border-radius: var(--mio-radius-xl);
+  box-shadow: var(--mio-shadow-lg);
+}
+.mio-nav--static { position: static; box-shadow: var(--mio-shadow-md); }
+.mio-nav__list { display: flex; flex: 1; margin: 0; padding: 0; list-style: none; }
+.mio-nav__list > li { flex: 1; }
+.mio-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 2px 6px;
+  border: 0;
+  border-radius: var(--mio-radius-lg);
+  background: transparent;
+  color: var(--mio-ink-muted);
+  font: 600 11px/14px var(--mio-font-sans);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--mio-duration-fast) var(--mio-ease), color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-nav__item:hover { color: var(--mio-ink); }
+.mio-nav__icon { position: relative; display: grid; place-items: center; width: 26px; height: 26px; }
+.mio-nav__icon svg { width: 22px; height: 22px; stroke-width: 2; }
+.mio-nav__item.is-active { background: var(--mio-brand); color: var(--mio-on-brand); }
+.mio-nav__badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-accent);
+  color: var(--mio-on-accent);
+  box-shadow: 0 0 0 2px var(--mio-surface-raised);
+  font: 700 10px/17px var(--mio-font-sans);
+  text-align: center;
+}
+.mio-nav__action { order: 2; }
+
+/* Desktop: vertical rail on the left. */
+@media (min-width: 960px) {
+  .mio-nav:not(.mio-nav--static) {
+    top: var(--mio-space-4);
+    bottom: var(--mio-space-4);
+    left: var(--mio-space-4);
+    right: auto;
+    width: 84px;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: var(--mio-space-4) 8px;
+  }
+  .mio-nav:not(.mio-nav--static) .mio-nav__list { flex: none; flex-direction: column; gap: var(--mio-space-2); width: 100%; }
+  .mio-nav:not(.mio-nav--static) .mio-nav__action { order: 0; margin-bottom: var(--mio-space-4); }
+}

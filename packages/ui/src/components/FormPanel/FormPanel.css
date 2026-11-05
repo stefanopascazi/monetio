@@ -1,0 +1,57 @@
+/* Collapsed: a mint call-to-action strip. Expanded: a raised white sheet in the page. */
+.mio-form-panel {
+  background: var(--mio-brand-soft);
+  border-radius: var(--mio-radius-lg);
+  transition: background-color var(--mio-duration-base) var(--mio-ease), box-shadow var(--mio-duration-base) var(--mio-ease);
+}
+.mio-form-panel.is-open { background: var(--mio-surface-raised); box-shadow: var(--mio-shadow-md); }
+.mio-form-panel__header {
+  display: flex;
+  align-items: center;
+  gap: var(--mio-space-3);
+  width: 100%;
+  padding: var(--mio-space-3) var(--mio-space-4) var(--mio-space-3) var(--mio-space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  border-radius: var(--mio-radius-lg);
+}
+button.mio-form-panel__header { cursor: pointer; }
+.mio-form-panel__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-brand);
+  color: var(--mio-on-brand);
+}
+.mio-form-panel__icon svg { width: 22px; height: 22px; stroke-width: 2.25; }
+.mio-form-panel__heading { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.mio-form-panel__title { font: 700 17px/22px var(--mio-font-display); letter-spacing: -0.01em; color: var(--mio-ink); }
+.mio-form-panel__desc { font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-form-panel__chevron {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+  color: var(--mio-ink-muted);
+  transition: transform var(--mio-duration-base) var(--mio-ease);
+}
+.mio-form-panel.is-open .mio-form-panel__chevron { transform: rotate(180deg); }
+.mio-form-panel__body { padding: var(--mio-space-2) var(--mio-space-5) var(--mio-space-5); }
+.mio-form-panel__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--mio-space-4);
+}
+.mio-form-panel__fields > .mio-span-full { grid-column: 1 / -1; }
+.mio-form-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mio-space-2);
+  margin-top: var(--mio-space-6);
+}

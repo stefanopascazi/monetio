@@ -1,0 +1,11 @@
+.mio-skeleton {
+  display: block;
+  background: var(--mio-surface-sunken);
+  animation: mio-pulse 1.4s var(--mio-ease) infinite;
+}
+.mio-skeleton--sm { border-radius: var(--mio-radius-xs); }
+.mio-skeleton--md { border-radius: var(--mio-radius-md); }
+.mio-skeleton--lg { border-radius: var(--mio-radius-lg); }
+.mio-skeleton--pill { border-radius: var(--mio-radius-pill); }
+.mio-skeleton-lines { display: flex; flex-direction: column; gap: var(--mio-space-2); }
+@keyframes mio-pulse { 50% { opacity: 0.55; } }

@@ -1,0 +1,12 @@
+.mio-select { position: relative; }
+.mio-select select { appearance: none; padding-right: 24px; cursor: pointer; }
+.mio-select select option { background: var(--mio-surface-raised); color: var(--mio-ink); }
+.mio-select__chevron {
+  position: absolute;
+  right: var(--mio-space-3);
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+  color: var(--mio-ink-muted);
+  pointer-events: none;
+}

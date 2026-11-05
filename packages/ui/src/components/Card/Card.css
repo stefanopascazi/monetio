@@ -1,0 +1,18 @@
+.mio-card { border-radius: var(--mio-radius-lg); min-width: 0; background: var(--mio-surface); }
+.mio-card--mint { background: var(--mio-brand-soft); }
+.mio-card--coral { background: var(--mio-accent-soft); }
+.mio-card--forecast { background: var(--mio-forecast-soft); }
+.mio-card--raised { background: var(--mio-surface-raised); box-shadow: var(--mio-shadow-md); }
+.mio-card--pad-md { padding: var(--mio-space-4); }
+.mio-card--pad-lg { padding: var(--mio-space-6); }
+.mio-card--pad-none { padding-bottom: var(--mio-space-2); }
+.mio-card__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--mio-space-3); margin-bottom: var(--mio-space-4); }
+.mio-card--pad-none .mio-card__header { padding: var(--mio-space-4) var(--mio-space-4) 0; margin-bottom: var(--mio-space-2); }
+.mio-card__heading { min-width: 0; }
+.mio-card__title { margin: 0; font: 700 18px/24px var(--mio-font-display); letter-spacing: -0.015em; color: var(--mio-ink); text-wrap: balance; }
+.mio-card__subtitle { margin: 2px 0 0; font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-card__action { flex: none; }
+@media (min-width: 768px) {
+  .mio-card--pad-md { padding: var(--mio-space-5); }
+  .mio-card--pad-none .mio-card__header { padding: var(--mio-space-5) var(--mio-space-5) 0; }
+}

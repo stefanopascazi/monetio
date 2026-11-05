@@ -1,0 +1,45 @@
+.mio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mio-space-2);
+  border: 0;
+  border-radius: var(--mio-radius-pill);
+  font-family: var(--mio-font-sans);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--mio-duration-fast) var(--mio-ease),
+    color var(--mio-duration-fast) var(--mio-ease),
+    transform var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-btn:active:not(:disabled) { transform: scale(0.97); }
+.mio-btn:disabled { cursor: not-allowed; opacity: 0.45; }
+.mio-btn--sm { height: var(--mio-control-sm); padding-inline: 14px; font-size: 13px; }
+.mio-btn--md { height: var(--mio-control-md); padding-inline: 20px; font-size: 15px; }
+.mio-btn--lg { height: var(--mio-control-lg); padding-inline: 26px; font-size: 16px; }
+.mio-btn--icon { padding-inline: 0; aspect-ratio: 1; }
+.mio-btn--block { width: 100%; }
+.mio-btn svg { width: 18px; height: 18px; stroke-width: 2; flex: none; }
+
+/* Mint fill with dark text: the signature primary action. */
+.mio-btn--primary { background: var(--mio-brand); color: var(--mio-on-brand); }
+.mio-btn--primary:hover:not(:disabled) { background: var(--mio-brand-hover); }
+.mio-btn--secondary { background: var(--mio-surface-sunken); color: var(--mio-ink); }
+.mio-btn--secondary:hover:not(:disabled) { background: var(--mio-border); }
+.mio-btn--ghost { background: transparent; color: var(--mio-ink); }
+.mio-btn--ghost:hover:not(:disabled) { background: var(--mio-surface-sunken); }
+.mio-btn--danger { background: var(--mio-danger-soft); color: var(--mio-danger); }
+.mio-btn--danger:hover:not(:disabled) { background: var(--mio-danger); color: var(--mio-surface-raised); }
+
+.mio-btn__spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--mio-radius-pill);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: mio-spin 700ms linear infinite;
+}
+@keyframes mio-spin { to { transform: rotate(360deg); } }

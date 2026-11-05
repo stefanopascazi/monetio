@@ -1,0 +1,32 @@
+.mio-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--mio-surface-sunken);
+  border-radius: var(--mio-radius-pill);
+}
+.mio-seg--block { display: flex; width: 100%; }
+.mio-seg--block .mio-seg__item { flex: 1; }
+.mio-seg__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--mio-ink-muted);
+  font: 600 14px/18px var(--mio-font-sans);
+  border-radius: var(--mio-radius-pill);
+  cursor: pointer;
+  transition:
+    background-color var(--mio-duration-fast) var(--mio-ease),
+    color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-seg--sm .mio-seg__item { height: 28px; padding-inline: 10px; font-size: 13px; }
+.mio-seg--md .mio-seg__item { height: 38px; padding-inline: 16px; }
+.mio-seg__item svg { width: 16px; height: 16px; stroke-width: 2; }
+.mio-seg__item:hover { color: var(--mio-ink); }
+.mio-seg__item.is-selected { background: var(--mio-surface-raised); color: var(--mio-ink); box-shadow: var(--mio-shadow-sm); }
+.mio-seg__item--income.is-selected { background: var(--mio-income-soft); color: var(--mio-income); box-shadow: none; }
+.mio-seg__item--expense.is-selected { background: var(--mio-expense-soft); color: var(--mio-expense); box-shadow: none; }
+.mio-seg__item--transfer.is-selected { background: var(--mio-transfer-soft); color: var(--mio-transfer); box-shadow: none; }

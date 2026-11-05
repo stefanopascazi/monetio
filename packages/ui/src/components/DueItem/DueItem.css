@@ -1,0 +1,47 @@
+.mio-due {
+  display: flex;
+  align-items: center;
+  gap: var(--mio-space-3);
+  padding: var(--mio-space-3) var(--mio-space-4);
+}
+
+/* Calendar leaf: the signature date mark for scheduled payments. */
+.mio-due__leaf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 52px;
+  height: 56px;
+  border-radius: var(--mio-radius-md);
+  background: var(--mio-surface-raised);
+  box-shadow: var(--mio-shadow-sm);
+}
+.mio-due__month {
+  font: 700 10px/12px var(--mio-font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mio-ink-muted);
+}
+.mio-due__day { font: 700 22px/24px var(--mio-font-display); letter-spacing: -0.02em; color: var(--mio-ink); font-variant-numeric: tabular-nums; }
+.mio-due--soon .mio-due__leaf { background: var(--mio-accent); box-shadow: none; }
+.mio-due--soon .mio-due__month,
+.mio-due--soon .mio-due__day { color: var(--mio-on-accent); }
+.mio-due--overdue .mio-due__leaf { background: var(--mio-danger); box-shadow: none; }
+.mio-due--overdue .mio-due__month,
+.mio-due--overdue .mio-due__day { color: var(--mio-surface-raised); }
+.mio-due--paid { opacity: 0.6; }
+.mio-due--paid .mio-due__title { text-decoration: line-through; text-decoration-color: var(--mio-ink-subtle); }
+
+.mio-due__main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.mio-due__title { font: 600 15px/20px var(--mio-font-sans); color: var(--mio-ink); }
+.mio-due__meta { display: inline-flex; align-items: center; gap: 4px; font: 400 13px/18px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-due__meta svg { width: 13px; height: 13px; stroke-width: 2.25; }
+.mio-due__status { margin-top: 2px; }
+.mio-due__end { display: flex; flex-direction: column; align-items: flex-end; gap: var(--mio-space-2); flex: none; }
+.mio-due__actions { display: flex; gap: var(--mio-space-2); }
+@media (max-width: 480px) {
+  .mio-due { flex-wrap: wrap; }
+  .mio-due__end { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; padding-left: 64px; }
+}
