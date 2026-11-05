@@ -1,0 +1,41 @@
+import type { ProjectionPoint } from "@monetio/ui";
+import { addMonthsToKey, monthLabel } from "../domain/dates";
+import type { ProjectionMonth } from "../domain/projection";
+import type { MonthlyBalance } from "./queries";
+
+/**
+ * Month-end total balance over `months` (oldest first) for the given accounts,
+ * carrying the last known balance forward through months without movements.
+ */
+export function balanceHistory(rows: MonthlyBalance[], accountIds: string[], months: string[], openingBefore: Record<string, number>): number[] {
+  const byAccount = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    if (!byAccount.has(r.accountId)) byAccount.set(r.accountId, new Map());
+    byAccount.get(r.accountId)!.set(r.month, r.balanceCents);
+  }
+  const last: Record<string, number> = { ...openingBefore };
+  return months.map((m) => {
+    let total = 0;
+    for (const id of accountIds) {
+      const v = byAccount.get(id)?.get(m);
+      if (v !== undefined) last[id] = v;
+      total += last[id] ?? 0;
+    }
+    return total;
+  });
+}
+
+/** Last `n` month keys ending with `current` (inclusive), oldest first. */
+export function lastMonths(current: string, n: number): string[] {
+  return Array.from({ length: n }, (_, i) => addMonthsToKey(current, i - n + 1));
+}
+
+/** Chart points: history (excluding the current month) followed by projected month-ends. */
+export function projectionPoints(history: { month: string; valueCents: number }[], projection: ProjectionMonth[], pick: (p: ProjectionMonth) => number): ProjectionPoint[] {
+  const longRange = projection.length > 24;
+  const label = (m: string) => (longRange ? monthLabel(m) : monthLabel(m).split(" ")[0]);
+  return [
+    ...history.map((h) => ({ label: label(h.month), valueCents: h.valueCents })),
+    ...projection.map((p) => ({ label: label(p.month), valueCents: pick(p), projected: true })),
+  ];
+}

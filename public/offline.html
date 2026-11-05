@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sei offline · MonetIO</title>
+    <style>
+      :root { --bg: #fbfcfb; --ink: #13201b; --muted: #55635d; --brand: #1a9d68; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #0b0f0e; --ink: #e7efeb; --muted: #9db0a8; --brand: #6fd3a8; } }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--ink); font-family: system-ui, sans-serif; padding: 16px; }
+      main { max-width: 360px; text-align: center; }
+      h1 { font-size: 24px; margin: 0 0 8px; }
+      p { color: var(--muted); line-height: 1.5; }
+      b { color: var(--brand); }
+      button { margin-top: 16px; border: 0; border-radius: 999px; padding: 12px 20px; background: var(--brand); color: var(--bg); font-weight: 600; font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>monet<b>io</b></h1>
+      <p>Sei offline. I dati di famiglia arrivano sempre aggiornati dal server: riconnettiti per vederli.</p>
+      <button onclick="location.reload()">Riprova</button>
+    </main>
+  </body>
+</html>

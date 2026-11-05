@@ -27,7 +27,7 @@ export default defineConfig({
         test: {
           ...shared,
           name: "app",
-          include: ["app/**/*.test.{ts,tsx}", "lib/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,tsx}", "components/**/*.test.{ts,tsx}"],
+          include: ["app/**/*.test.{ts,tsx}", "lib/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,tsx}", "components/**/*.test.{ts,tsx}", "hooks/**/*.test.{ts,tsx}"],
           setupFiles: ["./vitest.setup.ts"],
         },
       },

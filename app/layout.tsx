@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Gabarito, JetBrains_Mono, Onest } from "next/font/google";
 import { themeInitScript } from "@monetio/ui";
+import { ServiceWorker } from "@/components/shell/ServiceWorker";
 import "./globals.css";
 
 const display = Gabarito({ variable: "--font-gabarito", subsets: ["latin"], weight: ["500", "600", "700", "800"] });
@@ -8,8 +9,11 @@ const sans = Onest({ variable: "--font-onest", subsets: ["latin"] });
 const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "MonetIO",
-  description: "Household finances, shared.",
+  title: { default: "MonetIO", template: "%s · MonetIO" },
+  description: "Le finanze di famiglia, condivise.",
+  applicationName: "MonetIO",
+  appleWebApp: { capable: true, title: "MonetIO", statusBarStyle: "default" },
+  icons: { icon: "/icons/icon.svg", apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
@@ -23,11 +27,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // No default data-theme: the OS decides unless the user picked Light or Dark (applied by the init script).
-    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable} h-full`} suppressHydrationWarning>
+    <html lang="it" className={`${display.variable} ${sans.variable} ${mono.variable} h-full`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="mio-root min-h-full">{children}</body>
+      <body className="mio-root min-h-full">
+        {children}
+        <ServiceWorker />
+      </body>
     </html>
   );
 }
