@@ -1,8 +1,9 @@
 "use client";
 
-import { CalendarCheck, FileCheck2, PencilLine } from "lucide-react";
+import { CalendarCheck, FileCheck2, PencilLine, Search } from "lucide-react";
 import { useState } from "react";
-import { Badge, Button, Card, DueItem, EmptyState } from "@monetio/ui";
+import { Badge, Button, Card, DueItem, EmptyState, Select, TextField } from "@monetio/ui";
+import type { NamedRef } from "@/components/common/options";
 import { groupDueByMonth } from "@/lib/data/due-groups";
 import { isoToDate } from "@/lib/domain/dates";
 import type { RuleFrequency } from "@/lib/domain/types";
@@ -11,6 +12,7 @@ import { PayEntryForm } from "./PayEntryForm";
 
 export interface DueView {
   key: string;
+  accountId: string;
   date: string;
   description: string;
   amountCents: number;
@@ -25,17 +27,26 @@ export interface DueView {
   payable: boolean;
 }
 
+const normalize = (s: string) => s.toLocaleLowerCase("it").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/** Deadlines by month; with `accounts` it also shows a search box and an account filter. */
 export function DueList({
-  items,
+  items: all,
   today,
   title = "Da pagare",
   subtitle,
+  accounts,
 }: {
   items: DueView[];
   today: string;
   title?: string;
   subtitle?: string;
+  accounts?: NamedRef[];
 }) {
+  const [query, setQuery] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const q = normalize(query.trim());
+  const items = all.filter((e) => (!accountId || e.accountId === accountId) && (!q || normalize(`${e.description} ${e.accountName}`).includes(q)));
   // One inline panel at a time: paying an item or entering its actual amount.
   const [open, setOpen] = useState<{
     key: string;
@@ -44,6 +55,17 @@ export function DueList({
   const close = () => setOpen(null);
   return (
     <Card tone="coral" title={title} subtitle={subtitle} padding="none">
+      {accounts && (
+        <div className="grid grid-cols-1 gap-3 px-5 pb-4 sm:grid-cols-2">
+          <TextField label="Cerca" placeholder="Es. luce, quota" value={query} onChange={(e) => setQuery(e.target.value)} prefix={<Search className="size-4" aria-hidden="true" />} />
+          <Select
+            label="Conto"
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            options={[{ value: "", label: "Tutti i conti" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]}
+          />
+        </div>
+      )}
       {!items.length ? (
         <EmptyState
           icon={<CalendarCheck />}

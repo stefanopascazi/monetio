@@ -19,7 +19,7 @@ export async function AgendaView() {
   const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
   const due = dueViews(agenda.due, agenda.rules, active);
   const overdue = due.filter((d) => d.date < agenda.today);
-  const rules = ruleViews(agenda.rules, accounts, agenda.today);
+  const rules = ruleViews(agenda.rules, accounts, agenda.today, categories);
   const contributions = contributionViews(agenda.contributions, accounts, agenda.today, contributionSpendingFrom(agenda.flows));
 
   return (
@@ -34,7 +34,7 @@ export async function AgendaView() {
             count: due.length,
             content: (
               <section className="grid grid-cols-1 items-start gap-4 pt-4 lg:grid-cols-2">
-                <DueList items={due} today={agenda.today} subtitle={overdue.length ? `${overdue.length} scadute` : "Prossimi 31 giorni"} />
+                <DueList items={due} today={agenda.today} subtitle={overdue.length ? `${overdue.length} scadute` : "Prossimi 31 giorni"} accounts={refs} />
                 <Card title="Addebiti automatici" subtitle="Si registrano da soli nei prossimi 31 giorni" padding="none">
                   <UpcomingList items={dueViews(agenda.upcoming, agenda.rules, accounts)} />
                 </Card>

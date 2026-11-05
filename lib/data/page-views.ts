@@ -3,7 +3,7 @@ import { contributionAmount, contributionBase } from "../domain/contribution";
 import { monthKey } from "../domain/dates";
 import { nextOccurrence } from "../domain/recurrence";
 import type { DueEntry, SpendingLookup } from "../domain/schedule";
-import type { Account, ContributionRule, RecurringRule, RuleFrequency } from "../domain/types";
+import type { Account, Category, ContributionRule, RecurringRule, RuleFrequency } from "../domain/types";
 import { HIDDEN_ACCOUNT } from "./views";
 
 type Named = Pick<Account, "id" | "name">;
@@ -14,6 +14,7 @@ export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: 
   const visible = new Set(accounts.map((a) => a.id));
   return entries.map((e) => ({
     key: e.key,
+    accountId: e.accountId,
     date: e.date,
     description: e.description,
     amountCents: e.amountCents,
@@ -28,9 +29,10 @@ export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: 
   }));
 }
 
-export function ruleViews(rules: RecurringRule[], accounts: Named[], today: string) {
+export function ruleViews(rules: RecurringRule[], accounts: Named[], today: string, categories: Pick<Category, "id" | "name">[] = []) {
   return rules.map((r) => ({
     ...r,
+    categoryName: categories.find((c) => c.id === r.categoryId)?.name ?? null,
     accountName: r.counterpartAccountId ? `${nameOf(accounts, r.accountId)} → ${nameOf(accounts, r.counterpartAccountId)}` : nameOf(accounts, r.accountId),
     nextDate: r.active ? nextOccurrence(r, today) : null,
   }));
