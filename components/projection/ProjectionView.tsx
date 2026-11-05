@@ -3,15 +3,15 @@ import { loadProjection } from "@/lib/data/agenda";
 import { balanceHistory, lastMonths, projectionPoints } from "@/lib/data/history";
 import { listMonthlyBalances } from "@/lib/data/queries";
 import { addMonthsToKey, monthKey, monthLabel, startOfMonth } from "@/lib/domain/dates";
-import { HORIZONS, HorizonSwitch, ProjectionPanel } from "./ProjectionPanel";
+import { HORIZONS, horizonParam } from "./horizons";
+import { HorizonSwitch, ProjectionPanel } from "./ProjectionPanel";
 import { ProjectionTable } from "./ProjectionTable";
 
 const HISTORY_MONTHS = 6;
 
 export async function ProjectionView({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
-  const raw = Array.isArray(sp.mesi) ? sp.mesi[0] : sp.mesi;
-  const horizon = HORIZONS.find((h) => h.value === raw)?.value ?? "12";
+  const horizon = horizonParam(sp.mesi);
   const { today, accounts, projection } = await loadProjection(Number(horizon));
   const current = monthKey(today);
   // History: the months before the current one, month-end balances.

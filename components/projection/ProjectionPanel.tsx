@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Amount, Card, ProjectionChart, type ProjectionPoint, SegmentedControl, Select } from "@monetio/ui";
+import { HORIZONS } from "./horizons";
 
 export interface ProjectionSeries {
   id: string;
@@ -44,13 +45,6 @@ export function ProjectionPanel({ series, title, subtitle }: { series: Projectio
     </Card>
   );
 }
-
-export const HORIZONS = [
-  { value: "6", label: "6 mesi" },
-  { value: "12", label: "1 anno" },
-  { value: "36", label: "3 anni" },
-  { value: "120", label: "10 anni" },
-] as const;
 
 /** Horizon switch that updates the `?mesi=` search param. */
 export function HorizonSwitch({ value }: { value: string }) {
