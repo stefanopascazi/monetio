@@ -71,7 +71,7 @@ export function AmountInput({
           inputMode="decimal"
           autoComplete="off"
           autoFocus={autoFocus}
-          placeholder="0.00"
+          placeholder={toText(0, locale)}
           value={text}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(inputId, hint, error)}
