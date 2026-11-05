@@ -26,4 +26,11 @@ describe("projectionPoints", () => {
       { label: "nov", valueCents: 7, projected: true },
     ]);
   });
+
+  it("adds the year when months would repeat", () => {
+    const projection = Array.from({ length: 13 }, (_, i) => ({ month: `20${27 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`, byAccount: {}, totalCents: 0 }));
+    const labels = projectionPoints([], projection, (p) => p.totalCents).map((p) => p.label);
+    expect(labels[0]).toBe("gen 2027");
+    expect(new Set(labels).size).toBe(13);
+  });
 });

@@ -82,7 +82,7 @@ export function ProjectionChart({ data, height = 240, currency, title = messages
           ))}
           {data.map((d, i) =>
             i % every === 0 || i === data.length - 1 ? (
-              <text key={d.label} className="mio-chart__tick" x={x(i)} y={height - 6} textAnchor="middle">
+              <text key={`${i}-${d.label}`} className="mio-chart__tick" x={x(i)} y={height - 6} textAnchor="middle">
                 {d.label}
               </text>
             ) : null,

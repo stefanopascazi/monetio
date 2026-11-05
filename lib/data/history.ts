@@ -32,8 +32,9 @@ export function lastMonths(current: string, n: number): string[] {
 
 /** Chart points: history (excluding the current month) followed by projected month-ends. */
 export function projectionPoints(history: { month: string; valueCents: number }[], projection: ProjectionMonth[], pick: (p: ProjectionMonth) => number): ProjectionPoint[] {
-  const longRange = projection.length > 24;
-  const label = (m: string) => (longRange ? monthLabel(m) : monthLabel(m).split(" ")[0]);
+  // Over 12 points the same month name repeats: add the year so labels stay distinct.
+  const withYear = history.length + projection.length > 12;
+  const label = (m: string) => (withYear ? monthLabel(m) : monthLabel(m).split(" ")[0]);
   return [
     ...history.map((h) => ({ label: label(h.month), valueCents: h.valueCents })),
     ...projection.map((p) => ({ label: label(p.month), valueCents: pick(p), projected: true })),

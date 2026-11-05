@@ -61,7 +61,7 @@ export function CashflowChart({ data, height = 220, currency, title = messages.c
         {data.map((d, i) => {
           const cx0 = M.left + band * i + band / 2;
           return (
-            <g key={d.label}>
+            <g key={`${i}-${d.label}`}>
               {hover === i && <rect className="mio-chart__hover-band" x={cx0 - band / 2} y={M.top} width={band} height={innerH} rx={6} />}
               <path d={barPath(cx0 - barW - 1, y(d.incomeCents), barW, y(0) - y(d.incomeCents))} fill="var(--mio-chart-1)" />
               <path d={barPath(cx0 + 1, y(d.expenseCents), barW, y(0) - y(d.expenseCents))} fill="var(--mio-chart-2)" />
