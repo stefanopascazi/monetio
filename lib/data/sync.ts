@@ -16,7 +16,7 @@ const CATCH_UP_DAYS = 120;
 export async function syncAutoRules(ctx: AppContext, today: string): Promise<number> {
   const since = addDays(today, -CATCH_UP_DAYS);
   const [rules, occ] = await Promise.all([listRules(), listBookedOccurrences(since)]);
-  const pending = autoBookings(rules, bookedOccurrences(occ), today, since);
+  const pending = autoBookings(rules, bookedOccurrences(occ, rules), today, since);
   if (!pending.length) return 0;
   const supabase = await createClient();
   let booked = 0;

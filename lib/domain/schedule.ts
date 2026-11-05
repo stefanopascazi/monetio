@@ -1,17 +1,27 @@
 import { contributionAmount } from "./contribution";
 import { addDays, endOfMonth, makeDate, monthKey, parseISO } from "./dates";
 import { occurrences } from "./recurrence";
-import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
+import type { ContributionRule, ISODate, RecurringRule, RuleFrequency, Transaction } from "./types";
 
-export const ruleKey = (ruleId: string, date: ISODate) => `r:${ruleId}|${date}`;
-export const contributionKey = (ruleId: string, date: ISODate) => `c:${ruleId}|${date}`;
+/**
+ * Period an occurrence belongs to: its month for month-based schedules, the date for weekly ones.
+ * Matching payments by period (not exact date) keeps an item paid when its day is edited later.
+ */
+export const occurrencePeriod = (date: ISODate, frequency: RuleFrequency = "monthly") => (frequency === "weekly" ? date : monthKey(date));
+
+export const ruleKey = (ruleId: string, date: ISODate, frequency: RuleFrequency = "monthly") => `r:${ruleId}|${occurrencePeriod(date, frequency)}`;
+export const contributionKey = (ruleId: string, date: ISODate) => `c:${ruleId}|${monthKey(date)}`;
 
 /** Keys of rule/contribution occurrences already turned into transactions. */
-export function bookedOccurrences(txns: Pick<Transaction, "recurringRuleId" | "contributionRuleId" | "occurrenceDate">[]): Set<string> {
+export function bookedOccurrences(
+  txns: Pick<Transaction, "recurringRuleId" | "contributionRuleId" | "occurrenceDate">[],
+  rules: Pick<RecurringRule, "id" | "frequency">[] = [],
+): Set<string> {
+  const freq = new Map(rules.map((r) => [r.id, r.frequency]));
   const set = new Set<string>();
   for (const t of txns) {
     if (!t.occurrenceDate) continue;
-    if (t.recurringRuleId) set.add(ruleKey(t.recurringRuleId, t.occurrenceDate));
+    if (t.recurringRuleId) set.add(ruleKey(t.recurringRuleId, t.occurrenceDate, freq.get(t.recurringRuleId)));
     if (t.contributionRuleId) set.add(contributionKey(t.contributionRuleId, t.occurrenceDate));
   }
   return set;
@@ -36,7 +46,7 @@ export interface DueEntry {
 
 function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate): DueEntry {
   return {
-    key: ruleKey(r.id, date),
+    key: ruleKey(r.id, date, r.frequency),
     source: "rule",
     ruleId: r.id,
     date,
@@ -55,7 +65,7 @@ function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate): DueEntry {
 export function autoBookings(rules: RecurringRule[], booked: Set<string>, today: ISODate, since: ISODate): DueEntry[] {
   return rules
     .filter((r) => r.active && r.schedule === "auto")
-    .flatMap((r) => occurrences(r, since, today).filter((d) => !booked.has(ruleKey(r.id, d))).map((d) => ruleEntry(r, d, today)));
+    .flatMap((r) => occurrences(r, since, today).filter((d) => !booked.has(ruleKey(r.id, d, r.frequency))).map((d) => ruleEntry(r, d, today)));
 }
 
 /** Spending (positive cents) that a contribution rule shares, for a month. */
@@ -104,7 +114,7 @@ export function dueEntries(
   const to = addDays(today, horizonDays);
   const fromRules = rules
     .filter((r) => r.active && r.schedule === "due")
-    .flatMap((r) => occurrences(r, from, to).filter((d) => !booked.has(ruleKey(r.id, d))).map((d) => ruleEntry(r, d, today)));
+    .flatMap((r) => occurrences(r, from, to).filter((d) => !booked.has(ruleKey(r.id, d, r.frequency))).map((d) => ruleEntry(r, d, today)));
   const fromContributions = contributions
     .filter((c) => c.active)
     .flatMap((c) =>
@@ -120,7 +130,7 @@ export function upcomingOccurrences(rules: RecurringRule[], booked: Set<string>,
   const to = addDays(today, days);
   return rules
     .filter((r) => r.active)
-    .flatMap((r) => occurrences(r, today, to).filter((d) => !booked.has(ruleKey(r.id, d))).map((d) => ruleEntry(r, d, today)))
+    .flatMap((r) => occurrences(r, today, to).filter((d) => !booked.has(ruleKey(r.id, d, r.frequency))).map((d) => ruleEntry(r, d, today)))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 

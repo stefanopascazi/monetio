@@ -15,6 +15,23 @@ describe("bookedOccurrences", () => {
   });
 });
 
+describe("period matching", () => {
+  it("keeps an occurrence paid when the rule's day changes within the month", () => {
+    const paid = bookedOccurrences([txn({ amountCents: -1, bookedOn: "2026-11-03", recurringRuleId: "luce", occurrenceDate: "2026-11-15" })], [{ id: "luce", frequency: "monthly" }]);
+    const moved = rule({ id: "luce", amountCents: -10000, schedule: "due", dayOfMonth: 3, startDate: "2026-11-01" });
+    expect(dueEntries([moved], [], paid, today, () => 0, { lookbackDays: 30, horizonDays: 20 })).toEqual([]);
+  });
+
+  it("matches weekly rules by exact date", () => {
+    expect(ruleKey("w", "2026-11-03", "weekly")).not.toBe(ruleKey("w", "2026-11-10", "weekly"));
+    expect(ruleKey("m", "2026-11-03")).toBe(ruleKey("m", "2026-11-28"));
+  });
+
+  it("matches contributions by month", () => {
+    expect(contributionKey("c", "2026-11-03")).toBe(contributionKey("c", "2026-11-28"));
+  });
+});
+
 describe("autoBookings", () => {
   it("returns unbooked auto occurrences up to today", () => {
     const r = rule({ amountCents: -78110, dayOfMonth: 1, startDate: "2026-09-01" });

@@ -64,7 +64,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       continue;
     }
     for (const d of occurrences(r, from, end)) {
-      if (!booked.has(ruleKey(r.id, d))) push(d, r.accountId, r.amountCents, counterpart);
+      if (!booked.has(ruleKey(r.id, d, r.frequency))) push(d, r.accountId, r.amountCents, counterpart);
     }
   }
 

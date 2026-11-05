@@ -28,7 +28,7 @@ export const loadAgenda = cache(async () => {
     listBookedOccurrences(since),
     listFlows(startOfMonth(monthKey(since))),
   ]);
-  const booked = bookedOccurrences(occ);
+  const booked = bookedOccurrences(occ, rules);
   return {
     today,
     rules,
