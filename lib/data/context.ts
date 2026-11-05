@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 import { createClient } from "../supabase/server";
 import { mapMember } from "./mappers";
@@ -17,6 +18,8 @@ export interface AppContext {
 
 /** Signed-in user, without household checks. Redirects guests to /login. */
 export const getUser = cache(async () => {
+  // Session data is per request: never prerender past this point (dates are read later).
+  await connection();
   const supabase = await createClient();
   const {
     data: { user },
@@ -29,14 +32,23 @@ export const getUser = cache(async () => {
  * Current user with household and members (one request-scoped read).
  * Links a pre-created member by email on first login; users without a household go to onboarding.
  */
+/** Member row of the current user, linking a pre-created member by email if needed. Null when none. */
+export const findMembership = cache(async () => {
+  const user = await getUser();
+  const supabase = await createClient();
+  const { data: mine } = await supabase.from("household_members").select("*").eq("user_id", user.id).maybeSingle();
+  if (mine) return mine;
+  const { data: claimed, error } = await supabase.rpc("claim_membership");
+  if (error) console.error("claim_membership failed", error.message);
+  if (!claimed) return null;
+  const { data } = await supabase.from("household_members").select("*").eq("id", claimed).maybeSingle();
+  return data;
+});
+
 export const getContext = cache(async (): Promise<AppContext> => {
   const user = await getUser();
   const supabase = await createClient();
-  let { data: mine } = await supabase.from("household_members").select("*").eq("user_id", user.id).maybeSingle();
-  if (!mine) {
-    await supabase.rpc("claim_membership");
-    ({ data: mine } = await supabase.from("household_members").select("*").eq("user_id", user.id).maybeSingle());
-  }
+  const mine = await findMembership();
   if (!mine) redirect("/benvenuto");
 
   const [{ data: household }, { data: members }] = await Promise.all([
