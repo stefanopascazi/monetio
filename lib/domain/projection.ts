@@ -1,5 +1,5 @@
 import { contributionAmount, contributionBase } from "./contribution";
-import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
+import { addDays, addMonthsToKey, daysInMonth, endOfMonth, monthKey, parseISO, startOfMonth } from "./dates";
 import { occurrences } from "./recurrence";
 import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
 import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
@@ -23,6 +23,8 @@ export interface ProjectionInput {
   lookbackDays?: number;
   /** Actual amounts/dates entered for single occurrences. */
   overrides?: OverrideMap;
+  /** Monthly averages (positive cents) of income/spending not covered by rules, per account. */
+  baseline?: Record<string, { incomeCents: number; expenseCents: number }>;
 }
 
 export interface ProjectionMonth {
@@ -80,6 +82,20 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       if (booked.has(contributionKey(c.id, d))) continue;
       const { baseCents } = contributionBase(c, monthKey(d), currentMonth, input.contributionSpending);
       push(d, c.fromAccountId, -contributionAmount(c, baseCents), c.toAccountId);
+    }
+  }
+
+  // Historical averages: full months ahead, only the remaining share of the current month.
+  if (input.baseline) {
+    const { y, m, d } = parseISO(today);
+    const remaining = (daysInMonth(y, m) - d) / daysInMonth(y, m);
+    for (let n = 0; n < input.months; n++) {
+      const month = addMonthsToKey(currentMonth, n);
+      const share = n === 0 ? remaining : 1;
+      for (const [accountId, b] of Object.entries(input.baseline)) {
+        const net = Math.round((b.incomeCents - b.expenseCents) * share);
+        if (net) out.push({ date: endOfMonth(month), accountId, amountCents: net });
+      }
     }
   }
 

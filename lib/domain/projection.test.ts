@@ -61,4 +61,10 @@ describe("projectBalances", () => {
     const res = projectBalances({ ...base, months: 2, rules: [luce], overrides });
     expect(res.map((p) => p.byAccount.joint)).toEqual([100000, 91260]);
   });
+
+  it("adds historical averages: remaining share now, full months after", () => {
+    // 5 Nov: 25 of 30 days left.
+    const res = projectBalances({ ...base, months: 2, baseline: { ste: { incomeCents: 220000, expenseCents: 40000 } } });
+    expect(res.map((p) => p.byAccount.ste)).toEqual([50000 + 150000, 50000 + 150000 + 180000]);
+  });
 });
