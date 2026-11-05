@@ -1,23 +1,14 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { PasswordForm } from "@/components/auth/PasswordForm";
-import { getUser } from "@/lib/data/context";
+import { PasswordGate } from "@/components/auth/PasswordGate";
 
 export const metadata: Metadata = { title: "Scegli la password" };
 
+// The session is opened client-side from the email link (tokens may arrive in the URL fragment).
 export default function PasswordPage() {
   return (
     <AuthCard title="Scegli la password" description="La userai per accedere a MonetIO.">
-      <Suspense fallback={null}>
-        <SignedInPasswordForm />
-      </Suspense>
+      <PasswordGate />
     </AuthCard>
   );
-}
-
-// Requires the session opened by the invite or reset link.
-async function SignedInPasswordForm() {
-  await getUser();
-  return <PasswordForm />;
 }

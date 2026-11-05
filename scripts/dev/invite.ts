@@ -19,9 +19,18 @@ try {
   if (values.name) await sql`update household_members set display_name = ${values.name} where id = ${member.id}`;
 
   const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-  const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo: `${values.site}/auth/password` });
-  if (error) throw error;
-  console.log(`Invito inviato a ${email}`);
+  const redirectTo = `${values.site}/auth/password`;
+  const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
+  if (error && /already been registered/i.test(error.message)) {
+    // Account exists (e.g. a previous invite): send a password-setup link instead.
+    const reset = await admin.auth.resetPasswordForEmail(email, { redirectTo });
+    if (reset.error) throw reset.error;
+    console.log(`Account già esistente: inviato link per impostare la password a ${email}`);
+  } else if (error) {
+    throw error;
+  } else {
+    console.log(`Invito inviato a ${email}`);
+  }
 } finally {
   await sql.end();
 }
