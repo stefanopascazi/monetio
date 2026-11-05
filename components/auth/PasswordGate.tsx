@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Skeleton } from "@monetio/ui";
 import { adoptSession, exchangeCode, hasSession } from "@/app/actions/session";
 import { parseAuthHash } from "@/lib/supabase/hash";
@@ -15,15 +15,18 @@ type Status = { kind: "loading" } | { kind: "ready" } | { kind: "error"; message
  */
 export function PasswordGate() {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
+  // Email tokens are single-use: run once even when Strict Mode re-runs effects.
+  const started = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (started.current) return;
+    started.current = true;
     (async () => {
       const fromHash = parseAuthHash(window.location.hash);
       const code = new URLSearchParams(window.location.search).get("code");
       let ok = false;
       if (fromHash.kind === "error") {
-        if (!cancelled) setStatus({ kind: "error", message: fromHash.message });
+        setStatus({ kind: "error", message: fromHash.message });
         return;
       }
       if (fromHash.kind === "session") ok = await adoptSession(fromHash.accessToken, fromHash.refreshToken);
@@ -31,11 +34,8 @@ export function PasswordGate() {
       else ok = await hasSession();
       // Drop tokens from the address bar.
       window.history.replaceState(null, "", window.location.pathname);
-      if (!cancelled) setStatus(ok ? { kind: "ready" } : { kind: "error", message: "Il link non è valido o è scaduto." });
+      setStatus(ok ? { kind: "ready" } : { kind: "error", message: "Il link non è valido o è scaduto." });
     })();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   if (status.kind === "loading") return <Skeleton lines={3} height={44} />;

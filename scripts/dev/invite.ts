@@ -18,7 +18,10 @@ try {
   if (member.user_id) throw new Error("Questo membro ha già un account");
   if (values.name) await sql`update household_members set display_name = ${values.name} where id = ${member.id}`;
 
-  const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+  // Implicit flow: the link must work in any browser (PKCE would need a verifier stored by this script).
+  const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { persistSession: false, flowType: "implicit" },
+  });
   const redirectTo = `${values.site}/auth/password`;
   const { error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo });
   if (error && /already been registered/i.test(error.message)) {
