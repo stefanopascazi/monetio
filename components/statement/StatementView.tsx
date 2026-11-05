@@ -5,7 +5,8 @@ import { AccountSettings } from "@/components/accounts/AccountSettings";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionList } from "@/components/transactions/TransactionList";
-import { ensureSynced } from "@/lib/data/agenda";
+import { ensureSynced, loadPendingTransfers } from "@/lib/data/agenda";
+import { PendingTransfersNote } from "@/components/accounts/PendingTransfersNote";
 import { withQuery, yearParam } from "@/lib/data/params";
 import { balanceBefore, listAccounts, listCategories, listMonthlyBalances, listTransactions } from "@/lib/data/queries";
 import { toTxnView } from "@/lib/data/views";
@@ -25,12 +26,13 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
   const year = yearParam(sp.anno, thisYear, firstYear, thisYear + 1);
   const from = `${year}-01-01`;
   const to = `${year}-12-31`;
-  const [categories, txns, opening, monthly, planned] = await Promise.all([
+  const [categories, txns, opening, monthly, planned, pending] = await Promise.all([
     listCategories(),
     listTransactions({ accountId: id, from, to, status: "booked", limit: 1000 }),
     balanceBefore(id, from),
     listMonthlyBalances(`${year}-01-01`),
     listTransactions({ accountId: id, status: "planned", limit: 200 }),
+    loadPendingTransfers(),
   ]);
   const rows = withRunningBalance(opening, txns);
   const groups = groupByMonthDesc(rows);
@@ -46,7 +48,12 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
         eyebrow={account.visibility === "shared" ? "Conto condiviso" : `Conto privato di ${owner?.displayName ?? "un membro"}`}
         title={account.name}
         description={account.institution ?? undefined}
-        actions={<Amount cents={account.balanceCents} tone="neutral" size="xl" />}
+        actions={
+          <span className="flex flex-col items-end gap-2">
+            <Amount cents={account.balanceCents} tone="neutral" size="xl" />
+            <PendingTransfersNote pending={pending[id]} />
+          </span>
+        }
       />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.4fr]">
         <div className="flex flex-col gap-4">

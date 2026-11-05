@@ -1,10 +1,11 @@
 import "server-only";
 import { cache } from "react";
-import { addDays, addMonthsToKey, monthKey, startOfMonth, todayISO } from "../domain/dates";
+import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth, todayISO } from "../domain/dates";
 import { projectBalances } from "../domain/projection";
 import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
 import { getContext } from "./context";
 import { categorySpentFrom, contributionSpendingFrom } from "./flows";
+import { pendingTransfersByAccount } from "./pending-transfers";
 import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
 import { syncAutoRules } from "./sync";
 
@@ -77,4 +78,10 @@ export const loadProjection = cache(async (months: number) => {
     p.totalCents = Object.values(p.byAccount).reduce((s, v) => s + v, 0);
   }
   return { today: agenda.today, accounts: active, projection };
+});
+
+/** Pending transfers per account up to the end of the current month. */
+export const loadPendingTransfers = cache(async () => {
+  const agenda = await loadAgenda();
+  return pendingTransfersByAccount(agenda.due, endOfMonth(monthKey(agenda.today)));
 });

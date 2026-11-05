@@ -6,7 +6,7 @@ import { ProjectionPanel } from "@/components/projection/ProjectionPanel";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { createTransaction } from "@/app/actions/transactions";
-import { loadAgenda, loadProjection } from "@/lib/data/agenda";
+import { loadAgenda, loadPendingTransfers, loadProjection } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { cashflowSeries, categorySlices } from "@/lib/data/flows";
 import { lastMonths, projectionPoints } from "@/lib/data/history";
@@ -21,12 +21,13 @@ export async function Dashboard() {
   const today = agenda.today;
   const month = monthKey(today);
   const months = lastMonths(month, 6);
-  const [accounts, categories, flows, recent, { projection }] = await Promise.all([
+  const [accounts, categories, flows, recent, { projection }, pending] = await Promise.all([
     listAccounts(),
     listCategories(),
     listFlows(startOfMonth(months[0])),
     listTransactions({ to: today, status: "booked", limit: 8 }),
     loadProjection(12),
+    loadPendingTransfers(),
   ]);
   const active = accounts.filter((a) => !a.archived);
   const total = active.reduce((s, a) => s + a.balanceCents, 0);
@@ -56,7 +57,7 @@ export async function Dashboard() {
         </div>
       </section>
 
-      <AccountGrid accounts={active} members={ctx.members} />
+      <AccountGrid accounts={active} members={ctx.members} pending={pending} />
 
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
         <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: refs[0]?.id ?? "", bookedOn: today }} />
