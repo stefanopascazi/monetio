@@ -3,7 +3,7 @@
 /** Calendar date as `YYYY-MM-DD` (no time zone). */
 export type ISODate = string;
 
-export type AccountType = "checking" | "savings" | "investment" | "cash";
+export type AccountType = "checking" | "savings" | "investment" | "card" | "cash";
 export type Visibility = "shared" | "private";
 export type TransactionKind = "income" | "expense" | "transfer" | "adjustment";
 export type TransactionStatus = "booked" | "planned";
@@ -85,6 +85,10 @@ export interface ContributionRule {
   roundingCents: number;
   dayOfMonth: number;
   estimatedSpendingCents: number;
+  /** Account whose spending is shared; null means the receiving account. */
+  spendingAccountId: string | null;
+  /** 0 = same month as the transfer, -1 = previous month (e.g. card statement). */
+  spendingMonthOffset: 0 | -1;
   startDate: ISODate;
   endDate: ISODate | null;
   active: boolean;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ACCOUNTS, CATEGORIES } from "./mapping";
+import { ACCOUNTS, CATEGORIES, EXTRA_ACCOUNTS } from "./mapping";
 import { SEED_CONTRIBUTIONS, SEED_RULES } from "./seed-rules";
 
-const accountKeys = new Set(ACCOUNTS.map((a) => a.key));
+const accountKeys = new Set([...ACCOUNTS, ...EXTRA_ACCOUNTS].map((a) => a.key));
 const categories = new Set(CATEGORIES.map((c) => c.name));
 
 describe("seed rules", () => {
@@ -21,6 +21,7 @@ describe("seed rules", () => {
     for (const c of SEED_CONTRIBUTIONS) {
       expect(accountKeys.has(c.from) && accountKeys.has(c.to)).toBe(true);
       expect(c.categories.every((n) => categories.has(n))).toBe(true);
+      if (c.spendingAccount) expect(accountKeys.has(c.spendingAccount)).toBe(true);
     }
   });
 });

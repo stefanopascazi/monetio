@@ -34,6 +34,7 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   checking: "Conto corrente",
   savings: "Risparmio",
   investment: "Investimenti",
+  card: "Carta di credito",
   cash: "Contanti",
 };
 

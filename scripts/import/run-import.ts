@@ -3,7 +3,7 @@
 import { parseArgs } from "node:util";
 import { connect } from "../db/connect.ts";
 import { buildImport } from "./build.ts";
-import { ACCOUNTS, type AccountKey, CATEGORIES } from "./mapping.ts";
+import { ACCOUNTS, type AccountKey, CATEGORIES, EXTRA_ACCOUNTS } from "./mapping.ts";
 import { readHistoryRows } from "./read-xlsx.ts";
 import { SEED_CONTRIBUTIONS, SEED_RULES } from "./seed-rules.ts";
 
@@ -76,6 +76,16 @@ try {
       }
       accountIds[spec.key] = id;
     }
+    for (const spec of EXTRA_ACCOUNTS) {
+      const [found] = await tx<{ id: string }[]>`select id from accounts where household_id = ${householdId} and name = ${spec.name}`;
+      accountIds[spec.key] =
+        found?.id ??
+        (
+          await tx<{ id: string }[]>`
+            insert into accounts (household_id, name, type, visibility, owner_member_id, sort_order, opening_date)
+            values (${householdId}, ${spec.name}, ${spec.type}, ${spec.visibility}, ${spec.owner ? memberIds[spec.owner] : null}, ${spec.sortOrder}, ${spec.openingDate}) returning id`
+        )[0].id;
+    }
 
     const txRows = result.transactions.map((t) => ({
       household_id: householdId,
@@ -108,9 +118,11 @@ try {
       }
       for (const c of SEED_CONTRIBUTIONS) {
         await tx`insert into contribution_rules
-          (household_id, from_account_id, to_account_id, description, fixed_cents, share_percent, category_ids, day_of_month, estimated_spending_cents, start_date)
+          (household_id, from_account_id, to_account_id, description, fixed_cents, share_percent, category_ids, day_of_month,
+           estimated_spending_cents, start_date, spending_account_id, spending_month_offset, rounding_cents)
           values (${householdId}, ${accountIds[c.from]}, ${accountIds[c.to]}, ${c.description}, ${c.fixedCents}, ${c.sharePercent},
-                  ${c.categories.map((n) => categoryIds[n])}, ${c.dayOfMonth}, ${c.estimatedSpendingCents}, ${c.startDate})`;
+                  ${c.categories.map((n) => categoryIds[n])}, ${c.dayOfMonth}, ${c.estimatedSpendingCents}, ${c.startDate},
+                  ${c.spendingAccount ? accountIds[c.spendingAccount] : null}, ${c.spendingMonthOffset ?? 0}, ${c.roundingCents ?? 1000})`;
       }
       console.log(`Ricorrenze: ${SEED_RULES.length}, quote automatiche: ${SEED_CONTRIBUTIONS.length}`);
     } else {

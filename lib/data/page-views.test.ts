@@ -34,6 +34,7 @@ describe("page views", () => {
 
   it("computes the current contribution", () => {
     const [v] = contributionViews([contribution({ fromAccountId: "a1", toAccountId: "joint" })], accounts, "2026-11-05", () => 28057);
-    expect(v).toMatchObject({ fromName: "Conto Ste", toName: "Cointestato", currentCents: 95000, editable: true });
+    // Open month: max(actual 280.57, estimate 450) / 2 = 225 -> 230 (rounded up to 10), + 800.
+    expect(v).toMatchObject({ fromName: "Conto Ste", toName: "Cointestato", currentCents: 103000, editable: true });
   });
 });

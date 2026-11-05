@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categorySpending, ceilToStep, contributionAmount } from "./contribution";
+import { categorySpending, ceilToStep, contributionAmount, contributionBase } from "./contribution";
 import { contribution, txn } from "./fixtures";
 
 describe("ceilToStep", () => {
@@ -31,5 +31,20 @@ describe("contributionAmount", () => {
     // Spreadsheet: -800 + CEILING(280.57 / 2, 10) = 950
     expect(contributionAmount(contribution(), 28057)).toBe(95000);
     expect(contributionAmount(contribution({ sharePercent: 0 }), 28057)).toBe(80000);
+  });
+});
+
+describe("contributionBase", () => {
+  const spending = (_: unknown, month: string) => (month === "2026-10" ? 36647 : month === "2026-11" ? 17100 : 0);
+
+  it("uses the closed previous month when the offset is -1", () => {
+    const c = contribution({ spendingMonthOffset: -1 });
+    expect(contributionBase(c, "2026-11", "2026-11", spending)).toEqual({ baseCents: 36647, baseMonth: "2026-10", estimated: false });
+  });
+
+  it("estimates when the referenced month is open or future", () => {
+    const c = contribution({ spendingMonthOffset: -1, estimatedSpendingCents: 45000 });
+    expect(contributionBase(c, "2026-12", "2026-11", spending)).toEqual({ baseCents: 45000, baseMonth: "2026-11", estimated: true });
+    expect(contributionBase(contribution(), "2027-01", "2026-11", spending)).toEqual({ baseCents: 45000, baseMonth: "2027-01", estimated: true });
   });
 });

@@ -11,7 +11,15 @@ describe("parseContributionForm", () => {
     for (const [k, v] of Object.entries({ fromAccountId: A, toAccountId: B, fixedCents: "80000", sharePercent: "50", dayOfMonth: "28", estimatedSpendingCents: "45000", description: "Quota" })) fd.set(k, v);
     fd.append("categoryIds", C);
     const res = parseContributionForm(fd);
-    expect(res.ok && res.value).toMatchObject({ fixedCents: 80000, sharePercent: 50, categoryIds: [C], active: true });
+    expect(res.ok && res.value).toMatchObject({ fixedCents: 80000, sharePercent: 50, categoryIds: [C], active: true, spendingAccountId: null, spendingMonthOffset: 0, roundingCents: 1000 });
+  });
+
+  it("reads spending account, previous month and rounding", () => {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries({ fromAccountId: A, toAccountId: B, sharePercent: "100", dayOfMonth: "5", description: "Estratto conto", spendingAccountId: C, spendingMonthOffset: "-1", roundingCents: "1" })) fd.set(k, v);
+    fd.append("categoryIds", C);
+    const res = parseContributionForm(fd);
+    expect(res.ok && res.value).toMatchObject({ spendingAccountId: C, spendingMonthOffset: -1, roundingCents: 1 });
   });
 
   it("requires categories when sharing a percentage", () => {

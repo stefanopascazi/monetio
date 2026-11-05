@@ -12,6 +12,7 @@ import { ContributionForm } from "./ContributionForm";
 export interface ContributionView extends ContributionRule {
   fromName: string;
   toName: string;
+  spendingName: string;
   /** Amount for the current month with the spending booked so far. */
   currentCents: number;
   editable: boolean;
@@ -51,7 +52,8 @@ export function ContributionList({ items, accounts, categories }: { items: Contr
             <span className="truncate font-semibold">{c.description}</span>
             <span className="truncate text-sm font-normal text-ink-muted">
               {c.fromName} → {c.toName} · giorno {c.dayOfMonth}
-              {c.sharePercent > 0 ? ` · fisso + ${c.sharePercent}% spese condivise` : ""}
+              {c.fixedCents > 0 ? " · quota fissa" : ""}
+              {c.sharePercent > 0 ? ` · ${c.sharePercent}% spese su ${c.spendingName}${c.spendingMonthOffset === -1 ? " del mese prima" : ""}` : ""}
             </span>
           </span>
         ),

@@ -1,4 +1,4 @@
-import { contributionAmount } from "./contribution";
+import { contributionAmount, contributionBase } from "./contribution";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
 import { occurrences } from "./recurrence";
 import { contributionKey, ruleKey } from "./schedule";
@@ -73,10 +73,8 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     const dates = occurrences({ frequency: "monthly", dayOfMonth: c.dayOfMonth, startDate: c.startDate, endDate: c.endDate }, from, end);
     for (const d of dates) {
       if (booked.has(contributionKey(c.id, d))) continue;
-      const month = monthKey(d);
-      const actual = month <= currentMonth ? input.contributionSpending(c, month) : 0;
-      const base = month < currentMonth ? actual : Math.max(actual, c.estimatedSpendingCents);
-      push(d, c.fromAccountId, -contributionAmount(c, base), c.toAccountId);
+      const { baseCents } = contributionBase(c, monthKey(d), currentMonth, input.contributionSpending);
+      push(d, c.fromAccountId, -contributionAmount(c, baseCents), c.toAccountId);
     }
   }
 

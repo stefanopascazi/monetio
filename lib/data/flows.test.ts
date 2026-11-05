@@ -34,6 +34,9 @@ describe("flows", () => {
 
   it("computes spending lookups", () => {
     expect(contributionSpendingFrom(flows)(contribution({ categoryIds: ["spesa"] }), "2026-10")).toBe(28057);
+    // Spending read from another account (e.g. the card) instead of the receiving one.
+    expect(contributionSpendingFrom(flows)(contribution({ categoryIds: ["stip"], spendingAccountId: "ste" }), "2026-10")).toBe(0);
+    expect(contributionSpendingFrom(flows)(contribution({ categoryIds: ["spesa"], spendingAccountId: "ste" }), "2026-10")).toBe(0);
     expect(categorySpentFrom(flows)("joint", "luce", "2026-10")).toBe(9000);
     expect(categorySpentFrom(flows)("joint", null, "2026-10")).toBe(37057);
   });

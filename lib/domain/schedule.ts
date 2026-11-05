@@ -1,4 +1,4 @@
-import { contributionAmount } from "./contribution";
+import { type ContributionSpending, contributionAmount, contributionBase } from "./contribution";
 import { addDays, endOfMonth, makeDate, monthKey, parseISO } from "./dates";
 import { occurrences } from "./recurrence";
 import type { ContributionRule, ISODate, RecurringRule, RuleFrequency, Transaction } from "./types";
@@ -69,12 +69,10 @@ export function autoBookings(rules: RecurringRule[], booked: Set<string>, today:
 }
 
 /** Spending (positive cents) that a contribution rule shares, for a month. */
-export type SpendingLookup = (rule: ContributionRule, month: string) => number;
+export type SpendingLookup = ContributionSpending;
 
 export function contributionEntry(c: ContributionRule, date: ISODate, today: ISODate, spending: SpendingLookup): DueEntry {
-  const month = monthKey(date);
-  const future = month > monthKey(today);
-  const base = future ? c.estimatedSpendingCents : spending(c, month);
+  const { baseCents, estimated } = contributionBase(c, monthKey(date), monthKey(today), spending);
   return {
     key: contributionKey(c.id, date),
     source: "contribution",
@@ -85,10 +83,10 @@ export function contributionEntry(c: ContributionRule, date: ISODate, today: ISO
     categoryId: null,
     kind: "transfer",
     description: c.description,
-    amountCents: -contributionAmount(c, base),
+    amountCents: -contributionAmount(c, baseCents),
     overdue: date < today,
-    // The current month's share keeps changing until the month closes.
-    estimated: future || (month === monthKey(today) && date >= today),
+    // The share keeps changing until the referenced month closes.
+    estimated,
   };
 }
 

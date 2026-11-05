@@ -91,6 +91,8 @@ export function mapContribution(r: Row): ContributionRule {
     roundingCents: num(r.rounding_cents) || 1000,
     dayOfMonth: num(r.day_of_month),
     estimatedSpendingCents: num(r.estimated_spending_cents),
+    spendingAccountId: str(r.spending_account_id),
+    spendingMonthOffset: num(r.spending_month_offset) === -1 ? -1 : 0,
     startDate: String(r.start_date),
     endDate: str(r.end_date),
     active: Boolean(r.active),

@@ -1,11 +1,11 @@
 // How the "Piano Risparmi" sheet maps onto MonetIO accounts, categories and transactions.
 
-export type AccountKey = "joint" | "ste" | "asha" | "asha2";
+export type AccountKey = "joint" | "ste" | "asha" | "asha2" | "conad";
 
 export interface AccountSpec {
   key: AccountKey;
   name: string;
-  type: "checking" | "savings" | "investment" | "cash";
+  type: "checking" | "savings" | "investment" | "card" | "cash";
   visibility: "shared" | "private";
   owner: "ste" | "asha" | null;
   /** Column holding the running balance. */
@@ -28,6 +28,11 @@ export const ACCOUNTS: AccountSpec[] = [
   { key: "ste", name: "Conto Ste", type: "checking", visibility: "private", owner: "ste", balanceCol: "BT", sortOrder: 1 },
   { key: "asha", name: "Conto Asha", type: "checking", visibility: "private", owner: "asha", balanceCol: "BH", sortOrder: 2 },
   { key: "asha2", name: "Conto Asha 2", type: "checking", visibility: "private", owner: "asha", balanceCol: "AQ", sortOrder: 3 },
+];
+
+/** Accounts not in the sheet, created empty from the first app month (e.g. the Conad card). */
+export const EXTRA_ACCOUNTS: (Omit<AccountSpec, "balanceCol"> & { openingDate: string })[] = [
+  { key: "conad", name: "Carta Conad", type: "card", visibility: "shared", owner: null, sortOrder: 4, openingDate: "2026-10-31" },
 ];
 
 export interface CategorySpec {

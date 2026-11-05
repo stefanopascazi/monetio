@@ -39,7 +39,7 @@ export function ContributionForm({ action, accounts, categories, contribution: c
     <FormPanel
       key={formKey}
       title={embedded ? "Modifica quota" : "Nuova quota automatica"}
-      description={embedded ? undefined : "Es. 800 € fissi + metà della spesa del cointestato"}
+      description={embedded ? undefined : "Es. metà della spesa del mese scorso sulla carta"}
       icon={embedded ? undefined : <Plus />}
       collapsible={!embedded}
       open={open}
@@ -58,7 +58,7 @@ export function ContributionForm({ action, accounts, categories, contribution: c
       {cats.map((id) => (
         <input key={id} type="hidden" name="categoryIds" value={id} />
       ))}
-      <TextField name="description" label="Descrizione" placeholder="Es. Quota mensile Ste" defaultValue={c?.description} error={error("description")} required className="mio-span-full" />
+      <TextField name="description" label="Descrizione" placeholder="Es. Quota spesa Ste" defaultValue={c?.description} error={error("description")} required className="mio-span-full" />
       <Select name="fromAccountId" label="Dal conto" defaultValue={c?.fromAccountId ?? ""} placeholder="Scegli il conto" options={toOptions(accounts)} error={error("fromAccountId")} />
       <Select name="toAccountId" label="Al conto" defaultValue={c?.toAccountId ?? ""} placeholder="Scegli il conto" options={toOptions(accounts)} error={error("toAccountId")} />
       <AmountInput label="Quota fissa" kind="transfer" valueCents={fixed} onValueChange={setFixed} error={error("fixedCents")} />
@@ -74,8 +74,35 @@ export function ContributionForm({ action, accounts, categories, contribution: c
         </div>
         {error("categoryIds") && <p className="text-sm text-danger">{error("categoryIds")}</p>}
       </div>
+      <Select
+        name="spendingAccountId"
+        label="Spese registrate sul conto"
+        defaultValue={c?.spendingAccountId ?? ""}
+        options={[{ value: "", label: "Lo stesso che riceve" }, ...toOptions(accounts)]}
+        hint="Es. la carta su cui fate la spesa"
+      />
+      <Select
+        name="spendingMonthOffset"
+        label="Mese di riferimento"
+        defaultValue={String(c?.spendingMonthOffset ?? 0)}
+        options={[
+          { value: "0", label: "Stesso mese del versamento" },
+          { value: "-1", label: "Mese precedente (es. estratto conto)" },
+        ]}
+      />
+      <Select
+        name="roundingCents"
+        label="Arrotonda per eccesso a"
+        defaultValue={String(c?.roundingCents ?? 1000)}
+        options={[
+          { value: "1", label: "Centesimo (importo esatto)" },
+          { value: "100", label: "1 €" },
+          { value: "500", label: "5 €" },
+          { value: "1000", label: "10 €" },
+        ]}
+      />
       <TextField name="dayOfMonth" label="Giorno del versamento" type="number" min={1} max={31} defaultValue={c?.dayOfMonth ?? 28} error={error("dayOfMonth")} />
-      <AmountInput label="Spesa condivisa stimata al mese" kind="neutral" valueCents={estimate} onValueChange={setEstimate} hint="Usata per le proiezioni dei mesi futuri" />
+      <AmountInput label="Spesa stimata al mese" kind="neutral" valueCents={estimate} onValueChange={setEstimate} hint="Usata per le proiezioni dei mesi futuri" />
       {embedded && <Switch label="Attiva" checked={active} onCheckedChange={setActive} className="mio-span-full" />}
     </FormPanel>
   );

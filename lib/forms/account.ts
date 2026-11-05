@@ -10,7 +10,7 @@ export interface AccountInput {
   openingDate: ISODate;
 }
 
-const TYPES: AccountType[] = ["checking", "savings", "investment", "cash"];
+const TYPES: AccountType[] = ["checking", "savings", "investment", "card", "cash"];
 
 export function parseAccountForm(fd: FormData): ParseResult<AccountInput> {
   const name = text(fd, "name");

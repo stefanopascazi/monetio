@@ -34,7 +34,7 @@ export function spentIn(flows: MonthlyFlow[], accountId: string, categoryIds: st
 }
 
 export const contributionSpendingFrom = (flows: MonthlyFlow[]) => (rule: ContributionRule, month: string) =>
-  spentIn(flows, rule.toAccountId, rule.categoryIds, month);
+  spentIn(flows, rule.spendingAccountId ?? rule.toAccountId, rule.categoryIds, month);
 
 export const categorySpentFrom = (flows: MonthlyFlow[]) => (accountId: string, categoryId: string | null, month: string) =>
   spentIn(flows, accountId, categoryId ? [categoryId] : null, month);

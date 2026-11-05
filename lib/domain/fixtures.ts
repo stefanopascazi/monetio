@@ -50,6 +50,8 @@ export function contribution(p: Partial<ContributionRule> = {}): ContributionRul
     roundingCents: 1000,
     dayOfMonth: 28,
     estimatedSpendingCents: 45000,
+    spendingAccountId: null,
+    spendingMonthOffset: 0,
     startDate: "2026-01-01",
     endDate: null,
     active: true,

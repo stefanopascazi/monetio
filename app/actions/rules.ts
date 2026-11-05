@@ -73,6 +73,9 @@ function contributionRow(v: ReturnType<typeof parseContributionForm> & { ok: tru
     category_ids: c.categoryIds,
     day_of_month: c.dayOfMonth,
     estimated_spending_cents: c.estimatedSpendingCents,
+    spending_account_id: c.spendingAccountId,
+    spending_month_offset: c.spendingMonthOffset,
+    rounding_cents: c.roundingCents,
     active: c.active,
   };
 }

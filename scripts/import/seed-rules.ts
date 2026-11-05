@@ -26,6 +26,9 @@ export interface SeedContribution {
   dayOfMonth: number;
   estimatedSpendingCents: number;
   startDate: string;
+  spendingAccount?: AccountKey;
+  spendingMonthOffset?: 0 | -1;
+  roundingCents?: number;
 }
 
 const START = "2026-11-01";
@@ -46,7 +49,11 @@ export const SEED_RULES: SeedRule[] = [
   { account: "joint", category: "Extra", kind: "expense", description: "Spesa annuale di ottobre", amountCents: -24600, frequency: "yearly", schedule: "due", dayOfMonth: 15, startDate: "2027-10-01" },
   { account: "joint", category: "Assegni e bonus", kind: "income", description: "Assegno unico", amountCents: 17870, frequency: "monthly", schedule: "auto", dayOfMonth: 20, startDate: START, endDate: "2043-04-30" },
   { account: "joint", category: "Figli", kind: "expense", description: "Baby-sitter", amountCents: -24000, frequency: "monthly", schedule: "estimate", dayOfMonth: 28, startDate: "2027-01-01", endDate: "2036-12-31" },
-  { account: "joint", category: "Spesa", kind: "expense", description: "Spesa del mese (stima)", amountCents: -45000, frequency: "monthly", schedule: "estimate", dayOfMonth: 28, startDate: START },
+  // Groceries are paid with the Conad card; its statement is settled from the joint account (see contributions).
+  { account: "conad", category: "Spesa", kind: "expense", description: "Spesa del mese (stima)", amountCents: -45000, frequency: "monthly", schedule: "estimate", dayOfMonth: 28, startDate: START },
+  // Fixed monthly quotas into the joint account.
+  { account: "ste", counterpart: "joint", category: "Quote e giroconti", kind: "transfer", description: "Quota fissa Ste", amountCents: -80000, frequency: "monthly", schedule: "due", dayOfMonth: 3, startDate: START },
+  { account: "asha", counterpart: "joint", category: "Quote e giroconti", kind: "transfer", description: "Quota fissa Asha", amountCents: -80000, frequency: "monthly", schedule: "due", dayOfMonth: 10, startDate: START },
   // Ste
   { account: "ste", category: "Stipendio", kind: "income", description: "Stipendio", amountCents: 220000, frequency: "monthly", schedule: "auto", dayOfMonth: 27, startDate: START },
   { account: "ste", counterpart: "joint", category: "Quote e giroconti", kind: "transfer", description: "Quota finanziamento", amountCents: -26950, frequency: "monthly", schedule: "auto", dayOfMonth: 27, startDate: START, endDate: "2029-03-31" },
@@ -63,8 +70,11 @@ export const SEED_RULES: SeedRule[] = [
   { account: "asha", category: "Spese varie", kind: "expense", description: "Spese del mese (stima)", amountCents: -70000, frequency: "monthly", schedule: "estimate", dayOfMonth: 28, startDate: START },
 ];
 
-// Spreadsheet: each pays 800 + CEILING(joint grocery / 2, 10) into the joint account.
+// Grocery of month M is on the Conad card; its statement (≈ day 1-2 of M+1) is charged on the joint
+// account on day 5, and each person transfers CEILING(statement / 2, 10) with their fixed quota.
+const CARD = { spendingAccount: "conad" as const, spendingMonthOffset: -1 as const, categories: ["Spesa"], estimatedSpendingCents: 45000, startDate: "2026-12-01" };
 export const SEED_CONTRIBUTIONS: SeedContribution[] = [
-  { from: "ste", to: "joint", description: "Quota mensile Ste", fixedCents: 80000, sharePercent: 50, categories: ["Spesa"], dayOfMonth: 28, estimatedSpendingCents: 45000, startDate: START },
-  { from: "asha", to: "joint", description: "Quota mensile Asha", fixedCents: 80000, sharePercent: 50, categories: ["Spesa"], dayOfMonth: 28, estimatedSpendingCents: 45000, startDate: START },
+  { ...CARD, from: "joint", to: "conad", description: "Estratto conto Carta Conad", fixedCents: 0, sharePercent: 100, dayOfMonth: 5, roundingCents: 1 },
+  { ...CARD, from: "ste", to: "joint", description: "Quota spesa Ste", fixedCents: 0, sharePercent: 50, dayOfMonth: 3 },
+  { ...CARD, from: "asha", to: "joint", description: "Quota spesa Asha", fixedCents: 0, sharePercent: 50, dayOfMonth: 10 },
 ];

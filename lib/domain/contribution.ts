@@ -1,5 +1,7 @@
-import { monthKey } from "./dates";
+import { addMonthsToKey, monthKey } from "./dates";
 import type { ContributionRule, Transaction } from "./types";
+
+export type ContributionSpending = (rule: ContributionRule, month: string) => number;
 
 /** Rounds positive cents up to the next multiple of `step` (spreadsheet CEILING). */
 export function ceilToStep(cents: number, step: number): number {
@@ -23,4 +25,21 @@ export function contributionAmount(
   spendingCents: number,
 ): number {
   return rule.fixedCents + ceilToStep(Math.round((spendingCents * rule.sharePercent) / 100), rule.roundingCents);
+}
+
+/**
+ * Spending a contribution due in `occurrenceMonth` is based on. The referenced month is
+ * shifted by `spendingMonthOffset`; closed months use actual spending, open or future ones
+ * use the larger of actual and estimate (flagged as estimated).
+ */
+export function contributionBase(
+  rule: ContributionRule,
+  occurrenceMonth: string,
+  currentMonth: string,
+  spending: ContributionSpending,
+): { baseCents: number; baseMonth: string; estimated: boolean } {
+  const baseMonth = addMonthsToKey(occurrenceMonth, rule.spendingMonthOffset);
+  if (baseMonth < currentMonth) return { baseCents: spending(rule, baseMonth), baseMonth, estimated: false };
+  const actual = baseMonth === currentMonth ? spending(rule, baseMonth) : 0;
+  return { baseCents: Math.max(actual, rule.estimatedSpendingCents), baseMonth, estimated: true };
 }

@@ -1,5 +1,5 @@
 // Pure builders turning loaded data into view models for pages.
-import { contributionAmount } from "../domain/contribution";
+import { contributionAmount, contributionBase } from "../domain/contribution";
 import { monthKey } from "../domain/dates";
 import { nextOccurrence } from "../domain/recurrence";
 import type { DueEntry, SpendingLookup } from "../domain/schedule";
@@ -38,7 +38,8 @@ export function contributionViews(items: ContributionRule[], accounts: Named[], 
     ...c,
     fromName: nameOf(accounts, c.fromAccountId),
     toName: nameOf(accounts, c.toAccountId),
-    currentCents: contributionAmount(c, spending(c, monthKey(today))),
+    currentCents: contributionAmount(c, contributionBase(c, monthKey(today), monthKey(today), spending).baseCents),
+    spendingName: nameOf(accounts, c.spendingAccountId ?? c.toAccountId),
     editable: visible.has(c.fromAccountId),
   }));
 }
