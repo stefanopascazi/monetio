@@ -1,14 +1,19 @@
+/* Segments wrap onto more rows when they do not fit (e.g. five kinds on a phone). The track
+   radius equals a pill on one row and keeps rounded corners once it wraps. */
 .mio-seg {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 2px;
   padding: 4px;
   background: var(--mio-surface-sunken);
-  border-radius: var(--mio-radius-pill);
+  border-radius: var(--mio-radius-lg);
 }
 .mio-seg--block { display: flex; width: 100%; }
-.mio-seg--block .mio-seg__item { flex: 1; }
+.mio-seg--block .mio-seg__item { flex: 1 1 auto; }
 .mio-seg__item {
   display: inline-flex;
+  white-space: nowrap;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -24,6 +29,9 @@
 }
 .mio-seg--sm .mio-seg__item { height: 28px; padding-inline: 10px; font-size: 13px; }
 .mio-seg--md .mio-seg__item { height: 38px; padding-inline: 16px; }
+@media (max-width: 480px) {
+  .mio-seg--md .mio-seg__item { padding-inline: 12px; }
+}
 .mio-seg__item svg { width: 16px; height: 16px; stroke-width: 2; }
 .mio-seg__item:hover { color: var(--mio-ink); }
 .mio-seg__item.is-selected { background: var(--mio-surface-raised); color: var(--mio-ink); box-shadow: var(--mio-shadow-sm); }
