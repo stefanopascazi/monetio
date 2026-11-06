@@ -3,7 +3,7 @@ MonetIO is a PWA for managing a household's money together: several accounts, in
 ## Principles
 
 - **Fresh, not formal.** Soft filled blocks instead of outlined boxes, pill-shaped controls, large rounded corners, big confident numbers. Color is used in generous pastel fields, not thin accents.
-- **Forms live in the page, not in dialogs.** Data entry happens in a `FormPanel` at the top of the list it feeds, in an `Accordion` item for per-object edits, or in a dedicated `Tabs` view for long flows. Confirmations use `InlineConfirm`; feedback uses `Alert` in place. Modals are reserved for OS-level needs (camera, file picker).
+- **Forms live in the page, not in dialogs.** Data entry happens in a `FormPanel` at the top of the list it feeds, in an `Accordion` item for per-object edits, or in a dedicated `Tabs` view for long flows. Confirmations use `InlineConfirm`. After a save the form closes and a non-blocking `Toast` reports the outcome; errors stay inline as an `Alert`. Modals are reserved for OS-level needs (camera, file picker).
 - **Three colors, three meanings.** Mint is money in, positive news and the main action. Coral is attention: money out, things due. Periwinkle is anything that has not happened yet: projections and goals.
 - **Money is always legible without color.** Every amount renders through `Amount`: tabular digits, a true minus (−), a plus on income.
 - **Whose money is it?** Anything shareable shows its visibility (`AvatarGroup` or "Private") and is edited with `VisibilityPicker`.

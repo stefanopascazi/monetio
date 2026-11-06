@@ -172,7 +172,8 @@ Do not open dialogs from buttons: expand a FormPanel, switch a Tab or reveal an 
 - Put it at the top of the list it adds to ("Add transaction" above Transactions).
 - \`collapsible={false}\` for screens whose main job is the form (onboarding, new account).
 - Fields lay out on an auto-fit grid (min 220px). Add \`mio-span-full\` to a field to span the row.
-- After a successful save, keep the panel open with fields reset for quick repeated entry; show an inline Alert, not a toast.`,
+- After a successful save, close the panel (or the Accordion item holding the edit form), reset its fields and report the outcome with a Toast; on phones an open form makes the save look failed.
+- On failure keep the panel open with the error as an inline danger Alert at the top.`,
     demo: `
   (() => { const [k, setK] = useState("expense"); const [v, setV] = useState(null); return (
   <div style={{display:"grid",gap:16}}>
@@ -506,18 +507,39 @@ Do not open dialogs from buttons: expand a FormPanel, switch a Tab or reveal an 
     name: "Alert",
     group: "Feedback",
     height: 260,
-    readme: `In-flow notice that stays where the problem is. Replaces alert dialogs and toasts.
+    readme: `In-flow notice that stays where the problem is. Replaces alert dialogs; transient action feedback goes to Toast.
 
 **Consumer provides:** \`tone\`, \`title\` and/or children, optional \`action\`, \`onDismiss\`.
 
-- Success after saving a FormPanel: \`success\` Alert at the top of the panel, dismissible.
+- Form errors: \`danger\` Alert at the top of the FormPanel, which stays open.
+- Persistent states (budget warnings, sync failures) that must stay visible until resolved.
 - Errors say what went wrong and how to fix it, with the fix as the \`action\`.`,
     demo: `
   <div style={{display:"grid",gap:12}}>
-    <M.Alert tone="success" title="Transaction saved" onDismiss={() => {}}>Esselunga −€82.40 added to Joint account.</M.Alert>
+    <M.Alert tone="success" title="All accounts reconciled" onDismiss={() => {}}>Balances match your bank statements as of 5 Nov.</M.Alert>
     <M.Alert tone="warning" title="Dining out is at 91% of budget">€14 left until 30 Nov.</M.Alert>
     <M.Alert tone="danger" title="Bank sync failed" action={<M.Button size="sm" variant="secondary">Reconnect Intesa</M.Button>}>Your Intesa connection expired on 2 Nov.</M.Alert>
   </div>`,
+  },
+  {
+    name: "Toast",
+    group: "Feedback",
+    height: 260,
+    readme: `Non-blocking confirmation of an action that just happened (saved, deleted, archived, failed). Floats above the mobile bottom nav, bottom-right on desktop; never takes focus.
+
+**Consumer provides:** wrap the app once in \`ToastProvider\`; call \`useToast().show(message, { tone, duration })\` from components. Outside the provider \`useToast\` is a no-op.
+
+- \`success\` after a save or delete, paired with closing the FormPanel or Accordion item that held the form.
+- \`danger\` for failures (stays 6s, \`role="alert"\`); field-level errors still go inline.
+- Auto-dismiss after 3.5s (\`duration: 0\` keeps it); at most 3 stacked, oldest dropped.
+- One short sentence, no actions inside: anything that needs a decision belongs in the page.`,
+    demo: `
+  (() => { const t = M.useToast(); return (
+  <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+    <M.Button onClick={() => t.show("Movement saved", { tone: "success" })}>Save</M.Button>
+    <M.Button variant="secondary" onClick={() => t.show("Rule deleted", { tone: "success" })}>Delete</M.Button>
+    <M.Button variant="danger" onClick={() => t.show("Could not save. Try again.", { tone: "danger" })}>Fail</M.Button>
+  </div>); })()`,
   },
   {
     name: "EmptyState",

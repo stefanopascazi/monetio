@@ -189,7 +189,7 @@ for (const c of catalog) {
 <script>
 var M = window.${NAMESPACE}, h = React.createElement, F = React.Fragment, useState = React.useState, TODAY = new Date(2026, 10, 5);
 ${js}
-ReactDOM.createRoot(document.getElementById("root")).render(h(Demo));
+ReactDOM.createRoot(document.getElementById("root")).render(h(M.ToastProvider, null, h(Demo)));
 </script>
 </body>
 </html>
