@@ -10,6 +10,13 @@ describe("StatementFilters", () => {
     expect(screen.queryByText("Mostra gli ultimi movimenti")).toBeNull();
   });
 
+  it("sizes the forms from the card width via container queries", () => {
+    const { container } = render(<StatementFilters basePath="/conti/a1" period={{ kind: "recent", limit: 30 }} />);
+    expect(container.firstElementChild).toHaveClass("@container");
+    expect(screen.getByRole("form", { name: "Filtra per date" }).className).toMatch(/@md:grid-cols-/);
+    expect(screen.getByTestId("statement-filters").className).not.toMatch(/(sm|lg):/);
+  });
+
   it("prefills the active range and offers a reset", () => {
     render(<StatementFilters basePath="/conti/a1" period={{ kind: "range", from: "2026-01-10", to: "2026-01-20" }} />);
     expect(screen.getByLabelText("Da")).toHaveValue("2026-01-10");

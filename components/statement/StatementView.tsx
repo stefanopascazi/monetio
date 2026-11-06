@@ -58,7 +58,7 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
         settings={<AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />}
         note={<PendingTransfersNote pending={pending[id]} />}
       />
-      <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.4fr]">
+      <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-4">
           <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: id, bookedOn: today }} />
           {history.length > 1 && (
