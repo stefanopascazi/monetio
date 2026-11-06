@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { accountMembers } from "./AccountGrid";
 
 const members = [
-  { id: "m1", displayName: "Ste", email: null, userId: null, role: "owner" as const },
+  { id: "m1", displayName: "Ste", email: null, userId: null, role: "admin" as const },
   { id: "m2", displayName: "Asha", email: null, userId: null, role: "member" as const },
 ];
 

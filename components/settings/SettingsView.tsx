@@ -1,41 +1,52 @@
 import { LogOut } from "lucide-react";
-import { Avatar, Badge, Button, Card, PageHeader, ThemeSwitcher } from "@monetio/ui";
+import { Button, Card, PageHeader, ThemeSwitcher } from "@monetio/ui";
 import { signOut } from "@/app/actions/auth";
+import { Onboarding } from "@/components/auth/Onboarding";
 import { getContext } from "@/lib/data/context";
 import { listCategories } from "@/lib/data/queries";
+import { isAdmin, isLastAdmin } from "@/lib/domain/household";
+import { HouseholdExit, RenameHouseholdForm } from "./HouseholdActions";
+import { HouseholdSwitcher } from "./HouseholdSwitcher";
 import { InviteForm } from "./InviteForm";
+import { MemberList } from "./MemberList";
 import { CategoryManager, ProfileForm } from "./SettingsForms";
 
 export async function SettingsView() {
   const ctx = await getContext();
   const categories = await listCategories();
+  const admin = isAdmin(ctx.me);
   return (
     <>
       <PageHeader title="Impostazioni" description={ctx.email ?? undefined} />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <ProfileForm displayName={ctx.me.displayName} householdName={ctx.householdName} />
-        <Card title="Nucleo familiare" subtitle="Chi entra con il codice invito vede i conti condivisi">
+        <ProfileForm displayName={ctx.me.displayName} />
+        <Card title="I tuoi nuclei" subtitle="Puoi far parte di più nuclei e passare dall'uno all'altro">
           <div className="flex flex-col gap-4">
-            <ul className="flex flex-col gap-3">
-              {ctx.members.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-3">
-                    <Avatar name={m.displayName} size="sm" />
-                    <span className="flex flex-col">
-                      <span className="font-semibold">{m.displayName}</span>
-                      <span className="text-sm text-ink-muted">{m.email ?? "Email non indicata"}</span>
-                    </span>
-                  </span>
-                  {m.userId ? <Badge tone="success">Attivo</Badge> : <Badge tone="warning">In attesa</Badge>}
-                </li>
-              ))}
-            </ul>
+            <HouseholdSwitcher memberships={ctx.memberships} activeId={ctx.householdId} />
+            <Card title="Aggiungi un nucleo" tone="raised" collapsible defaultOpen={false}>
+              <Onboarding />
+            </Card>
+          </div>
+        </Card>
+        <Card
+          title={ctx.householdName}
+          subtitle={admin ? "Sei amministratore: gestisci persone e ruoli" : "Fai parte di questo nucleo come membro"}
+          className="lg:col-span-2"
+        >
+          <div className="flex flex-col gap-4">
+            <MemberList me={ctx.me} members={ctx.members} />
             <div className="flex flex-col gap-1 rounded-[14px] bg-surface-sunken p-4">
               <span className="text-sm text-ink-muted">Codice invito</span>
               <span className="font-mono text-xl font-semibold tracking-widest">{ctx.inviteCode}</span>
-              <span className="text-sm text-ink-muted">Alternativa all&apos;invito: chi ha già un account lo inserisce in &quot;Ho un codice&quot;.</span>
+              <span className="text-sm text-ink-muted">Chi ha già un account lo inserisce in &quot;Aggiungi un nucleo&quot; ed entra come membro.</span>
             </div>
-            {ctx.me.role === "owner" && <InviteForm pending={ctx.members.filter((m) => !m.userId).map((m) => ({ id: m.id, name: m.displayName }))} />}
+            {admin && (
+              <>
+                <InviteForm pending={ctx.members.filter((m) => !m.userId).map((m) => ({ id: m.id, name: m.displayName }))} />
+                <RenameHouseholdForm householdName={ctx.householdName} />
+              </>
+            )}
+            <HouseholdExit householdName={ctx.householdName} admin={admin} canLeave={!isLastAdmin(ctx.members, ctx.me.id)} />
           </div>
         </Card>
         <Card title="Aspetto">

@@ -12,12 +12,14 @@ export type PaymentMethod = "bank_transfer" | "cbill";
 export type RuleFrequency = "weekly" | "monthly" | "bimonthly" | "quarterly" | "semiannual" | "yearly";
 export type RuleSchedule = "auto" | "due" | "estimate";
 
+export type MemberRole = "admin" | "member";
+
 export interface Member {
   id: string;
   displayName: string;
   email: string | null;
   userId: string | null;
-  role: "owner" | "member";
+  role: MemberRole;
 }
 
 export interface Account {

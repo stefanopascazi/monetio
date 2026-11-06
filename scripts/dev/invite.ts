@@ -1,4 +1,4 @@
-// Invites a member already listed in the household (bootstrap for the first owner).
+// Invites a member already listed in the household (bootstrap for the first admin).
 // Usage: npm run auth:invite -- you@example.com [--name Stefano] [--site http://localhost:3000] [--link]
 // --link prints a one-time link instead of sending an email (avoids Supabase's email rate limit).
 import { parseArgs } from "node:util";

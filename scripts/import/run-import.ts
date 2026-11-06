@@ -45,7 +45,7 @@ try {
         : (
             await tx<{ id: string }[]>`
               insert into household_members (household_id, display_name, email, role)
-              values (${householdId}, ${name}, ${email?.toLowerCase() ?? null}, ${key === "ste" ? "owner" : "member"}) returning id`
+              values (${householdId}, ${name}, ${email?.toLowerCase() ?? null}, ${key === "ste" ? "admin" : "member"}) returning id`
           )[0].id;
       if (email) await tx`update household_members set email = ${email.toLowerCase()} where id = ${memberIds[key]} and user_id is null`;
     }

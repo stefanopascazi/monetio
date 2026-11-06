@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { Account, Category, ContributionRule, ISODate, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
 import { createClient } from "../supabase/server";
+import { activeHouseholdId } from "./context";
 import { type MonthlyFlow, mapFlow } from "./flows";
 import { attachFees, mapAccount, mapCategory, mapContribution, mapRule, mapTransaction } from "./mappers";
 import { hiddenAccountName } from "./views";
@@ -11,10 +12,10 @@ export interface AccountWithBalance extends Account {
 }
 
 export const listAccounts = cache(async (): Promise<AccountWithBalance[]> => {
-  const supabase = await createClient();
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const [{ data: accounts, error }, { data: balances }] = await Promise.all([
-    supabase.from("accounts").select("*").order("sort_order").order("name"),
-    supabase.from("account_balances").select("account_id, balance_cents"),
+    supabase.from("accounts").select("*").eq("household_id", hh).order("sort_order").order("name"),
+    supabase.from("account_balances").select("account_id, balance_cents").eq("household_id", hh),
   ]);
   if (error) throw error;
   const map = new Map((balances ?? []).map((b) => [String(b.account_id), Number(b.balance_cents)]));
@@ -25,8 +26,8 @@ export const listAccounts = cache(async (): Promise<AccountWithBalance[]> => {
 });
 
 export const listCategories = cache(async (): Promise<Category[]> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("categories").select("*").is("archived_at", null).order("name");
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase.from("categories").select("*").eq("household_id", hh).is("archived_at", null).order("name");
   if (error) throw error;
   return (data ?? []).map(mapCategory);
 });
@@ -57,8 +58,8 @@ async function withFees(supabase: Client, rows: Record<string, unknown>[]): Prom
 }
 
 export async function listTransactions(f: TransactionFilter = {}): Promise<Transaction[]> {
-  const supabase = await createClient();
-  let q = supabase.from("transactions").select("*").order("booked_on", { ascending: false }).order("id", { ascending: false });
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  let q = supabase.from("transactions").select("*").eq("household_id", hh).order("booked_on", { ascending: false }).order("id", { ascending: false });
   if (f.accountId) q = q.eq("account_id", f.accountId);
   if (f.categoryId) q = q.eq("category_id", f.categoryId);
   if (f.from) q = q.gte("booked_on", f.from);
@@ -90,26 +91,26 @@ export async function listAudit(transactionId: string): Promise<AuditEntry[]> {
 }
 
 export const listRules = cache(async (): Promise<RecurringRule[]> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("recurring_rules").select("*").order("description");
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase.from("recurring_rules").select("*").eq("household_id", hh).order("description");
   if (error) throw error;
   return (data ?? []).map(mapRule);
 });
 
 export const listContributions = cache(async (): Promise<ContributionRule[]> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("contribution_rules").select("*").order("description");
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase.from("contribution_rules").select("*").eq("household_id", hh).order("description");
   if (error) throw error;
   return (data ?? []).map(mapContribution);
 });
 
 /** Monthly aggregates since a month (`YYYY-MM-DD`, first of month). */
 export const listFlows = cache(async (since: ISODate): Promise<MonthlyFlow[]> => {
-  const supabase = await createClient();
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const rows: MonthlyFlow[] = [];
   // Page through the view: PostgREST returns at most 1000 rows per request.
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase.from("monthly_flows").select("*").gte("month", since).range(from, from + 999);
+    const { data, error } = await supabase.from("monthly_flows").select("*").eq("household_id", hh).gte("month", since).range(from, from + 999);
     if (error) throw error;
     rows.push(...(data ?? []).map(mapFlow));
     if (!data || data.length < 1000) break;
@@ -124,18 +125,19 @@ export interface MonthlyBalance {
 }
 
 export const listMonthlyBalances = cache(async (since: ISODate): Promise<MonthlyBalance[]> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("monthly_balances").select("*").gte("month", since).order("month");
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase.from("monthly_balances").select("*").eq("household_id", hh).gte("month", since).order("month");
   if (error) throw error;
   return (data ?? []).map((r) => ({ accountId: String(r.account_id), month: String(r.month).slice(0, 7), balanceCents: Number(r.balance_cents) }));
 });
 
 /** Rule/contribution occurrences already booked since a date. */
 export const listBookedOccurrences = cache(async (since: ISODate) => {
-  const supabase = await createClient();
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const { data, error } = await supabase
     .from("transactions")
     .select("recurring_rule_id, contribution_rule_id, occurrence_date")
+    .eq("household_id", hh)
     .gte("occurrence_date", since)
     .or("recurring_rule_id.not.is.null,contribution_rule_id.not.is.null")
     .limit(5000);
@@ -156,15 +158,15 @@ export async function balanceBefore(accountId: string, date: ISODate): Promise<n
 
 /** Accounts the viewer cannot see, labelled with their owner (e.g. "Conto privato di Asha"). */
 export const listHiddenAccounts = cache(async (): Promise<{ id: string; name: string }[]> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("hidden_account_owners");
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase.rpc("hidden_account_owners", { p_household: hh });
   if (error) throw error;
   return ((data ?? []) as { id: string; owner_name: string | null }[]).map((r) => ({ id: String(r.id), name: hiddenAccountName(r.owner_name) }));
 });
 
 export const listOverrides = cache(async (): Promise<OccurrenceOverride[]> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("rule_occurrence_overrides").select("rule_id, period, amount_cents, due_date, note");
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase.from("rule_occurrence_overrides").select("rule_id, period, amount_cents, due_date, note").eq("household_id", hh);
   if (error) throw error;
   return (data ?? []).map((r) => ({
     ruleId: String(r.rule_id),
