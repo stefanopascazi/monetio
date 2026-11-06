@@ -52,7 +52,9 @@ export function transactionRows(t: NewTransaction, newId: () => string = () => c
     { ...(t.id ? { id: t.id } : {}), ...base, account_id: t.accountId, counterpart_account_id: t.counterpartAccountId ?? null, amount_cents: t.amountCents },
   ];
   if (isTransfer) {
-    rows.push({ ...base, account_id: t.counterpartAccountId!, counterpart_account_id: t.accountId, amount_cents: -t.amountCents });
+    // With an explicit id on the first row, the mirror needs one too: a bulk insert nulls
+    // keys missing from some rows instead of applying column defaults.
+    rows.push({ ...(t.id ? { id: newId() } : {}), ...base, account_id: t.counterpartAccountId!, counterpart_account_id: t.accountId, amount_cents: -t.amountCents });
   }
   return rows;
 }

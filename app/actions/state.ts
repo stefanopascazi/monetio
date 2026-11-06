@@ -25,5 +25,7 @@ export function dbErrorMessage(error: { code?: string; message?: string } | null
   if (error.code === "23505") return "Questo elemento esiste già.";
   if (error.code === "42501" || /row-level security/i.test(error.message ?? "")) return "Non hai i permessi per questa operazione.";
   if (error.code === "23514") return "Alcuni valori non sono validi.";
+  // Unmapped errors surface only as a generic message: keep the cause in the server log.
+  console.error("[db]", error.code, error.message);
   return "Operazione non riuscita. Riprova.";
 }

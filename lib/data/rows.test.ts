@@ -57,11 +57,13 @@ describe("paymentRows", () => {
   });
 
   it("links the fee of a transfer to its paying side", () => {
-    const ids = ["p1", "f1", "g1"];
+    const ids = ["p1", "f1", "g1", "m1"];
     const rows = paymentRows({ ...base, kind: "transfer", counterpartAccountId: "b" }, 100, { feeCategoryId: "fees", newId: () => ids.shift()! });
     expect(rows).toHaveLength(3);
+    // Same keys on every row, ids included, so the bulk insert never nulls a primary key.
+    expect(rows.every((r) => Object.keys(r).sort().join() === Object.keys(rows[0]).sort().join())).toBe(true);
     expect(rows[0]).toMatchObject({ id: "p1", account_id: "a", amount_cents: -300000, transfer_group_id: "g1" });
-    expect(rows[1]).toMatchObject({ account_id: "b", amount_cents: 300000, transfer_group_id: "g1" });
+    expect(rows[1]).toMatchObject({ id: "m1", account_id: "b", amount_cents: 300000, transfer_group_id: "g1" });
     expect(rows[2]).toMatchObject({ id: "f1", account_id: "a", amount_cents: -100, kind: "expense", transfer_group_id: null, parent_transaction_id: "p1", description: "Spese giroconto · Affitto" });
   });
 
