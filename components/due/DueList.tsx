@@ -6,7 +6,7 @@ import { Badge, Button, Card, DueItem, EmptyState, Select, TextField } from "@mo
 import type { NamedRef } from "@/components/common/options";
 import { groupDueByMonth } from "@/lib/data/due-groups";
 import { isoToDate } from "@/lib/domain/dates";
-import type { RuleFrequency } from "@/lib/domain/types";
+import type { PaymentMethod, RuleFrequency } from "@/lib/domain/types";
 import { ActualAmountForm } from "./ActualAmountForm";
 import { PayEntryForm } from "./PayEntryForm";
 
@@ -25,6 +25,9 @@ export interface DueView {
   canConfirm: boolean;
   /** False when the paying account is not visible to the viewer. */
   payable: boolean;
+  /** Bonifico/CBill: paying also books `feeCents` (positive, 0 = none). */
+  paymentMethod: PaymentMethod | null;
+  feeCents: number;
 }
 
 const normalize = (s: string) => s.toLocaleLowerCase("it").normalize("NFD").replace(/[\u0300-\u036f]/g, "");

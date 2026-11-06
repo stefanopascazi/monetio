@@ -21,14 +21,14 @@ export interface TxnView {
   recurring: boolean;
   isTransfer: boolean;
   paymentMethod: PaymentMethod | null;
-  /** Fee row of a bonifico/CBill. */
+  /** Fee row of a bonifico/CBill: read-only, managed from its payment. */
   isFee: boolean;
+  /** Linked fee of a payment (positive), null when none. */
+  feeCents: number | null;
   /** Display name of whoever entered it; null when unknown (imports, automatic bookings). */
   createdByName: string | null;
   balanceAfterCents?: number;
 }
-
-export const PAYMENT_LABEL: Record<PaymentMethod, string> = { bank_transfer: "Bonifico", cbill: "CBill" };
 
 export const HIDDEN_ACCOUNT = "Conto privato";
 export const FORMER_MEMBER = "Ex membro";
@@ -71,6 +71,7 @@ export function toTxnView(
     isTransfer: !!t.transferGroupId || t.kind === "transfer",
     paymentMethod: t.paymentMethod,
     isFee: !!t.parentTransactionId,
+    feeCents: t.feeCents,
     createdByName: creatorName(t.createdBy, members),
     balanceAfterCents: t.balanceAfterCents,
   };

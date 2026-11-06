@@ -4,12 +4,15 @@ import { useState } from "react";
 import { AmountInput, Button, TextField } from "@monetio/ui";
 import { markEntryPaid } from "@/app/actions/rules";
 import { FormMessage } from "@/components/common/FormMessage";
+import { FeeInput } from "@/components/payments/FeeInput";
 import { useFormAction } from "@/hooks/useFormAction";
+import { PAYMENT_LABEL } from "@/lib/domain/fees";
 import type { DueView } from "./DueList";
 
-/** Inline confirmation of a deadline with the actual amount and date. */
+/** Inline confirmation of a deadline with the actual amount, date and (bonifico/CBill) fee. */
 export function PayEntryForm({ entry, today, onClose }: { entry: DueView; today: string; onClose: () => void }) {
   const [amount, setAmount] = useState<number | null>(Math.abs(entry.amountCents));
+  const [fee, setFee] = useState<number | null>(entry.feeCents || null);
   const { state, pending, onSubmit, error } = useFormAction(markEntryPaid.bind(null, entry.key), onClose);
   return (
     <form
@@ -31,6 +34,11 @@ export function PayEntryForm({ entry, today, onClose }: { entry: DueView; today:
           Registra
         </Button>
       </div>
+      {entry.paymentMethod && (
+        <div className="sm:col-span-3">
+          <FeeInput valueCents={fee} onValueChange={setFee} hint={`${PAYMENT_LABEL[entry.paymentMethod]}: le spese diventano un movimento separato`} error={error("feeCents")} />
+        </div>
+      )}
     </form>
   );
 }

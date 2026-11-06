@@ -34,7 +34,8 @@ export function monthlySummary(accountIds: string[], rules: RecurringRule[], con
   for (const id of accountIds) slot(id);
   for (const r of rules) {
     if (!r.active) continue;
-    const m = avg(r.amountCents, occurrences(r, from, to).length);
+    // Bonifico/CBill fees are extra expenses of the same occurrences.
+    const m = avg(r.amountCents - (r.paymentMethod ? r.feeCents : 0), occurrences(r, from, to).length);
     if (!m) continue;
     if (r.kind === "transfer") {
       slot(r.accountId).transfersCents += m;

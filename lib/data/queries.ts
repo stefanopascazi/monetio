@@ -41,9 +41,12 @@ export interface TransactionFilter {
   limit?: number;
 }
 
+/** Transactions with their linked fee rows (bonifico/CBill) embedded. */
+const TXN_SELECT = "*, fees:transactions!transactions_parent_transaction_id_fkey(amount_cents)";
+
 export async function listTransactions(f: TransactionFilter = {}): Promise<Transaction[]> {
   const supabase = await createClient();
-  let q = supabase.from("transactions").select("*").order("booked_on", { ascending: false }).order("id", { ascending: false });
+  let q = supabase.from("transactions").select(TXN_SELECT).order("booked_on", { ascending: false }).order("id", { ascending: false });
   if (f.accountId) q = q.eq("account_id", f.accountId);
   if (f.categoryId) q = q.eq("category_id", f.categoryId);
   if (f.from) q = q.gte("booked_on", f.from);
@@ -57,7 +60,7 @@ export async function listTransactions(f: TransactionFilter = {}): Promise<Trans
 
 export async function getTransaction(id: string): Promise<Transaction | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("transactions").select("*").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("transactions").select(TXN_SELECT).eq("id", id).maybeSingle();
   return data ? mapTransaction(data) : null;
 }
 

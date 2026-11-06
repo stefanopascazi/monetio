@@ -3,11 +3,15 @@
 import { refresh } from "next/cache";
 import { todayISO } from "@/lib/domain/dates";
 import { getContext } from "@/lib/data/context";
+import { fetchFeeCategoryId } from "@/lib/data/fee-category";
+import { syncFee } from "@/lib/data/fee-sync";
 import { paymentRows } from "@/lib/data/rows";
 import { parseTransactionForm } from "@/lib/forms/transaction";
 import { isUUID } from "@/lib/forms/parse";
 import { createClient } from "@/lib/supabase/server";
 import { type ActionState, dbErrorMessage, failure, success } from "./state";
+
+const FEE_LOCKED = "Queste spese si gestiscono dal bonifico o CBill a cui appartengono.";
 
 export async function createTransaction(prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await getContext();
@@ -16,8 +20,9 @@ export async function createTransaction(prev: ActionState, fd: FormData): Promis
   const v = parsed.value;
   const supabase = await createClient();
   // A bonifico/CBill with a fee becomes two linked expense rows.
+  const feeCategoryId = v.feeCents ? await fetchFeeCategoryId(supabase, ctx.householdId) : null;
   const { error } = await supabase.from("transactions").insert(
-    paymentRows({ ...v, householdId: ctx.householdId, createdBy: ctx.userId }, v.feeCents),
+    paymentRows({ ...v, householdId: ctx.householdId, createdBy: ctx.userId }, v.feeCents, { feeCategoryId }),
   );
   if (error) return failure(dbErrorMessage(error));
   refresh();
@@ -26,13 +31,18 @@ export async function createTransaction(prev: ActionState, fd: FormData): Promis
 
 export async function updateTransaction(id: string, prev: ActionState, fd: FormData): Promise<ActionState> {
   if (!isUUID(id)) return failure("Movimento non trovato.");
-  await getContext();
+  const ctx = await getContext();
   const parsed = parseTransactionForm(fd, todayISO());
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
   const v = parsed.value;
   const supabase = await createClient();
-  const { data: current } = await supabase.from("transactions").select("id, kind, transfer_group_id, account_id, parent_transaction_id").eq("id", id).maybeSingle();
+  const { data: current } = await supabase
+    .from("transactions")
+    .select("id, kind, transfer_group_id, account_id, parent_transaction_id, source, created_by")
+    .eq("id", id)
+    .maybeSingle();
   if (!current) return failure("Movimento non trovato.");
+  if (current.parent_transaction_id) return failure(FEE_LOCKED);
 
   const shared = { category_id: v.categoryId, booked_on: v.bookedOn, description: v.description, notes: v.notes, status: v.status };
   if (current.transfer_group_id) {
@@ -51,16 +61,11 @@ export async function updateTransaction(id: string, prev: ActionState, fd: FormD
         kind: v.kind === "transfer" ? current.kind : v.kind,
         account_id: v.accountId,
         amount_cents: v.amountCents,
-        // Fee rows stay plain expenses.
-        payment_method: current.parent_transaction_id ? null : v.paymentMethod,
+        payment_method: v.paymentMethod,
       })
       .eq("id", id);
     if (error) return failure(dbErrorMessage(error));
-    // Linked fee rows follow the payment's account, date and status.
-    const { error: feeError } = await supabase
-      .from("transactions")
-      .update({ account_id: v.accountId, booked_on: v.bookedOn, status: v.status })
-      .eq("parent_transaction_id", id);
+    const feeError = await syncFee(supabase, { ...v, id, householdId: ctx.householdId, source: current.source, createdBy: current.created_by }, v.feeCents);
     if (feeError) return failure(dbErrorMessage(feeError));
   }
   refresh();
@@ -71,7 +76,8 @@ export async function deleteTransaction(id: string): Promise<ActionState> {
   if (!isUUID(id)) return failure("Movimento non trovato.");
   await getContext();
   const supabase = await createClient();
-  const { data: current } = await supabase.from("transactions").select("transfer_group_id").eq("id", id).maybeSingle();
+  const { data: current } = await supabase.from("transactions").select("transfer_group_id, parent_transaction_id").eq("id", id).maybeSingle();
+  if (current?.parent_transaction_id) return failure(FEE_LOCKED);
   // Fee rows of a bonifico/CBill are removed by the FK cascade.
   const query = supabase.from("transactions").delete();
   const { error } = current?.transfer_group_id ? await query.eq("transfer_group_id", current.transfer_group_id) : await query.eq("id", id);
@@ -85,8 +91,9 @@ export async function confirmPlanned(id: string): Promise<ActionState> {
   if (!isUUID(id)) return failure("Movimento non trovato.");
   await getContext();
   const supabase = await createClient();
-  const { data: t } = await supabase.from("transactions").select("booked_on, transfer_group_id").eq("id", id).maybeSingle();
+  const { data: t } = await supabase.from("transactions").select("booked_on, transfer_group_id, parent_transaction_id").eq("id", id).maybeSingle();
   if (!t) return failure("Movimento non trovato.");
+  if (t.parent_transaction_id) return failure(FEE_LOCKED);
   const today = todayISO();
   const patch = { status: "booked", booked_on: t.booked_on > today ? today : t.booked_on };
   const q = supabase.from("transactions").update(patch);

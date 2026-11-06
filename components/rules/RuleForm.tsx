@@ -6,11 +6,14 @@ import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextF
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
 import { type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, toOptions } from "@/components/common/options";
+import { FeeInput } from "@/components/payments/FeeInput";
+import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS } from "@/components/payments/movement-kind";
 import { useFormAction } from "@/hooks/useFormAction";
 import type { RecurringRule, RuleSchedule } from "@/lib/domain/types";
+import { formKindOf, type MovementFormKind } from "@/lib/forms/payment";
 import { RuleScheduleFields } from "./RuleScheduleFields";
 
-type Kind = "expense" | "income" | "transfer";
+type Kind = MovementFormKind;
 
 export interface RuleFormProps {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
@@ -25,7 +28,8 @@ export interface RuleFormProps {
 /** Create (collapsible panel) or edit (embedded) a recurring rule. */
 export function RuleForm({ action, accounts, categories, rule, today, onSaved }: RuleFormProps) {
   const embedded = !!rule;
-  const [kind, setKind] = useState<Kind>(rule?.kind ?? "expense");
+  const [kind, setKind] = useState<Kind>(rule ? formKindOf(rule.kind, rule.paymentMethod) : "expense");
+  const [fee, setFee] = useState<number | null>(rule?.feeCents || null);
   const [schedule, setSchedule] = useState<RuleSchedule>(rule?.schedule ?? "auto");
   const [amount, setAmount] = useState<number | null>(rule ? Math.abs(rule.amountCents) : null);
   const [active, setActive] = useState(rule?.active ?? true);
@@ -36,6 +40,7 @@ export function RuleForm({ action, accounts, categories, rule, today, onSaved }:
     if (embedded) return onSaved?.();
     setOpen(false);
     setAmount(null);
+    setFee(null);
     setKind("expense");
     setSchedule("auto");
     setFormKey((k) => k + 1);
@@ -68,12 +73,11 @@ export function RuleForm({ action, accounts, categories, rule, today, onSaved }:
         className="mio-span-full"
         block
         value={kind}
-        onChange={setKind}
-        options={[
-          { value: "expense", label: "Uscita", tone: "expense" },
-          { value: "income", label: "Entrata", tone: "income" },
-          { value: "transfer", label: "Giroconto", tone: "transfer" },
-        ]}
+        onChange={(k) => {
+          setKind(k);
+          if (isPaymentKind(k) && schedule === "estimate") setSchedule("due");
+        }}
+        options={MOVEMENT_KIND_OPTIONS}
       />
       <div className="mio-span-full flex flex-col gap-2">
         <SegmentedControl<RuleSchedule>
@@ -81,18 +85,23 @@ export function RuleForm({ action, accounts, categories, rule, today, onSaved }:
           block
           value={schedule}
           onChange={setSchedule}
-          options={(Object.keys(SCHEDULE_LABEL) as RuleSchedule[]).map((s) => ({ value: s, label: SCHEDULE_LABEL[s] }))}
+          // Payments always create movements: an estimate cannot be a bonifico/CBill.
+          options={(Object.keys(SCHEDULE_LABEL) as RuleSchedule[])
+            .filter((s) => !(isPaymentKind(kind) && s === "estimate"))
+            .map((s) => ({ value: s, label: SCHEDULE_LABEL[s] }))}
         />
         <p className="text-sm text-ink-muted">{SCHEDULE_HINT[schedule]}</p>
+        {error("schedule") && <p className="text-sm text-danger">{error("schedule")}</p>}
       </div>
       <AmountInput
         label={schedule === "auto" ? "Importo" : "Importo previsto"}
-        kind={kind}
+        kind={amountKind(kind)}
         valueCents={amount}
         onValueChange={setAmount}
         error={error("amountCents")}
         className="mio-span-full"
       />
+      {isPaymentKind(kind) && <FeeInput valueCents={fee} onValueChange={setFee} hint="Registrate come movimento separato a ogni pagamento" error={error("feeCents")} />}
       <TextField name="description" label="Descrizione" placeholder="Es. Rata mutuo" defaultValue={rule?.description} error={error("description")} required />
       <Select name="accountId" label={kind === "transfer" ? "Dal conto" : "Conto"} defaultValue={rule?.accountId ?? accounts[0]?.id} options={toOptions(accounts)} error={error("accountId")} />
       {kind === "transfer" && (

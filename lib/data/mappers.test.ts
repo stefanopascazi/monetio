@@ -13,11 +13,14 @@ describe("mappers", () => {
     expect(t).toMatchObject({ amountCents: -100, counterpartAccountId: null, recurringRuleId: null, occurrenceDate: null, createdBy: null });
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: 1, booked_on: "2026-11-01", description: "x", created_by: "u1" }).createdBy).toBe("u1");
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -65, booked_on: "2026-11-01", description: "x", payment_method: "cbill", parent_transaction_id: "p" })).toMatchObject({ paymentMethod: "cbill", parentTransactionId: "p" });
-    expect(t).toMatchObject({ paymentMethod: null, parentTransactionId: null });
+    expect(t).toMatchObject({ paymentMethod: null, parentTransactionId: null, feeCents: null });
+    expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -1, booked_on: "2026-11-01", description: "x", fees: [{ amount_cents: "-65" }, { amount_cents: -10 }] }).feeCents).toBe(75);
   });
 
   it("maps rules, contributions, categories and members", () => {
     expect(mapRule({ id: "r", account_id: "a", kind: "income", description: "S", amount_cents: 1, frequency: "monthly", schedule: "auto", day_of_month: 27, start_date: "2026-11-01", end_date: null, active: true }).dayOfMonth).toBe(27);
+    expect(mapRule({ id: "r", account_id: "a", kind: "expense", description: "A", amount_cents: -1, payment_method: "bank_transfer", fee_cents: "65", active: true })).toMatchObject({ paymentMethod: "bank_transfer", feeCents: 65 });
+    expect(mapRule({ id: "r", account_id: "a", kind: "expense", description: "A", amount_cents: -1, fee_cents: 65, active: true })).toMatchObject({ paymentMethod: null, feeCents: 0 });
     expect(mapContribution({ id: "c", from_account_id: "a", to_account_id: "b", description: "Q", fixed_cents: "80000", share_percent: "50.00", category_ids: ["x"], rounding_cents: 1000, day_of_month: 28, estimated_spending_cents: 45000, start_date: "2026-11-01", active: true })).toMatchObject({ fixedCents: 80000, sharePercent: 50, categoryIds: ["x"] });
     expect(mapCategory({ id: "c", name: "Spesa", kind: "expense", icon: "cart", color_index: 9 }).colorIndex).toBe(6);
     expect(mapMember({ id: "m", display_name: "Ste", email: null, user_id: "u", role: "owner" })).toEqual({ id: "m", displayName: "Ste", email: null, userId: "u", role: "owner" });

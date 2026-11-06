@@ -7,10 +7,11 @@ import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
 import { type NamedRef, toOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
-import type { TransactionFormKind } from "@/lib/forms/transaction";
+import { FeeInput } from "@/components/payments/FeeInput";
+import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS } from "@/components/payments/movement-kind";
+import type { MovementFormKind } from "@/lib/forms/payment";
 
-type Kind = TransactionFormKind;
-const isPayment = (k: Kind) => k === "bank_transfer" || k === "cbill";
+type Kind = MovementFormKind;
 
 export interface TransactionDefaults {
   kind: Kind;
@@ -18,6 +19,8 @@ export interface TransactionDefaults {
   counterpartAccountId?: string | null;
   categoryId?: string | null;
   amountCents?: number | null;
+  /** Linked fee of a bonifico/CBill being edited. */
+  feeCents?: number | null;
   bookedOn: string;
   description?: string;
   notes?: string | null;
@@ -42,7 +45,7 @@ export interface TransactionFormProps {
 export function TransactionForm({ action, accounts, categories, defaults, title = "Nuovo movimento", submitLabel = "Salva movimento", embedded, lockKind, onSaved }: TransactionFormProps) {
   const [kind, setKind] = useState<Kind>(defaults.kind);
   const [amount, setAmount] = useState<number | null>(defaults.amountCents ?? null);
-  const [fee, setFee] = useState<number | null>(null);
+  const [fee, setFee] = useState<number | null>(defaults.feeCents ?? null);
   const [planned, setPlanned] = useState(defaults.planned ?? false);
   const [formKey, setFormKey] = useState(0);
   const [open, setOpen] = useState(!!embedded);
@@ -78,7 +81,6 @@ export function TransactionForm({ action, accounts, categories, defaults, title 
       <FormMessage state={state} />
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="amountCents" value={amount ?? ""} />
-      <input type="hidden" name="feeCents" value={fee ?? ""} />
       <input type="hidden" name="status" value={planned ? "planned" : "booked"} />
       {!lockKind && (
         <SegmentedControl<Kind>
@@ -87,26 +89,17 @@ export function TransactionForm({ action, accounts, categories, defaults, title 
           block
           value={kind}
           onChange={setKind}
-          options={[
-            { value: "expense", label: "Uscita", tone: "expense" },
-            { value: "income", label: "Entrata", tone: "income" },
-            { value: "transfer", label: "Giroconto", tone: "transfer" },
-            { value: "bank_transfer", label: "Bonifico", tone: "expense" },
-            { value: "cbill", label: "CBill", tone: "expense" },
-          ]}
+          options={MOVEMENT_KIND_OPTIONS}
         />
       )}
-      <AmountInput label="Importo" kind={isPayment(kind) ? "expense" : kind} valueCents={amount} onValueChange={setAmount} error={error("amountCents")} className="mio-span-full" />
-      {/* Fee only on creation: once saved it is its own movement, editable on its row. */}
-      {isPayment(kind) && !embedded && (
-        <AmountInput
-          label="Spese (facoltative)"
-          kind="expense"
+      <AmountInput label="Importo" kind={amountKind(kind)} valueCents={amount} onValueChange={setAmount} error={error("amountCents")} className="mio-span-full" />
+      {/* The fee row is managed only from here: it is read-only on its own row. */}
+      {isPaymentKind(kind) && (
+        <FeeInput
           valueCents={fee}
           onValueChange={setFee}
-          hint="Commissione della banca: diventa un movimento separato"
+          hint={embedded ? "Svuota il campo per eliminare il movimento delle spese" : "Commissione della banca: diventa un movimento separato"}
           error={error("feeCents")}
-          className="mio-span-full"
         />
       )}
       <TextField name="description" label="Descrizione" placeholder="Es. Esselunga" defaultValue={defaults.description} error={error("description")} required />

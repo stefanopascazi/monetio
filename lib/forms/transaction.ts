@@ -1,10 +1,6 @@
 import type { ISODate, PaymentMethod } from "../domain/types";
 import { Checker, isISODate, isUUID, optionalText, type ParseResult, positiveCents, text } from "./parse";
-
-/** Kinds offered by the form: bonifico and CBill are expenses with an optional fee. */
-export type TransactionFormKind = "income" | "expense" | "transfer" | PaymentMethod;
-const FORM_KINDS: TransactionFormKind[] = ["income", "expense", "transfer", "bank_transfer", "cbill"];
-const isPaymentMethod = (k: string): k is PaymentMethod => k === "bank_transfer" || k === "cbill";
+import { parsePaymentKind } from "./payment";
 
 export interface TransactionInput {
   kind: "income" | "expense" | "transfer";
@@ -24,11 +20,7 @@ export interface TransactionInput {
 
 /** Validates the transaction form; future dates become planned unless booked is forced. */
 export function parseTransactionForm(fd: FormData, today: ISODate): ParseResult<TransactionInput> {
-  const formKind = text(fd, "kind") as TransactionFormKind;
-  const paymentMethod = isPaymentMethod(formKind) ? formKind : null;
-  const kind: TransactionInput["kind"] = paymentMethod ? "expense" : (formKind as TransactionInput["kind"]);
-  const feeText = paymentMethod ? text(fd, "feeCents") : "";
-  const feeCents = feeText ? positiveCents(feeText) : null;
+  const { kind, paymentMethod, feeCents, kindValid, feeValid } = parsePaymentKind(fd);
   const accountId = text(fd, "accountId");
   const counterpart = text(fd, "counterpartAccountId");
   const categoryId = text(fd, "categoryId");
@@ -37,13 +29,13 @@ export function parseTransactionForm(fd: FormData, today: ISODate): ParseResult<
   const description = text(fd, "description");
 
   const c = new Checker()
-    .check(FORM_KINDS.includes(formKind), "kind", "Scegli il tipo di movimento")
+    .check(kindValid, "kind", "Scegli il tipo di movimento")
     .check(isUUID(accountId), "accountId", "Scegli un conto")
     .check(cents !== null, "amountCents", "Inserisci un importo maggiore di zero")
     .check(isISODate(bookedOn), "bookedOn", "Inserisci una data valida")
     .check(description.length > 0 && description.length <= 200, "description", "Scrivi una descrizione")
     .check(!categoryId || isUUID(categoryId), "categoryId", "Categoria non valida")
-    .check(!feeText || feeCents !== null, "feeCents", "Le spese devono essere maggiori di zero");
+    .check(feeValid, "feeCents", "Le spese devono essere maggiori di zero");
   if (kind === "transfer") {
     c.check(isUUID(counterpart), "counterpartAccountId", "Scegli il conto di destinazione").check(
       counterpart !== accountId,

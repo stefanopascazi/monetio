@@ -22,6 +22,11 @@ describe("monthlySummary", () => {
     expect(res.joint.netCents).toBe(-78110 + 102500);
   });
 
+  it("counts bonifico/CBill fees as expenses", () => {
+    const res = monthlySummary(["joint"], [rule({ accountId: "joint", amountCents: -5000, paymentMethod: "cbill", feeCents: 150 })], [], today);
+    expect(res.joint.rulesExpenseCents).toBe(5150);
+  });
+
   it("spreads non-monthly rules over the year", () => {
     const rules = [rule({ accountId: "ste", amountCents: -24000, frequency: "yearly", startDate: "2026-03-01" }), rule({ id: "b", accountId: "ste", amountCents: -6000, frequency: "bimonthly" })];
     expect(monthlySummary(["ste"], rules, [], today).ste.rulesExpenseCents).toBe(2000 + 3000);

@@ -1,3 +1,4 @@
+import { feeDescription } from "./fees";
 import { contributionAmount, contributionBase } from "./contribution";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
 import { occurrences } from "./recurrence";
@@ -82,6 +83,8 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       if (booked.has(key)) continue;
       const o = input.overrides?.get(key);
       push(o?.dueDate ?? d, r.accountId, o?.amountCents ?? r.amountCents, counterpart, r.description, "rule");
+      // Bonifico/CBill fee, booked as its own expense with each occurrence.
+      if (r.paymentMethod && r.feeCents) push(o?.dueDate ?? d, r.accountId, -r.feeCents, null, feeDescription(r.paymentMethod, r.description), "rule");
     }
   }
 

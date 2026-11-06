@@ -11,7 +11,8 @@ import { TransactionForm } from "./TransactionForm";
 /** Expanded body of a transaction: notes, edit form, delete. `onDone` closes the row after a change. */
 export function TransactionDetails({ t, accounts, categories, onDone }: { t: TxnView; accounts: NamedRef[]; categories: NamedRef[]; onDone?: () => void }) {
   const { pending, run } = useToastAction();
-  const editable = t.kind !== "adjustment";
+  // Fee rows follow their bonifico/CBill: edited and deleted only from it.
+  const editable = t.kind !== "adjustment" && !t.isFee;
 
   return (
     <div className="flex flex-col gap-4 pb-2">
@@ -33,7 +34,8 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           </div>
         )}
       </dl>
-      {t.status === "planned" && (
+      {t.isFee && <p className="text-sm text-ink-muted">Spese collegate a un pagamento: si modificano o eliminano dal bonifico o CBill a cui appartengono.</p>}
+      {t.status === "planned" && !t.isFee && (
         <Button variant="secondary" size="sm" iconStart={<Check />} loading={pending} onClick={() => run(() => confirmPlanned(t.id), onDone)} className="w-fit">
           Registra come avvenuto
         </Button>
@@ -50,6 +52,7 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           onSaved={onDone}
           defaults={{
             kind: t.isTransfer ? "transfer" : (t.paymentMethod ?? (t.amountCents >= 0 ? "income" : "expense")),
+            feeCents: t.feeCents,
             accountId: t.accountId,
             counterpartAccountId: t.counterpartAccountId,
             categoryId: t.categoryId,
@@ -61,6 +64,7 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           }}
         />
       )}
+      {!t.isFee && (
       <InlineConfirm
         triggerLabel="Elimina movimento"
         triggerIcon={<Trash2 />}
@@ -74,6 +78,7 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
         confirmLabel="Elimina"
         onConfirm={() => run(() => deleteTransaction(t.id), onDone)}
       />
+      )}
     </div>
   );
 }

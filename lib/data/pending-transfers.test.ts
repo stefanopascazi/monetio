@@ -10,6 +10,8 @@ const entry = (p: Partial<DueEntry>): DueEntry => ({
   occurrenceDate: "2026-11-10",
   accountId: "ste",
   counterpartAccountId: "joint",
+  paymentMethod: null,
+  feeCents: 0,
   categoryId: null,
   kind: "transfer",
   description: "x",

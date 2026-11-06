@@ -27,6 +27,13 @@ describe("projectBalances", () => {
     ]);
   });
 
+  it("adds the bonifico fee of each unbooked occurrence", () => {
+    const affitto = rule({ id: "a", accountId: "joint", amountCents: -80000, dayOfMonth: 10, startDate: "2026-01-01", paymentMethod: "bank_transfer", feeCents: 65 });
+    const res = projectBalances({ ...base, months: 1, rules: [affitto] });
+    // Overdue October occurrence plus November's, each with its fee.
+    expect(res.map((p) => p.byAccount.joint)).toEqual([100000 - 2 * 80065]);
+  });
+
   it("never overlaps a rule that ends with the one that replaces it", () => {
     const old = rule({ id: "o", accountId: "ste", amountCents: 177000, dayOfMonth: 10, startDate: "2026-11-01", endDate: "2027-01-31" });
     const next = rule({ id: "n", accountId: "ste", amountCents: 190000, dayOfMonth: 10, startDate: "2027-02-01" });

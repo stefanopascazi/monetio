@@ -1,4 +1,5 @@
 // Builds `transactions` insert rows; transfers become two linked rows (one per account).
+import { feeDescription } from "../domain/fees";
 import type { DueEntry } from "../domain/schedule";
 import type { ISODate, PaymentMethod, TransactionKind } from "../domain/types";
 
@@ -56,33 +57,39 @@ export function transactionRows(t: NewTransaction, newId: () => string = () => c
   return rows;
 }
 
-/** Description of the fee row of a payment, e.g. "Spese bonifico · Affitto". */
-export const feeDescription = (method: PaymentMethod, description: string) =>
-  `Spese ${method === "cbill" ? "CBill" : "bonifico"} · ${description}`.slice(0, 200);
-
 /**
  * Rows for a bonifico/CBill: the payment plus, when `feeCents` is set, a linked expense row
  * for the fee on the same account, date and status. Plain transactions pass through unchanged.
  * Both rows carry an explicit id: a bulk insert nulls keys missing from some rows instead of
  * applying column defaults.
  */
-export function paymentRows(t: NewTransaction, feeCents: number | null, newId: () => string = () => crypto.randomUUID()): TransactionInsert[] {
+export function paymentRows(
+  t: NewTransaction,
+  feeCents: number | null,
+  { feeCategoryId = null, newId = () => crypto.randomUUID() }: { feeCategoryId?: string | null; newId?: () => string } = {},
+): TransactionInsert[] {
   if (!t.paymentMethod || !feeCents) return transactionRows(t, newId);
-  const id = t.id ?? newId();
-  const fee: NewTransaction = {
-    id: newId(),
-    householdId: t.householdId,
-    accountId: t.accountId,
+  const payment = { ...t, id: t.id ?? newId() };
+  const fee = feeTransaction(payment, feeCents, feeCategoryId, newId());
+  return [...transactionRows(payment, newId), ...transactionRows(fee, newId)];
+}
+
+/** Fee row of a saved payment: same account, date and status, linked by its id. */
+export function feeTransaction(payment: NewTransaction & { id: string }, feeCents: number, feeCategoryId: string | null, id?: string): NewTransaction {
+  return {
+    id,
+    householdId: payment.householdId,
+    accountId: payment.accountId,
+    categoryId: feeCategoryId,
     kind: "expense",
     amountCents: -Math.abs(feeCents),
-    bookedOn: t.bookedOn,
-    description: feeDescription(t.paymentMethod, t.description),
-    status: t.status,
-    source: t.source,
-    createdBy: t.createdBy,
-    parentTransactionId: id,
+    bookedOn: payment.bookedOn,
+    description: feeDescription(payment.paymentMethod ?? "bank_transfer", payment.description),
+    status: payment.status,
+    source: payment.source,
+    createdBy: payment.createdBy,
+    parentTransactionId: payment.id,
   };
-  return [...transactionRows({ ...t, id }, newId), ...transactionRows(fee, newId)];
 }
 
 /** Transaction for a due entry (rule or contribution occurrence), optionally with the actual amount/date. */
@@ -105,5 +112,6 @@ export function entryTransaction(
     contributionRuleId: e.source === "contribution" ? e.ruleId : null,
     occurrenceDate: e.occurrenceDate,
     createdBy: ctx.userId,
+    paymentMethod: e.paymentMethod,
   };
 }

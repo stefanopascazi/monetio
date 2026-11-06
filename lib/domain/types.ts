@@ -56,6 +56,8 @@ export interface Transaction {
   paymentMethod: PaymentMethod | null;
   /** Set on fee rows: the payment they belong to. */
   parentTransactionId: string | null;
+  /** Total of the linked fee rows of a payment (positive); null when it has none or was not loaded. */
+  feeCents: number | null;
   recurringRuleId: string | null;
   contributionRuleId: string | null;
   occurrenceDate: ISODate | null;
@@ -79,6 +81,9 @@ export interface RecurringRule {
   startDate: ISODate;
   endDate: ISODate | null;
   active: boolean;
+  paymentMethod: PaymentMethod | null;
+  /** Fee booked with each occurrence of a bonifico/CBill rule (positive, 0 = none). */
+  feeCents: number;
 }
 
 /** Actual amount/due date of one occurrence of a rule, entered before paying (e.g. a bill). */

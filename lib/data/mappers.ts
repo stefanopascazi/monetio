@@ -41,6 +41,12 @@ export function mapCategory(r: Row): Category {
   };
 }
 
+/** Sum of embedded fee rows (`fees:transactions(amount_cents)`), as positive cents. */
+function feeTotal(fees: unknown): number | null {
+  if (!Array.isArray(fees) || !fees.length) return null;
+  return fees.reduce((sum: number, f: Row) => sum + Math.abs(num(f.amount_cents)), 0);
+}
+
 export function mapTransaction(r: Row): Transaction {
   return {
     id: String(r.id),
@@ -56,6 +62,7 @@ export function mapTransaction(r: Row): Transaction {
     transferGroupId: str(r.transfer_group_id),
     paymentMethod: (str(r.payment_method) as Transaction["paymentMethod"]) ?? null,
     parentTransactionId: str(r.parent_transaction_id),
+    feeCents: feeTotal(r.fees),
     recurringRuleId: str(r.recurring_rule_id),
     contributionRuleId: str(r.contribution_rule_id),
     occurrenceDate: str(r.occurrence_date),
@@ -79,6 +86,8 @@ export function mapRule(r: Row): RecurringRule {
     startDate: String(r.start_date),
     endDate: str(r.end_date),
     active: Boolean(r.active),
+    paymentMethod: (str(r.payment_method) as RecurringRule["paymentMethod"]) ?? null,
+    feeCents: r.payment_method ? num(r.fee_cents) : 0,
   };
 }
 

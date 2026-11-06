@@ -1,6 +1,7 @@
 import { anchorDay } from "../domain/recurrence";
-import type { ISODate, RuleFrequency, RuleSchedule } from "../domain/types";
+import type { ISODate, PaymentMethod, RuleFrequency, RuleSchedule } from "../domain/types";
 import { Checker, isISODate, isUUID, type ParseResult, positiveCents, text } from "./parse";
+import { parsePaymentKind } from "./payment";
 
 export interface RuleInput {
   kind: "income" | "expense" | "transfer";
@@ -15,13 +16,16 @@ export interface RuleInput {
   startDate: ISODate;
   endDate: ISODate | null;
   active: boolean;
+  paymentMethod: PaymentMethod | null;
+  /** Fee booked with each occurrence (positive, 0 = none). */
+  feeCents: number;
 }
 
 const FREQUENCIES: RuleFrequency[] = ["weekly", "monthly", "bimonthly", "quarterly", "semiannual", "yearly"];
 const SCHEDULES: RuleSchedule[] = ["auto", "due", "estimate"];
 
 export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
-  const kind = text(fd, "kind") as RuleInput["kind"];
+  const { kind, paymentMethod, feeCents, kindValid, feeValid } = parsePaymentKind(fd);
   const accountId = text(fd, "accountId");
   const counterpart = text(fd, "counterpartAccountId");
   const categoryId = text(fd, "categoryId");
@@ -34,11 +38,13 @@ export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
   const description = text(fd, "description");
 
   const c = new Checker()
-    .check(["income", "expense", "transfer"].includes(kind), "kind", "Scegli il tipo")
+    .check(kindValid, "kind", "Scegli il tipo")
+    .check(feeValid, "feeCents", "Le spese devono essere maggiori di zero")
     .check(isUUID(accountId), "accountId", "Scegli un conto")
     .check(cents !== null, "amountCents", "Inserisci un importo maggiore di zero")
     .check(FREQUENCIES.includes(frequency), "frequency", "Scegli la frequenza")
     .check(SCHEDULES.includes(schedule), "schedule", "Scegli come gestirla")
+    .check(!(paymentMethod && schedule === "estimate"), "schedule", "Un bonifico o CBill non può essere una stima")
     .check(Number.isInteger(day) && day >= 1 && day <= 31, "dayOfMonth", "Giorno tra 1 e 31")
     .check(isISODate(startDate), "startDate", "Inserisci la data di inizio")
     .check(!endDate || (isISODate(endDate) && endDate >= startDate), "endDate", "La fine deve essere dopo l'inizio")
@@ -62,5 +68,7 @@ export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
     startDate,
     endDate: endDate || null,
     active: text(fd, "active") !== "false",
+    paymentMethod,
+    feeCents: feeCents ?? 0,
   });
 }
