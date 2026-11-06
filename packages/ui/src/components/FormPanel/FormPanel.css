@@ -41,6 +41,8 @@ button.mio-form-panel__header { cursor: pointer; }
   transition: transform var(--mio-duration-base) var(--mio-ease);
 }
 .mio-form-panel.is-open .mio-form-panel__chevron { transform: rotate(180deg); }
+.mio-form-panel--plain, .mio-form-panel--plain.is-open { background: transparent; box-shadow: none; }
+.mio-form-panel--plain .mio-form-panel__body { padding: 0; }
 .mio-form-panel__body { padding: var(--mio-space-2) var(--mio-space-5) var(--mio-space-5); }
 .mio-form-panel__fields {
   display: grid;

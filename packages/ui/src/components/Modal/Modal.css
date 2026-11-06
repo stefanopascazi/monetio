@@ -1,0 +1,42 @@
+/* Centered sheet on desktop, bottom sheet on mobile. */
+.mio-modal {
+  width: min(560px, 100%);
+  max-width: 100%;
+  max-height: 100dvh;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--mio-radius-lg) var(--mio-radius-lg) 0 0;
+  background: var(--mio-surface-raised);
+  color: var(--mio-ink);
+  box-shadow: var(--mio-shadow-lg);
+}
+.mio-modal::backdrop { background: rgba(14, 26, 22, 0.45); }
+.mio-modal__sheet { display: flex; flex-direction: column; max-height: 90dvh; }
+.mio-modal__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mio-space-3);
+  padding: var(--mio-space-5) var(--mio-space-5) var(--mio-space-2);
+}
+.mio-modal__heading { flex: 1; min-width: 0; }
+.mio-modal__title { margin: 0; font: 700 20px/26px var(--mio-font-display); letter-spacing: -0.015em; }
+.mio-modal__desc { margin: var(--mio-space-1) 0 0; font: 400 14px/20px var(--mio-font-sans); color: var(--mio-ink-muted); }
+.mio-modal__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--mio-radius-pill);
+  background: transparent;
+  color: var(--mio-ink-muted);
+  cursor: pointer;
+}
+.mio-modal__close:hover { background: var(--mio-brand-soft); color: var(--mio-ink); }
+.mio-modal__close svg { width: 20px; height: 20px; }
+.mio-modal__body { overflow-y: auto; padding: var(--mio-space-2) var(--mio-space-5) var(--mio-space-5); }
+@media (min-width: 768px) {
+  .mio-modal { margin: auto; border-radius: var(--mio-radius-lg); }
+}

@@ -42,7 +42,7 @@ export async function Dashboard() {
 
   return (
     <>
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="flex flex-col justify-between gap-6 rounded-[28px] bg-surface p-6">
           <p className="text-ink-muted">
             Ciao {ctx.me.displayName}, ecco la situazione di {monthLabel(month, true)}.
@@ -60,7 +60,7 @@ export async function Dashboard() {
 
       <AccountGrid accounts={active} members={ctx.members} pending={pending} />
 
-      <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
+      <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: refs[0]?.id ?? "", bookedOn: today }} />
         <DueList items={dueViews(agenda.due, agenda.rules, active, hidden).slice(0, 6)} today={today} title="In scadenza" subtitle="Prossimi 31 giorni" />
       </section>
@@ -76,7 +76,7 @@ export async function Dashboard() {
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.2fr]">
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <Card title="Spese per categoria" subtitle={monthLabel(slicesMonth, true)}>
           <CategoryDonut data={categorySlices(flows, slicesMonth, categories)} />
         </Card>

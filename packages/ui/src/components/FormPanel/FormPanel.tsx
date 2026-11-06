@@ -12,6 +12,8 @@ export interface FormPanelProps {
   icon?: ReactNode;
   /** When false the panel is always open (inline form). */
   collapsible?: boolean;
+  /** Hides header and surface, for forms hosted by a container that already has a title (e.g. Modal). */
+  plain?: boolean;
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -31,6 +33,7 @@ export function FormPanel({
   description,
   icon,
   collapsible = true,
+  plain = false,
   open,
   defaultOpen = false,
   onOpenChange,
@@ -41,7 +44,7 @@ export function FormPanel({
 }: FormPanelProps) {
   const id = useId();
   const [isOpen, setOpen] = useControllableState(open, collapsible ? defaultOpen : true, onOpenChange);
-  const expanded = !collapsible || isOpen;
+  const expanded = plain || !collapsible || isOpen;
 
   const header = (
     <>
@@ -55,8 +58,8 @@ export function FormPanel({
   );
 
   return (
-    <section className={cx("mio-form-panel", expanded && "is-open", className)} aria-labelledby={`${id}-title`}>
-      {collapsible ? (
+    <section className={cx("mio-form-panel", expanded && "is-open", plain && "mio-form-panel--plain", className)} aria-labelledby={`${id}-title`}>
+      {plain ? null : collapsible ? (
         <button
           type="button"
           id={`${id}-title`}

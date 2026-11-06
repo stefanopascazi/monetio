@@ -18,4 +18,14 @@ if (!globalThis.localStorage) {
   Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
 }
 
+// jsdom lacks the modal <dialog> API: toggle the `open` attribute instead.
+if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
+}
+
 afterEach(() => cleanup());
