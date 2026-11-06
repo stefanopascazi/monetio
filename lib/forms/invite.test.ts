@@ -16,7 +16,12 @@ describe("invite form", () => {
 
   it("accepts an existing pending member", () => {
     const id = "11111111-1111-4111-8111-111111111111";
-    expect(parseInviteForm(form({ email: "A@b.it", memberId: id, displayName: "x" }))).toEqual({ ok: true, value: { email: "a@b.it", memberId: id, displayName: null } });
+    expect(parseInviteForm(form({ email: "A@b.it", memberId: id, displayName: "x" }))).toEqual({ ok: true, value: { email: "a@b.it", memberId: id, displayName: null, role: "member" } });
+  });
+
+  it("reads the role", () => {
+    expect(parseInviteForm(form({ email: "a@b.it", displayName: "Asha", role: "admin" }))).toEqual({ ok: true, value: { email: "a@b.it", memberId: null, displayName: "Asha", role: "admin" } });
+    expect(parseInviteForm(form({ email: "a@b.it", displayName: "Asha", role: "owner" }))).toEqual({ ok: false, errors: { role: "Ruolo non valido" } });
   });
 
   it("requires a name for a new member", () => {

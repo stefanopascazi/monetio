@@ -2,9 +2,11 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
-import { createClient } from "../supabase/server";
-import { mapMember } from "./mappers";
+import { type Membership, pickActiveHousehold } from "../domain/household";
 import type { Member } from "../domain/types";
+import { createClient } from "../supabase/server";
+import { readActiveHouseholdId } from "./active-household";
+import { mapMember } from "./mappers";
 
 export interface AppContext {
   userId: string;
@@ -14,6 +16,8 @@ export interface AppContext {
   inviteCode: string;
   me: Member;
   members: Member[];
+  /** Every household of the user, for the switcher. */
+  memberships: Membership[];
 }
 
 /** Signed-in user, without household checks. Redirects guests to /login. */
@@ -29,34 +33,40 @@ export const getUser = cache(async () => {
 });
 
 /**
- * Current user with household and members (one request-scoped read).
- * Links a pre-created member by email on first login; users without a household go to onboarding.
+ * Member rows of the current user (one per household), oldest first.
+ * Links pending members invited by email first, so new invitations show up on the next request.
  */
-/** Member row of the current user, linking a pre-created member by email if needed. Null when none. */
-export const findMembership = cache(async () => {
+export const listMemberships = cache(async () => {
   const user = await getUser();
   const supabase = await createClient();
-  const { data: mine } = await supabase.from("household_members").select("*").eq("user_id", user.id).maybeSingle();
-  if (mine) return mine;
-  const { data: claimed, error } = await supabase.rpc("claim_membership");
+  const { error } = await supabase.rpc("claim_membership");
   if (error) console.error("claim_membership failed", error.message);
-  if (!claimed) return null;
-  const { data } = await supabase.from("household_members").select("*").eq("id", claimed).maybeSingle();
-  return data;
+  const { data } = await supabase.from("household_members").select("*").eq("user_id", user.id).order("created_at");
+  return data ?? [];
 });
 
+/** Member row of the current user in the active household. Null when the user has none. */
+export const findMembership = cache(async () => {
+  const rows = await listMemberships();
+  const preferred = await readActiveHouseholdId();
+  return pickActiveHousehold(rows.map((r) => ({ ...r, householdId: String(r.household_id) })), preferred);
+});
+
+/** Current user with the active household and its members (one request-scoped read). */
 export const getContext = cache(async (): Promise<AppContext> => {
   const user = await getUser();
   const supabase = await createClient();
-  const mine = await findMembership();
+  const [rows, mine] = await Promise.all([listMemberships(), findMembership()]);
   if (!mine) redirect("/benvenuto");
 
-  const [{ data: household }, { data: members }] = await Promise.all([
-    supabase.from("households").select("id, name, invite_code").eq("id", mine.household_id).single(),
-    supabase.from("household_members").select("*").eq("household_id", mine.household_id).order("created_at"),
+  const [{ data: households }, { data: members }] = await Promise.all([
+    supabase.from("households").select("id, name, invite_code").in("id", rows.map((r) => r.household_id)),
+    supabase.from("household_members").select("*").eq("household_id", mine.householdId).order("created_at"),
   ]);
+  const household = households?.find((h) => h.id === mine.householdId);
   if (!household) redirect("/benvenuto");
 
+  const names = new Map((households ?? []).map((h) => [String(h.id), String(h.name)]));
   return {
     userId: user.id,
     email: user.email ?? null,
@@ -65,5 +75,11 @@ export const getContext = cache(async (): Promise<AppContext> => {
     inviteCode: household.invite_code,
     me: mapMember(mine),
     members: (members ?? []).map(mapMember),
+    memberships: rows.map((r) => ({ householdId: String(r.household_id), householdName: names.get(String(r.household_id)) ?? "", role: mapMember(r).role })),
   };
 });
+
+/** Active household id, for scoping reads (RLS alone shows every household of the user). */
+export async function activeHouseholdId(): Promise<string> {
+  return (await getContext()).householdId;
+}

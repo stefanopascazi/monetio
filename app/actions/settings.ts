@@ -33,17 +33,14 @@ export async function archiveCategory(id: string): Promise<ActionState> {
   return success("Categoria archiviata.");
 }
 
+/** Own display name in the active household (household name is renamed by admins). */
 export async function updateProfile(prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await getContext();
   const displayName = String(fd.get("displayName") ?? "").trim();
-  const householdName = String(fd.get("householdName") ?? "").trim();
-  if (!displayName || !householdName) return failure("Nome e nucleo sono obbligatori.");
+  if (!displayName || displayName.length > 40) return failure("Scrivi il tuo nome.", { displayName: "Nome obbligatorio" });
   const supabase = await createClient();
-  const [a, b] = await Promise.all([
-    supabase.from("household_members").update({ display_name: displayName }).eq("id", ctx.me.id),
-    supabase.from("households").update({ name: householdName }).eq("id", ctx.householdId),
-  ]);
-  if (a.error || b.error) return failure(dbErrorMessage(a.error ?? b.error));
+  const { error } = await supabase.from("household_members").update({ display_name: displayName }).eq("id", ctx.me.id);
+  if (error) return failure(dbErrorMessage(error));
   refresh();
   return success("Profilo aggiornato.", prev);
 }

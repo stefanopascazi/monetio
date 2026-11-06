@@ -10,13 +10,13 @@ import { useFormAction } from "@/hooks/useFormAction";
 import { useToastAction } from "@/hooks/useToastAction";
 import type { Category } from "@/lib/domain/types";
 
-export function ProfileForm({ displayName, householdName }: { displayName: string; householdName: string }) {
-  const { state, pending, onSubmit } = useFormAction(updateProfile);
+/** Own name as shown in the active household. */
+export function ProfileForm({ displayName }: { displayName: string }) {
+  const { state, pending, onSubmit, error } = useFormAction(updateProfile);
   return (
-    <FormPanel title="Profilo e nucleo" collapsible={false} onSubmit={onSubmit} actions={<Button type="submit" loading={pending}>Salva</Button>}>
+    <FormPanel title="Profilo" collapsible={false} onSubmit={onSubmit} actions={<Button type="submit" loading={pending}>Salva</Button>}>
       <FormMessage state={state} />
-      <TextField name="displayName" label="Il tuo nome" defaultValue={displayName} required />
-      <TextField name="householdName" label="Nome del nucleo" defaultValue={householdName} required />
+      <TextField name="displayName" label="Il tuo nome nel nucleo" defaultValue={displayName} error={error("displayName")} required className="mio-span-full" />
     </FormPanel>
   );
 }

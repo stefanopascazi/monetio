@@ -12,7 +12,8 @@ export function mapMember(r: Row): Member {
     displayName: String(r.display_name),
     email: str(r.email),
     userId: str(r.user_id),
-    role: r.role === "owner" ? "owner" : "member",
+    // Legacy "owner" rows are admins.
+    role: r.role === "admin" || r.role === "owner" ? "admin" : "member",
   };
 }
 
