@@ -40,8 +40,19 @@
 .mio-due__meta svg { width: 13px; height: 13px; stroke-width: 2.25; }
 .mio-due__status { margin-top: 2px; }
 .mio-due__end { display: flex; flex-direction: column; align-items: flex-end; gap: var(--mio-space-2); flex: none; }
-.mio-due__actions { display: flex; gap: var(--mio-space-2); }
+.mio-due__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--mio-space-2); }
+/* Mobile: amount + actions drop under the text, aligned with it, wrapping instead of overflowing. */
 @media (max-width: 480px) {
   .mio-due { flex-wrap: wrap; }
-  .mio-due__end { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; padding-left: 64px; }
+  .mio-due__end {
+    box-sizing: border-box;
+    flex: 1 1 100%;
+    min-width: 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 64px;
+  }
+  .mio-due__actions { justify-content: flex-start; }
 }
