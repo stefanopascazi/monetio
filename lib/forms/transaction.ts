@@ -14,7 +14,7 @@ export interface TransactionInput {
   notes: string | null;
   status: "booked" | "planned";
   paymentMethod: PaymentMethod | null;
-  /** Optional fee of a bonifico/CBill, positive; booked as a separate expense row. */
+  /** Optional fee of a bonifico/CBill/transfer, positive; booked as a separate expense row. */
   feeCents: number | null;
 }
 

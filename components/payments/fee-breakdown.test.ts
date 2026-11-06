@@ -12,4 +12,8 @@ describe("feeBreakdown", () => {
     expect(feeBreakdown(-500, 0)).toEqual({ totalCents: -500, label: null });
     expect(feeBreakdown(-500, null)).toEqual({ totalCents: -500, label: null });
   });
+
+  it("ignores the fee on the receiving side of a transfer", () => {
+    expect(feeBreakdown(500, 100)).toEqual({ totalCents: 500, label: null });
+  });
 });

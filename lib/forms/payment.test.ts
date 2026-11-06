@@ -13,6 +13,11 @@ describe("parsePaymentKind", () => {
     expect(parsePaymentKind(form({ kind: "cbill" }))).toMatchObject({ paymentMethod: "cbill", feeCents: null, feeValid: true });
   });
 
+  it("reads an optional fee on transfers", () => {
+    expect(parsePaymentKind(form({ kind: "transfer", feeCents: "100" }))).toEqual({ kind: "transfer", paymentMethod: null, feeCents: 100, kindValid: true, feeValid: true });
+    expect(parsePaymentKind(form({ kind: "transfer", feeCents: "0" })).feeValid).toBe(false);
+  });
+
   it("flags invalid fees and kinds, ignoring fees on plain kinds", () => {
     expect(parsePaymentKind(form({ kind: "cbill", feeCents: "-3" })).feeValid).toBe(false);
     expect(parsePaymentKind(form({ kind: "expense", feeCents: "65" }))).toMatchObject({ paymentMethod: null, feeCents: null, feeValid: true });

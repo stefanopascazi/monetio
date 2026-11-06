@@ -8,7 +8,7 @@ import { FormMessage } from "@/components/common/FormMessage";
 import { type NamedRef, toOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
 import { FeeInput } from "@/components/payments/FeeInput";
-import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS } from "@/components/payments/movement-kind";
+import { amountKind, MOVEMENT_KIND_OPTIONS, takesFee } from "@/components/payments/movement-kind";
 import type { MovementFormKind } from "@/lib/forms/payment";
 
 type Kind = MovementFormKind;
@@ -19,7 +19,7 @@ export interface TransactionDefaults {
   counterpartAccountId?: string | null;
   categoryId?: string | null;
   amountCents?: number | null;
-  /** Linked fee of a bonifico/CBill being edited. */
+  /** Linked fee of a bonifico/CBill/transfer being edited. */
   feeCents?: number | null;
   bookedOn: string;
   description?: string;
@@ -94,7 +94,7 @@ export function TransactionForm({ action, accounts, categories, defaults, title 
       )}
       <AmountInput label="Importo" kind={amountKind(kind)} valueCents={amount} onValueChange={setAmount} error={error("amountCents")} className="mio-span-full" />
       {/* The fee row is managed only from here: it is read-only on its own row. */}
-      {isPaymentKind(kind) && (
+      {takesFee(kind) && (
         <FeeInput
           valueCents={fee}
           onValueChange={setFee}

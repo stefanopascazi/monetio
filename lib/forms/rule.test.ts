@@ -27,6 +27,14 @@ describe("parseRuleForm", () => {
     expect(plain.ok && plain.value).toMatchObject({ paymentMethod: null, feeCents: 0 });
   });
 
+  it("keeps the fee of transfer rules except estimates", () => {
+    const B = "22222222-2222-4222-8222-222222222222";
+    const res = parseRuleForm(form({ ...valid, kind: "transfer", counterpartAccountId: B, feeCents: "100" }));
+    expect(res.ok && res.value).toMatchObject({ kind: "transfer", paymentMethod: null, feeCents: 100, counterpartAccountId: B });
+    const estimate = parseRuleForm(form({ ...valid, kind: "transfer", counterpartAccountId: B, schedule: "estimate", feeCents: "100" }));
+    expect(estimate.ok && estimate.value).toMatchObject({ feeCents: 0 });
+  });
+
   it("rejects estimate payments and invalid fees", () => {
     const res = parseRuleForm(form({ ...valid, kind: "bank_transfer", schedule: "estimate", feeCents: "0" }));
     expect(res).toEqual({ ok: false, errors: { schedule: "Un bonifico o CBill non può essere una stima", feeCents: "Le spese devono essere maggiori di zero" } });

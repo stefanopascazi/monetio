@@ -1,5 +1,5 @@
 // Builds `transactions` insert rows; transfers become two linked rows (one per account).
-import { feeDescription } from "../domain/fees";
+import { feeDescription, feeSource } from "../domain/fees";
 import type { DueEntry } from "../domain/schedule";
 import type { ISODate, PaymentMethod, TransactionKind } from "../domain/types";
 
@@ -58,8 +58,9 @@ export function transactionRows(t: NewTransaction, newId: () => string = () => c
 }
 
 /**
- * Rows for a bonifico/CBill: the payment plus, when `feeCents` is set, a linked expense row
- * for the fee on the same account, date and status. Plain transactions pass through unchanged.
+ * Rows for a bonifico/CBill/transfer: the movement plus, when `feeCents` is set, a linked expense
+ * row for the fee on the same (paying) account, date and status. A transfer's fee links to its
+ * first row, the paying side. Plain transactions pass through unchanged.
  * Both rows carry an explicit id: a bulk insert nulls keys missing from some rows instead of
  * applying column defaults.
  */
@@ -68,7 +69,7 @@ export function paymentRows(
   feeCents: number | null,
   { feeCategoryId = null, newId = () => crypto.randomUUID() }: { feeCategoryId?: string | null; newId?: () => string } = {},
 ): TransactionInsert[] {
-  if (!t.paymentMethod || !feeCents) return transactionRows(t, newId);
+  if (!feeSource(t.kind, t.paymentMethod) || !feeCents) return transactionRows(t, newId);
   const payment = { ...t, id: t.id ?? newId() };
   const fee = feeTransaction(payment, feeCents, feeCategoryId, newId());
   return [...transactionRows(payment, newId), ...transactionRows(fee, newId)];
@@ -84,7 +85,7 @@ export function feeTransaction(payment: NewTransaction & { id: string }, feeCent
     kind: "expense",
     amountCents: -Math.abs(feeCents),
     bookedOn: payment.bookedOn,
-    description: feeDescription(payment.paymentMethod ?? "bank_transfer", payment.description),
+    description: feeDescription(feeSource(payment.kind, payment.paymentMethod) ?? "bank_transfer", payment.description),
     status: payment.status,
     source: payment.source,
     createdBy: payment.createdBy,

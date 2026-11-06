@@ -34,6 +34,12 @@ describe("projectBalances", () => {
     expect(res.map((p) => p.byAccount.joint)).toEqual([100000 - 2 * 80065]);
   });
 
+  it("charges a transfer fee to the paying account", () => {
+    const g = rule({ id: "g", kind: "transfer", accountId: "ste", counterpartAccountId: "joint", amountCents: -10000, dayOfMonth: 20, startDate: "2026-11-01", feeCents: 100 });
+    const [p] = projectBalances({ ...base, months: 1, rules: [g] });
+    expect(p.byAccount).toMatchObject({ ste: 50000 - 10100, joint: 110000 });
+  });
+
   it("never overlaps a rule that ends with the one that replaces it", () => {
     const old = rule({ id: "o", accountId: "ste", amountCents: 177000, dayOfMonth: 10, startDate: "2026-11-01", endDate: "2027-01-31" });
     const next = rule({ id: "n", accountId: "ste", amountCents: 190000, dayOfMonth: 10, startDate: "2027-02-01" });

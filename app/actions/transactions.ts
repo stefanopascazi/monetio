@@ -11,7 +11,7 @@ import { isUUID } from "@/lib/forms/parse";
 import { createClient } from "@/lib/supabase/server";
 import { type ActionState, dbErrorMessage, failure, success } from "./state";
 
-const FEE_LOCKED = "Queste spese si gestiscono dal bonifico o CBill a cui appartengono.";
+const FEE_LOCKED = "Queste spese si gestiscono dal bonifico, CBill o giroconto a cui appartengono.";
 
 export async function createTransaction(prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await getContext();
@@ -19,7 +19,7 @@ export async function createTransaction(prev: ActionState, fd: FormData): Promis
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
   const v = parsed.value;
   const supabase = await createClient();
-  // A bonifico/CBill with a fee becomes two linked expense rows.
+  // A bonifico/CBill/transfer with a fee also gets a linked expense row for the fee.
   const feeCategoryId = v.feeCents ? await fetchFeeCategoryId(supabase, ctx.householdId) : null;
   const { error } = await supabase.from("transactions").insert(
     paymentRows({ ...v, householdId: ctx.householdId, createdBy: ctx.userId }, v.feeCents, { feeCategoryId }),
@@ -46,12 +46,26 @@ export async function updateTransaction(id: string, prev: ActionState, fd: FormD
 
   const shared = { category_id: v.categoryId, booked_on: v.bookedOn, description: v.description, notes: v.notes, status: v.status };
   if (current.transfer_group_id) {
-    // Keep both sides of a transfer in sync; the account pair stays as it was.
-    const { data: sides } = await supabase.from("transactions").select("id, account_id").eq("transfer_group_id", current.transfer_group_id);
+    // Keep both sides of a transfer in sync; account pair and direction stay as they were.
+    const { data: sides } = await supabase
+      .from("transactions")
+      .select("id, account_id, amount_cents")
+      .eq("transfer_group_id", current.transfer_group_id)
+      .is("parent_transaction_id", null);
     for (const side of sides ?? []) {
-      const amount = side.id === id ? v.amountCents : -v.amountCents;
+      const amount = Number(side.amount_cents) < 0 ? -Math.abs(v.amountCents) : Math.abs(v.amountCents);
       const { error } = await supabase.from("transactions").update({ ...shared, amount_cents: amount }).eq("id", side.id);
       if (error) return failure(dbErrorMessage(error));
+    }
+    // The fee belongs to the paying side, whichever side was edited.
+    const payer = sides?.find((s) => Number(s.amount_cents) < 0);
+    if (payer) {
+      const feeError = await syncFee(
+        supabase,
+        { ...v, id: String(payer.id), accountId: String(payer.account_id), paymentMethod: null, householdId: ctx.householdId, source: current.source, createdBy: current.created_by },
+        v.feeCents,
+      );
+      if (feeError) return failure(dbErrorMessage(feeError));
     }
   } else {
     const { error } = await supabase
@@ -78,7 +92,7 @@ export async function deleteTransaction(id: string): Promise<ActionState> {
   const supabase = await createClient();
   const { data: current } = await supabase.from("transactions").select("transfer_group_id, parent_transaction_id").eq("id", id).maybeSingle();
   if (current?.parent_transaction_id) return failure(FEE_LOCKED);
-  // Fee rows of a bonifico/CBill are removed by the FK cascade.
+  // Fee rows of a bonifico/CBill/transfer are removed by the FK cascade.
   const query = supabase.from("transactions").delete();
   const { error } = current?.transfer_group_id ? await query.eq("transfer_group_id", current.transfer_group_id) : await query.eq("id", id);
   if (error) return failure(dbErrorMessage(error));
@@ -99,8 +113,9 @@ export async function confirmPlanned(id: string): Promise<ActionState> {
   const q = supabase.from("transactions").update(patch);
   const { error } = t.transfer_group_id ? await q.eq("transfer_group_id", t.transfer_group_id) : await q.eq("id", id);
   if (error) return failure(dbErrorMessage(error));
-  // Confirm the fee of a bonifico/CBill together with it.
-  const { error: feeError } = await supabase.from("transactions").update(patch).eq("parent_transaction_id", id);
+  // Confirm the fee together with it; a transfer's fee hangs on its paying side.
+  const parents = t.transfer_group_id ? ((await supabase.from("transactions").select("id").eq("transfer_group_id", t.transfer_group_id)).data ?? []).map((r) => String(r.id)) : [id];
+  const { error: feeError } = await supabase.from("transactions").update(patch).in("parent_transaction_id", parents);
   if (feeError) return failure(dbErrorMessage(feeError));
   refresh();
   return success("Movimento registrato.");

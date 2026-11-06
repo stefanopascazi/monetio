@@ -69,6 +69,7 @@ export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
     endDate: endDate || null,
     active: text(fd, "active") !== "false",
     paymentMethod,
-    feeCents: feeCents ?? 0,
+    // Estimates never create movements, so they carry no fee.
+    feeCents: schedule === "estimate" ? 0 : (feeCents ?? 0),
   });
 }

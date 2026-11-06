@@ -26,7 +26,8 @@ export interface DueView {
   canConfirm: boolean;
   /** False when the paying account is not visible to the viewer. */
   payable: boolean;
-  /** Bonifico/CBill: paying also books `feeCents` (positive, 0 = none). */
+  kind: "income" | "expense" | "transfer";
+  /** Bonifico/CBill (transfers take a fee too): paying also books `feeCents` (positive, 0 = none). */
   paymentMethod: PaymentMethod | null;
   feeCents: number;
 }
@@ -102,7 +103,7 @@ export function DueList({
                     e.estimated ? `${e.description} (stima)` : e.description
                   }
                   dueDate={isoToDate(e.date)}
-                  // Bonifico/CBill: total including the fee; the split is shown below.
+                  // Bonifico/CBill/transfer: total including the fee; the split is shown below.
                   amountCents={Math.abs(feeBreakdown(e.amountCents, e.feeCents).totalCents)}
                   amountNote={feeBreakdown(e.amountCents, e.feeCents).label}
                   kind={e.amountCents >= 0 ? "income" : "expense"}

@@ -1,4 +1,5 @@
 // Average month per account over the coming year, built only from recurring rules and quotas.
+import { feeSource } from "./fees";
 import { addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
 import { occurrences } from "./recurrence";
 import type { ContributionRule, RecurringRule } from "./types";
@@ -34,8 +35,12 @@ export function monthlySummary(accountIds: string[], rules: RecurringRule[], con
   for (const id of accountIds) slot(id);
   for (const r of rules) {
     if (!r.active) continue;
-    // Bonifico/CBill fees are extra expenses of the same occurrences.
-    const m = avg(r.amountCents - (r.paymentMethod ? r.feeCents : 0), occurrences(r, from, to).length);
+    const count = occurrences(r, from, to).length;
+    // Bank fees are extra expenses of the paying account: inside the payment for bonifico/CBill,
+    // separate from the moved amount for transfers.
+    const fee = feeSource(r.kind, r.paymentMethod) ? r.feeCents : 0;
+    if (r.kind === "transfer" && fee) slot(r.accountId).rulesExpenseCents += avg(fee, count);
+    const m = avg(r.amountCents - (r.kind === "transfer" ? 0 : fee), count);
     if (!m) continue;
     if (r.kind === "transfer") {
       slot(r.accountId).transfersCents += m;

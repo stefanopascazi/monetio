@@ -11,7 +11,7 @@ import { TransactionForm } from "./TransactionForm";
 /** Expanded body of a transaction: notes, edit form, delete. `onDone` closes the row after a change. */
 export function TransactionDetails({ t, accounts, categories, onDone }: { t: TxnView; accounts: NamedRef[]; categories: NamedRef[]; onDone?: () => void }) {
   const { pending, run } = useToastAction();
-  // Fee rows follow their bonifico/CBill: edited and deleted only from it.
+  // Fee rows follow their bonifico/CBill/transfer: edited and deleted only from it.
   const editable = t.kind !== "adjustment" && !t.isFee;
 
   return (
@@ -34,7 +34,7 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           </div>
         )}
       </dl>
-      {t.isFee && <p className="text-sm text-ink-muted">Spese collegate a un pagamento: si modificano o eliminano dal bonifico o CBill a cui appartengono.</p>}
+      {t.isFee && <p className="text-sm text-ink-muted">Spese collegate a un movimento: si modificano o eliminano dal bonifico, CBill o giroconto a cui appartengono.</p>}
       {t.status === "planned" && !t.isFee && (
         <Button variant="secondary" size="sm" iconStart={<Check />} loading={pending} onClick={() => run(() => confirmPlanned(t.id), onDone)} className="w-fit">
           Registra come avvenuto
@@ -70,7 +70,9 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
         triggerIcon={<Trash2 />}
         message={
           t.isTransfer
-            ? "Elimino il giroconto su entrambi i conti? Resterà nello storico modifiche."
+            ? t.feeCents
+              ? "Elimino il giroconto su entrambi i conti e le sue spese? Resterà nello storico modifiche."
+              : "Elimino il giroconto su entrambi i conti? Resterà nello storico modifiche."
             : t.paymentMethod
               ? "Elimino il movimento e le sue eventuali spese? Resterà nello storico modifiche."
               : "Elimino il movimento? Resterà nello storico modifiche."

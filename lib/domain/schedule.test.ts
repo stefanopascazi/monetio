@@ -49,6 +49,11 @@ describe("rule entries with fees", () => {
     expect(e).toMatchObject({ paymentMethod: "cbill", feeCents: 150 });
     expect(upcomingOccurrences([rule({ id: "p", amountCents: -1, dayOfMonth: 20, startDate: "2026-01-01" })], new Set(), "2026-11-15", 10)[0]).toMatchObject({ paymentMethod: null, feeCents: 0 });
   });
+
+  it("carry the fee of transfer rules", () => {
+    const g = rule({ id: "g", kind: "transfer", counterpartAccountId: "joint", amountCents: -5000, schedule: "due", dayOfMonth: 20, startDate: "2026-01-01", feeCents: 100 });
+    expect(upcomingOccurrences([g], new Set(), "2026-11-15", 10)[0]).toMatchObject({ kind: "transfer", paymentMethod: null, feeCents: 100 });
+  });
 });
 
 describe("dueEntries", () => {

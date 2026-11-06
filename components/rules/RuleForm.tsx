@@ -7,7 +7,7 @@ import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
 import { type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, toOptions } from "@/components/common/options";
 import { FeeInput } from "@/components/payments/FeeInput";
-import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS } from "@/components/payments/movement-kind";
+import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS, takesFee } from "@/components/payments/movement-kind";
 import { useFormAction } from "@/hooks/useFormAction";
 import type { RecurringRule, RuleSchedule } from "@/lib/domain/types";
 import { formKindOf, type MovementFormKind } from "@/lib/forms/payment";
@@ -101,7 +101,10 @@ export function RuleForm({ action, accounts, categories, rule, today, onSaved }:
         error={error("amountCents")}
         className="mio-span-full"
       />
-      {isPaymentKind(kind) && <FeeInput valueCents={fee} onValueChange={setFee} hint="Registrate come movimento separato a ogni pagamento" error={error("feeCents")} />}
+      {/* Estimates create no movements, so a transfer estimate has no fee. */}
+      {takesFee(kind) && schedule !== "estimate" && (
+        <FeeInput valueCents={fee} onValueChange={setFee} hint="Registrate come movimento separato a ogni pagamento" error={error("feeCents")} />
+      )}
       <TextField name="description" label="Descrizione" placeholder="Es. Rata mutuo" defaultValue={rule?.description} error={error("description")} required />
       <Select name="accountId" label={kind === "transfer" ? "Dal conto" : "Conto"} defaultValue={rule?.accountId ?? accounts[0]?.id} options={toOptions(accounts)} error={error("accountId")} />
       {kind === "transfer" && (

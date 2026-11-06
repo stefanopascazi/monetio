@@ -2,7 +2,7 @@
 
 import { Repeat, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Accordion, Amount, Badge, Card, EmptyState, InlineConfirm, TextField } from "@monetio/ui";
+import { Accordion, Badge, Card, EmptyState, InlineConfirm, TextField } from "@monetio/ui";
 import { deleteRule, updateRule } from "@/app/actions/rules";
 import { FREQUENCY_LABEL, type NamedRef, SCHEDULE_LABEL } from "@/components/common/options";
 import { groupRules } from "@/lib/data/rule-groups";
@@ -76,7 +76,7 @@ function RuleAccordion({
             </span>
           </span>
         ),
-        meta: r.paymentMethod ? <AmountWithFee cents={r.viewCents} feeCents={r.feeCents} /> : <Amount cents={r.viewCents} tone={r.kind === "transfer" ? "transfer" : "auto"} showSign />,
+        meta: <AmountWithFee cents={r.viewCents} feeCents={r.feeCents} tone={r.kind === "transfer" ? "transfer" : "auto"} />,
         content: open.includes(r.id) ? <RuleBody rule={r} accounts={accounts} categories={categories} today={today} onDone={() => setOpen([])} /> : null,
       }))}
     />

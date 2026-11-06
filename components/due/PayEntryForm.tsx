@@ -6,14 +6,16 @@ import { markEntryPaid } from "@/app/actions/rules";
 import { FormMessage } from "@/components/common/FormMessage";
 import { FeeInput } from "@/components/payments/FeeInput";
 import { useFormAction } from "@/hooks/useFormAction";
-import { PAYMENT_LABEL } from "@/lib/domain/fees";
+import { FEE_SOURCE_LABEL, feeSource } from "@/lib/domain/fees";
 import type { DueView } from "./DueList";
 
-/** Inline confirmation of a deadline with the actual amount, date and (bonifico/CBill) fee. */
+/** Inline confirmation of a deadline with the actual amount, date and (bonifico/CBill/transfer) fee. */
 export function PayEntryForm({ entry, today, onClose }: { entry: DueView; today: string; onClose: () => void }) {
   const [amount, setAmount] = useState<number | null>(Math.abs(entry.amountCents));
   const [fee, setFee] = useState<number | null>(entry.feeCents || null);
   const { state, pending, onSubmit, error } = useFormAction(markEntryPaid.bind(null, entry.key), onClose);
+  // Only rule occurrences carry a fee (contributions are computed transfers).
+  const source = entry.canConfirm ? feeSource(entry.kind, entry.paymentMethod) : null;
   return (
     <form
       onSubmit={(e) => {
@@ -34,9 +36,9 @@ export function PayEntryForm({ entry, today, onClose }: { entry: DueView; today:
           Registra
         </Button>
       </div>
-      {entry.paymentMethod && (
+      {source && (
         <div className="sm:col-span-3">
-          <FeeInput valueCents={fee} onValueChange={setFee} hint={`${PAYMENT_LABEL[entry.paymentMethod]}: le spese diventano un movimento separato`} error={error("feeCents")} />
+          <FeeInput valueCents={fee} onValueChange={setFee} hint={`${FEE_SOURCE_LABEL[source]}: le spese diventano un movimento separato`} error={error("feeCents")} />
         </div>
       )}
     </form>

@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { todayISO } from "@/lib/domain/dates";
+import { feeSource } from "@/lib/domain/fees";
 import { loadAgenda } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { fetchFeeCategoryId } from "@/lib/data/fee-category";
@@ -29,7 +30,7 @@ function ruleRow(v: ReturnType<typeof parseRuleForm> & { ok: true }) {
     end_date: r.endDate,
     active: r.active,
     payment_method: r.paymentMethod,
-    fee_cents: r.paymentMethod ? r.feeCents : 0,
+    fee_cents: feeSource(r.kind, r.paymentMethod) ? r.feeCents : 0,
   };
 }
 
@@ -130,8 +131,8 @@ export async function markEntryPaid(key: string, prev: ActionState, fd: FormData
   const date = String(fd.get("bookedOn") ?? "") || todayISO();
   if (cents === null) return failure("Inserisci un importo maggiore di zero.", { amountCents: "Importo non valido" });
   if (!isISODate(date)) return failure("Inserisci una data valida.", { bookedOn: "Data non valida" });
-  // Bonifico/CBill: the fee can be corrected on payment (empty = none).
-  const feeCents = entry.paymentMethod ? (fd.has("feeCents") ? feeFromForm(fd) : entry.feeCents) : 0;
+  // Bonifico/CBill/transfer rules: the fee can be corrected on payment (empty = none).
+  const feeCents = entry.source === "rule" && feeSource(entry.kind, entry.paymentMethod) ? (fd.has("feeCents") ? feeFromForm(fd) : entry.feeCents) : 0;
   if (feeCents === undefined) return failure("Controlla i campi evidenziati.", { feeCents: "Le spese devono essere maggiori di zero" });
   const signed = Math.sign(entry.amountCents || -1) * cents;
   const supabase = await createClient();

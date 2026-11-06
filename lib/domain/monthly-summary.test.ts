@@ -27,6 +27,13 @@ describe("monthlySummary", () => {
     expect(res.joint.rulesExpenseCents).toBe(5150);
   });
 
+  it("counts transfer fees as expenses of the paying account only", () => {
+    const t = rule({ kind: "transfer", accountId: "ste", counterpartAccountId: "joint", amountCents: -80000, feeCents: 100 });
+    const res = monthlySummary(["ste", "joint"], [t], [], today);
+    expect(res.ste).toMatchObject({ rulesExpenseCents: 100, transfersCents: -80000, netCents: -80100 });
+    expect(res.joint).toMatchObject({ rulesExpenseCents: 0, transfersCents: 80000 });
+  });
+
   it("spreads non-monthly rules over the year", () => {
     const rules = [rule({ accountId: "ste", amountCents: -24000, frequency: "yearly", startDate: "2026-03-01" }), rule({ id: "b", accountId: "ste", amountCents: -6000, frequency: "bimonthly" })];
     expect(monthlySummary(["ste"], rules, [], today).ste.rulesExpenseCents).toBe(2000 + 3000);

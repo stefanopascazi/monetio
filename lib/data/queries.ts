@@ -45,16 +45,26 @@ export interface TransactionFilter {
 type Client = Awaited<ReturnType<typeof createClient>>;
 
 /**
- * Maps rows and attaches the fee total of bonifico/CBill payments with a separate query
- * (no PostgREST embedding: it depends on the relationship being in the schema cache).
+ * Maps rows and attaches the fee total of bonifico/CBill payments and transfers with separate
+ * queries (no PostgREST embedding: it depends on the relationship being in the schema cache).
  */
 async function withFees(supabase: Client, rows: Record<string, unknown>[]): Promise<Transaction[]> {
   const txns = rows.map(mapTransaction);
-  const ids = txns.filter((t) => t.paymentMethod).map((t) => t.id);
+  const transfers = txns.filter((t) => t.transferGroupId && !t.parentTransactionId);
+  const sides = transfers.map((t) => ({ id: t.id, groupId: t.transferGroupId! }));
+  // Receiving sides: their fee hangs on the paying side, which may not be listed.
+  const incoming = transfers.filter((t) => t.amountCents > 0).map((t) => t.transferGroupId!);
+  if (incoming.length) {
+    const { data, error } = await supabase.from("transactions").select("id, transfer_group_id").in("transfer_group_id", incoming).lt("amount_cents", 0).is("parent_transaction_id", null);
+    if (error) throw error;
+    for (const r of data ?? []) sides.push({ id: String(r.id), groupId: String(r.transfer_group_id) });
+  }
+  const ids = [...new Set([...txns.filter((t) => t.paymentMethod).map((t) => t.id), ...sides.map((s) => s.id)])];
   if (!ids.length) return txns;
   const { data, error } = await supabase.from("transactions").select("parent_transaction_id, amount_cents").in("parent_transaction_id", ids);
   if (error) throw error;
-  return attachFees(txns, (data ?? []).map((r) => ({ parentId: String(r.parent_transaction_id), amountCents: Number(r.amount_cents) })));
+  const fees = (data ?? []).map((r) => ({ parentId: String(r.parent_transaction_id), amountCents: Number(r.amount_cents) }));
+  return attachFees(txns, fees, sides);
 }
 
 export async function listTransactions(f: TransactionFilter = {}): Promise<Transaction[]> {

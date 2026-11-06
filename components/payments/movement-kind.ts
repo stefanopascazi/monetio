@@ -12,5 +12,8 @@ export const MOVEMENT_KIND_OPTIONS: SegmentedOption<MovementFormKind>[] = [
 
 export const isPaymentKind = (k: MovementFormKind) => k === "bank_transfer" || k === "cbill";
 
+/** Kinds that accept an optional bank fee: bonifico, CBill and transfer. */
+export const takesFee = (k: MovementFormKind) => isPaymentKind(k) || k === "transfer";
+
 /** Sign shown by amount inputs for a form kind. */
 export const amountKind = (k: MovementFormKind): "expense" | "income" | "transfer" => (isPaymentKind(k) ? "expense" : (k as "expense" | "income" | "transfer"));

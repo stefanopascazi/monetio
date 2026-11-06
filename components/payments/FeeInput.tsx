@@ -3,7 +3,7 @@
 import { AmountInput } from "@monetio/ui";
 import type { ReactNode } from "react";
 
-/** Optional bonifico/CBill fee; posts `feeCents` (empty = no fee). */
+/** Optional bonifico/CBill/transfer fee; posts `feeCents` (empty = no fee). */
 export function FeeInput({ valueCents, onValueChange, hint, error }: { valueCents: number | null; onValueChange: (c: number | null) => void; hint: ReactNode; error?: ReactNode }) {
   return (
     <>

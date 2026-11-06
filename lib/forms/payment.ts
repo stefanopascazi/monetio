@@ -1,4 +1,4 @@
-// Shared parsing of the movement kind, where bonifico/CBill are expenses with an optional fee.
+// Shared parsing of the movement kind: bonifico/CBill are expenses; they and transfers take an optional fee.
 import type { PaymentMethod } from "../domain/types";
 import { positiveCents, text } from "./parse";
 
@@ -11,18 +11,18 @@ export const isPaymentMethod = (k: string): k is PaymentMethod => k === "bank_tr
 export interface PaymentKind {
   kind: "income" | "expense" | "transfer";
   paymentMethod: PaymentMethod | null;
-  /** Positive fee cents; null when empty or not a payment. */
+  /** Positive fee cents; null when empty or the kind takes no fee. */
   feeCents: number | null;
   kindValid: boolean;
   /** False when a fee was typed but is not a positive amount. */
   feeValid: boolean;
 }
 
-/** Reads `kind` and, for bonifico/CBill, the optional `feeCents` field. */
+/** Reads `kind` and, for bonifico/CBill/transfer, the optional `feeCents` field. */
 export function parsePaymentKind(fd: FormData): PaymentKind {
   const formKind = text(fd, "kind");
   const paymentMethod = isPaymentMethod(formKind) ? formKind : null;
-  const feeText = paymentMethod ? text(fd, "feeCents") : "";
+  const feeText = paymentMethod || formKind === "transfer" ? text(fd, "feeCents") : "";
   const feeCents = feeText ? positiveCents(feeText) : null;
   return {
     kind: paymentMethod ? "expense" : (formKind as PaymentKind["kind"]),
