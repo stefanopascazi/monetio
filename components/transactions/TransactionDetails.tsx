@@ -6,6 +6,7 @@ import { confirmPlanned, deleteTransaction, updateTransaction } from "@/app/acti
 import type { NamedRef } from "@/components/common/options";
 import { useToastAction } from "@/hooks/useToastAction";
 import { SOURCE_LABEL, type TxnView } from "@/lib/data/views";
+import { editDefaults } from "./edit-defaults";
 import { TransactionForm } from "./TransactionForm";
 
 /** Expanded body of a transaction: notes, edit form, delete. `onDone` closes the row after a change. */
@@ -50,19 +51,7 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           accounts={accounts}
           categories={categories}
           onSaved={onDone}
-          defaults={{
-            kind: t.isTransfer ? "transfer" : (t.paymentMethod ?? (t.amountCents >= 0 ? "income" : "expense")),
-            feeCents: t.feeCents,
-            accountId: t.accountId,
-            counterpartAccountId: t.counterpartAccountId,
-            counterpartName: t.counterpartName,
-            categoryId: t.categoryId,
-            amountCents: Math.abs(t.amountCents),
-            bookedOn: t.bookedOn,
-            description: t.description,
-            notes: t.notes,
-            planned: t.status === "planned",
-          }}
+          defaults={editDefaults(t)}
         />
       )}
       {!t.isFee && (

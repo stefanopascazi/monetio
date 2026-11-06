@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextField } from "@monetio/ui";
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
-import { counterpartOptions } from "@/components/common/counterpart-options";
+import { accountOptions } from "@/components/common/account-options";
 import { type NamedRef, toOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
 import { FeeInput } from "@/components/payments/FeeInput";
@@ -17,6 +17,8 @@ type Kind = MovementFormKind;
 export interface TransactionDefaults {
   kind: Kind;
   accountId: string;
+  /** Label of the paying account, kept listed when the viewer cannot see it. */
+  accountName?: string | null;
   counterpartAccountId?: string | null;
   /** Label of the current destination, kept listed when it is a hidden account. */
   counterpartName?: string | null;
@@ -99,7 +101,8 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
       )}
       <AmountInput label="Importo" kind={amountKind(kind)} valueCents={amount} onValueChange={setAmount} error={error("amountCents")} className="mio-span-full" />
       {/* The fee row is managed only from here: it is read-only on its own row. */}
-      {takesFee(kind) && (
+      {/* A transfer's fee belongs to its payer: hidden when editing a transfer from an account the viewer cannot see. */}
+      {takesFee(kind) && (kind !== "transfer" || !lockKind || accounts.some((a) => a.id === defaults.accountId)) && (
         <FeeInput
           valueCents={fee}
           onValueChange={setFee}
@@ -113,7 +116,7 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
         name="accountId"
         label={kind === "transfer" ? "Dal conto" : "Conto"}
         defaultValue={defaults.accountId}
-        options={toOptions(accounts)}
+        options={accountOptions(accounts, [], defaults.accountName ? { id: defaults.accountId, name: defaults.accountName } : null)}
         error={error("accountId")}
         disabled={lockKind}
       />
@@ -125,7 +128,7 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
             label="Al conto"
             defaultValue={defaults.counterpartAccountId ?? ""}
             placeholder="Scegli il conto"
-            options={counterpartOptions(
+            options={accountOptions(
               accounts,
               transferTargets,
               defaults.counterpartAccountId ? { id: defaults.counterpartAccountId, name: defaults.counterpartName ?? "Conto privato" } : null,

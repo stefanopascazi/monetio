@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextField } from "@monetio/ui";
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
-import { counterpartOptions } from "@/components/common/counterpart-options";
+import { accountOptions } from "@/components/common/account-options";
 import { type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, toOptions } from "@/components/common/options";
 import { FeeInput } from "@/components/payments/FeeInput";
 import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS, takesFee } from "@/components/payments/movement-kind";
@@ -116,7 +116,7 @@ export function RuleForm({ action, accounts, categories, transferTargets, rule, 
           label="Al conto"
           defaultValue={rule?.counterpartAccountId ?? ""}
           placeholder="Scegli il conto"
-          options={counterpartOptions(accounts, transferTargets, rule?.counterpartAccountId ? { id: rule.counterpartAccountId, name: "Conto privato" } : null)}
+          options={accountOptions(accounts, transferTargets, rule?.counterpartAccountId ? { id: rule.counterpartAccountId, name: "Conto privato" } : null)}
           error={error("counterpartAccountId")}
         />
       )}
