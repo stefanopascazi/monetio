@@ -9,17 +9,28 @@ import { HIDDEN_ACCOUNT } from "./views";
 
 type Named = Pick<Account, "id" | "name">;
 
-const nameOf = (accounts: Named[], id: string | null) => (id ? (accounts.find((a) => a.id === id)?.name ?? HIDDEN_ACCOUNT) : "");
+/** Visible accounts plus labels of hidden ones ("Conto privato di Asha"). */
+const nameOf = (accounts: Named[], hidden: Named[], id: string | null) =>
+  id ? (accounts.find((a) => a.id === id)?.name ?? hidden.find((a) => a.id === id)?.name ?? HIDDEN_ACCOUNT) : "";
 
-export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: Named[]) {
+/**
+ * Amount from the viewer's side: a transfer seen only through its counterpart is money in
+ * for them (amounts are signed for the paying account).
+ */
+const viewerCents = (amountCents: number, payerVisible: boolean, counterpartId: string | null) =>
+  !payerVisible && counterpartId ? -amountCents : amountCents;
+
+export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: Named[], hidden: Named[] = []) {
   const visible = new Set(accounts.map((a) => a.id));
   return entries.map((e) => ({
     key: e.key,
     accountId: e.accountId,
     date: e.date,
     description: e.description,
-    amountCents: e.amountCents,
-    accountName: e.counterpartAccountId ? `${nameOf(accounts, e.accountId)} → ${nameOf(accounts, e.counterpartAccountId)}` : nameOf(accounts, e.accountId),
+    amountCents: viewerCents(e.amountCents, visible.has(e.accountId), e.counterpartAccountId),
+    accountName: e.counterpartAccountId
+      ? `${nameOf(accounts, hidden, e.accountId)} → ${nameOf(accounts, hidden, e.counterpartAccountId)}`
+      : nameOf(accounts, hidden, e.accountId),
     frequency: (e.source === "rule" ? (rules.find((r) => r.id === e.ruleId)?.frequency ?? "monthly") : "monthly") as RuleFrequency,
     estimated: e.estimated,
     confirmed: e.confirmed,
@@ -30,26 +41,31 @@ export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: 
   }));
 }
 
-export function ruleViews(rules: RecurringRule[], accounts: Named[], today: string, categories: Pick<Category, "id" | "name">[] = []) {
+export function ruleViews(rules: RecurringRule[], accounts: Named[], today: string, categories: Pick<Category, "id" | "name">[] = [], hidden: Named[] = []) {
   const visible = new Set(accounts.map((a) => a.id));
   return rules.map((r) => ({
     ...r,
     categoryName: categories.find((c) => c.id === r.categoryId)?.name ?? null,
-    accountName: r.counterpartAccountId ? `${nameOf(accounts, r.accountId)} → ${nameOf(accounts, r.counterpartAccountId)}` : nameOf(accounts, r.accountId),
+    accountName: r.counterpartAccountId
+      ? `${nameOf(accounts, hidden, r.accountId)} → ${nameOf(accounts, hidden, r.counterpartAccountId)}`
+      : nameOf(accounts, hidden, r.accountId),
+    /** Paying account label, used to group rules (hidden accounts carry their owner). */
+    sourceName: nameOf(accounts, hidden, r.accountId),
+    viewCents: viewerCents(r.amountCents, visible.has(r.accountId), r.counterpartAccountId),
     nextDate: r.active ? nextOccurrence(r, today) : null,
     /** False for transfers seen only through the counterpart: read-only for the viewer. */
     editable: ownsRule(r, visible),
   }));
 }
 
-export function contributionViews(items: ContributionRule[], accounts: Named[], today: string, spending: SpendingLookup) {
+export function contributionViews(items: ContributionRule[], accounts: Named[], today: string, spending: SpendingLookup, hidden: Named[] = []) {
   const visible = new Set(accounts.map((a) => a.id));
   return items.map((c) => ({
     ...c,
-    fromName: nameOf(accounts, c.fromAccountId),
-    toName: nameOf(accounts, c.toAccountId),
+    fromName: nameOf(accounts, hidden, c.fromAccountId),
+    toName: nameOf(accounts, hidden, c.toAccountId),
     currentCents: contributionAmount(c, contributionBase(c, monthKey(today), monthKey(today), spending).baseCents),
-    spendingName: nameOf(accounts, c.spendingAccountId ?? c.toAccountId),
+    spendingName: nameOf(accounts, hidden, c.spendingAccountId ?? c.toAccountId),
     editable: visible.has(c.fromAccountId),
   }));
 }

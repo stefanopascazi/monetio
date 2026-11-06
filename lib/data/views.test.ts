@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { txn } from "../domain/fixtures";
-import { FORMER_MEMBER, HIDDEN_ACCOUNT, creatorName, toTxnView } from "./views";
+import { FORMER_MEMBER, HIDDEN_ACCOUNT, creatorName, hiddenAccountName, toTxnView } from "./views";
 
 describe("toTxnView", () => {
   const accounts = [{ id: "a1", name: "Cointestato" }];
@@ -32,5 +32,13 @@ describe("creatorName", () => {
 
   it("labels users no longer in the household", () => {
     expect(creatorName("gone", members)).toBe(FORMER_MEMBER);
+  });
+});
+
+describe("hiddenAccountName", () => {
+  it("names the owner when known", () => {
+    expect(hiddenAccountName("Asha")).toBe("Conto privato di Asha");
+    expect(hiddenAccountName(" ")).toBe(HIDDEN_ACCOUNT);
+    expect(hiddenAccountName(null)).toBe(HIDDEN_ACCOUNT);
   });
 });

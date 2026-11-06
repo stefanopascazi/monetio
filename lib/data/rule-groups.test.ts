@@ -32,6 +32,17 @@ describe("groupRules", () => {
     ]);
   });
 
+  it("merges hidden accounts of the same owner into one group", () => {
+    const hidden = [
+      { ...r("h1", "Quota fissa Asha", "due", "Conto privato di Asha → Cointestato"), sourceName: "Conto privato di Asha" },
+      { ...r("h2", "Babysitter metà", "estimate", "Conto privato di Asha → Cointestato"), sourceName: "Conto privato di Asha" },
+    ];
+    const groups = groupRules(hidden, accounts);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ accountId: "hidden:Conto privato di Asha", accountName: "Conto privato di Asha" });
+    expect([groups[0].effective.length, groups[0].estimates.length]).toEqual([1, 1]);
+  });
+
   it("filters by description, account or category ignoring case and accents", () => {
     expect(groupRules(rules, accounts, "LUCE").flatMap((g) => g.effective.map((x) => x.description))).toEqual(["Bolletta luce"]);
     expect(groupRules(rules, accounts, "mutuo")[0].effective.map((x) => x.description)).toEqual(["Rata mutuo"]);

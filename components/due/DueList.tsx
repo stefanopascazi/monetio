@@ -103,6 +103,8 @@ export function DueList({
                   frequency={e.frequency}
                   account={e.accountName}
                   today={isoToDate(today)}
+                  // Paid from an account the viewer cannot see: shown lighter, no actions.
+                  className={e.payable ? undefined : "opacity-75"}
                   onMarkPaid={
                     e.payable && open?.key !== e.key
                       ? () => setOpen({ key: e.key, mode: "pay" })

@@ -7,20 +7,20 @@ import { RuleList } from "@/components/rules/RuleList";
 import { loadAgenda } from "@/lib/data/agenda";
 import { contributionSpendingFrom } from "@/lib/data/flows";
 import { contributionViews, dueViews, ruleViews } from "@/lib/data/page-views";
-import { listAccounts, listCategories } from "@/lib/data/queries";
+import { listAccounts, listCategories, listHiddenAccounts } from "@/lib/data/queries";
 import { DueList } from "./DueList";
 import { UpcomingList } from "./UpcomingList";
 
 export async function AgendaView() {
   const agenda = await loadAgenda();
-  const [accounts, categories] = await Promise.all([listAccounts(), listCategories()]);
+  const [accounts, categories, hidden] = await Promise.all([listAccounts(), listCategories(), listHiddenAccounts()]);
   const active = accounts.filter((a) => !a.archived);
   const refs = active.map((a) => ({ id: a.id, name: a.name }));
   const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
-  const due = dueViews(agenda.due, agenda.rules, active);
+  const due = dueViews(agenda.due, agenda.rules, active, hidden);
   const overdue = due.filter((d) => d.date < agenda.today);
-  const rules = ruleViews(agenda.rules, accounts, agenda.today, categories);
-  const contributions = contributionViews(agenda.contributions, accounts, agenda.today, contributionSpendingFrom(agenda.flows));
+  const rules = ruleViews(agenda.rules, accounts, agenda.today, categories, hidden);
+  const contributions = contributionViews(agenda.contributions, accounts, agenda.today, contributionSpendingFrom(agenda.flows), hidden);
 
   return (
     <>
@@ -36,7 +36,7 @@ export async function AgendaView() {
               <section className="grid grid-cols-1 items-start gap-4 pt-4 lg:grid-cols-2">
                 <DueList items={due} today={agenda.today} subtitle={overdue.length ? `${overdue.length} scadute` : "Prossimi 31 giorni"} accounts={refs} />
                 <Card title="Addebiti automatici" subtitle="Si registrano da soli nei prossimi 31 giorni" padding="none">
-                  <UpcomingList items={dueViews(agenda.upcoming, agenda.rules, accounts)} />
+                  <UpcomingList items={dueViews(agenda.upcoming, agenda.rules, accounts, hidden)} />
                 </Card>
               </section>
             ),

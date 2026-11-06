@@ -1,6 +1,7 @@
 import type { RecurringRule } from "../domain/types";
 
 export interface RuleGroup<T> {
+  /** Paying account id; hidden accounts are grouped by label instead (one card per owner). */
   accountId: string;
   accountName: string;
   /** Automatic and due rules: real money movements. */
@@ -13,9 +14,12 @@ const normalize = (s: string) => s.toLocaleLowerCase("it").normalize("NFD").repl
 
 /**
  * Filters rules by a free-text query (description, account, category) and groups them by
- * paying account, splitting real movements from estimates. Accounts follow `accountOrder`.
+ * paying account, splitting real movements from estimates. Accounts follow `accountOrder`;
+ * accounts missing from it (hidden to the viewer) are merged by label and go last.
  */
-export function groupRules<T extends Pick<RecurringRule, "accountId" | "schedule" | "description"> & { accountName: string; categoryName?: string | null }>(
+export function groupRules<
+  T extends Pick<RecurringRule, "accountId" | "schedule" | "description"> & { accountName: string; sourceName?: string; categoryName?: string | null },
+>(
   rules: T[],
   accountOrder: { id: string; name: string }[],
   query = "",
@@ -24,10 +28,12 @@ export function groupRules<T extends Pick<RecurringRule, "accountId" | "schedule
   const matches = (r: T) => !q || [r.description, r.accountName, r.categoryName ?? ""].some((s) => normalize(s).includes(q));
   const groups = new Map<string, RuleGroup<T>>();
   for (const r of rules.filter(matches)) {
-    const name = accountOrder.find((a) => a.id === r.accountId)?.name ?? r.accountName.split(" → ")[0];
-    const g = groups.get(r.accountId) ?? { accountId: r.accountId, accountName: name, effective: [], estimates: [] };
+    const known = accountOrder.find((a) => a.id === r.accountId);
+    const name = known?.name ?? r.sourceName ?? r.accountName.split(" → ")[0];
+    const key = known ? r.accountId : `hidden:${name}`;
+    const g = groups.get(key) ?? { accountId: key, accountName: name, effective: [], estimates: [] };
     (r.schedule === "estimate" ? g.estimates : g.effective).push(r);
-    groups.set(r.accountId, g);
+    groups.set(key, g);
   }
   const rank = (id: string) => {
     const i = accountOrder.findIndex((a) => a.id === id);
