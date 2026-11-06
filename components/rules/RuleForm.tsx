@@ -17,10 +17,12 @@ export interface RuleFormProps {
   categories: NamedRef[];
   rule?: RecurringRule;
   today: string;
+  /** Edit mode: called after a successful save (e.g. to close the parent accordion). */
+  onSaved?: () => void;
 }
 
 /** Create (collapsible panel) or edit (embedded) a recurring rule. */
-export function RuleForm({ action, accounts, categories, rule, today }: RuleFormProps) {
+export function RuleForm({ action, accounts, categories, rule, today, onSaved }: RuleFormProps) {
   const embedded = !!rule;
   const [kind, setKind] = useState<Kind>(rule?.kind ?? "expense");
   const [schedule, setSchedule] = useState<RuleSchedule>(rule?.schedule ?? "auto");
@@ -28,11 +30,15 @@ export function RuleForm({ action, accounts, categories, rule, today }: RuleForm
   const [active, setActive] = useState(rule?.active ?? true);
   const [open, setOpen] = useState(embedded);
   const [formKey, setFormKey] = useState(0);
+  // After saving: close the panel so the outcome is visible, and clear the create form.
   const reset = useCallback(() => {
-    if (embedded) return;
+    if (embedded) return onSaved?.();
+    setOpen(false);
     setAmount(null);
+    setKind("expense");
+    setSchedule("auto");
     setFormKey((k) => k + 1);
-  }, [embedded]);
+  }, [embedded, onSaved]);
   const { state, pending, onSubmit, error } = useFormAction(action, reset);
 
   return (

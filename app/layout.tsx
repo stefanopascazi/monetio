@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Gabarito, JetBrains_Mono, Onest } from "next/font/google";
-import { themeInitScript } from "@monetio/ui";
+import { ToastProvider, themeInitScript } from "@monetio/ui";
 import { ServiceWorker } from "@/components/shell/ServiceWorker";
 import "./globals.css";
 
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="mio-root min-h-full">
-        {children}
+        <ToastProvider>{children}</ToastProvider>
         <ServiceWorker />
       </body>
     </html>

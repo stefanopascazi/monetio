@@ -1,14 +1,14 @@
 "use client";
 
 import { Repeat, Search, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { Accordion, Alert, Amount, Badge, Card, EmptyState, InlineConfirm, TextField } from "@monetio/ui";
+import { useState } from "react";
+import { Accordion, Amount, Badge, Card, EmptyState, InlineConfirm, TextField } from "@monetio/ui";
 import { deleteRule, updateRule } from "@/app/actions/rules";
-import type { ActionState } from "@/app/actions/state";
 import { FREQUENCY_LABEL, type NamedRef, SCHEDULE_LABEL } from "@/components/common/options";
 import { groupRules } from "@/lib/data/rule-groups";
 import { dateLabel } from "@/lib/domain/dates";
 import type { RecurringRule } from "@/lib/domain/types";
+import { useToastAction } from "@/hooks/useToastAction";
 import { RuleForm } from "./RuleForm";
 
 export interface RuleView extends RecurringRule {
@@ -17,19 +17,17 @@ export interface RuleView extends RecurringRule {
   nextDate: string | null;
 }
 
-function RuleBody({ rule, accounts, categories, today }: { rule: RuleView; accounts: NamedRef[]; categories: NamedRef[]; today: string }) {
-  const [result, setResult] = useState<ActionState | null>(null);
-  const [, start] = useTransition();
+function RuleBody({ rule, accounts, categories, today, onDone }: { rule: RuleView; accounts: NamedRef[]; categories: NamedRef[]; today: string; onDone: () => void }) {
+  const { run } = useToastAction();
   return (
     <div className="flex flex-col gap-4 pb-2">
-      {result?.message && <Alert tone={result.ok ? "success" : "danger"}>{result.message}</Alert>}
-      <RuleForm rule={rule} action={updateRule.bind(null, rule.id)} accounts={accounts} categories={categories} today={today} />
+      <RuleForm rule={rule} action={updateRule.bind(null, rule.id)} accounts={accounts} categories={categories} today={today} onSaved={onDone} />
       <InlineConfirm
         triggerLabel="Elimina ricorrenza"
         triggerIcon={<Trash2 />}
         message="Elimino la ricorrenza? I movimenti già registrati restano."
         confirmLabel="Elimina"
-        onConfirm={() => start(async () => setResult(await deleteRule(rule.id)))}
+        onConfirm={() => run(() => deleteRule(rule.id), onDone)}
       />
     </div>
   );
@@ -71,7 +69,7 @@ function RuleAccordion({
           </span>
         ),
         meta: <Amount cents={r.amountCents} tone={r.kind === "transfer" ? "transfer" : "auto"} showSign />,
-        content: open.includes(r.id) ? <RuleBody rule={r} accounts={accounts} categories={categories} today={today} /> : null,
+        content: open.includes(r.id) ? <RuleBody rule={r} accounts={accounts} categories={categories} today={today} onDone={() => setOpen([])} /> : null,
       }))}
     />
   );

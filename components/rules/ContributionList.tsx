@@ -1,12 +1,12 @@
 "use client";
 
 import { HandCoins, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { Accordion, Alert, Amount, EmptyState, InlineConfirm } from "@monetio/ui";
+import { useState } from "react";
+import { Accordion, Amount, EmptyState, InlineConfirm } from "@monetio/ui";
 import { deleteContribution, updateContribution } from "@/app/actions/rules";
-import type { ActionState } from "@/app/actions/state";
 import type { NamedRef } from "@/components/common/options";
 import type { ContributionRule } from "@/lib/domain/types";
+import { useToastAction } from "@/hooks/useToastAction";
 import { ContributionForm } from "./ContributionForm";
 
 export interface ContributionView extends ContributionRule {
@@ -18,20 +18,18 @@ export interface ContributionView extends ContributionRule {
   editable: boolean;
 }
 
-function Body({ c, accounts, categories }: { c: ContributionView; accounts: NamedRef[]; categories: NamedRef[] }) {
-  const [result, setResult] = useState<ActionState | null>(null);
-  const [, start] = useTransition();
+function Body({ c, accounts, categories, onDone }: { c: ContributionView; accounts: NamedRef[]; categories: NamedRef[]; onDone: () => void }) {
+  const { run } = useToastAction();
   if (!c.editable) return <p className="pb-2 text-sm text-ink-muted">Può modificarla solo chi vede il conto di partenza.</p>;
   return (
     <div className="flex flex-col gap-4 pb-2">
-      {result?.message && <Alert tone={result.ok ? "success" : "danger"}>{result.message}</Alert>}
-      <ContributionForm contribution={c} action={updateContribution.bind(null, c.id)} accounts={accounts} categories={categories} />
+      <ContributionForm contribution={c} action={updateContribution.bind(null, c.id)} accounts={accounts} categories={categories} onSaved={onDone} />
       <InlineConfirm
         triggerLabel="Elimina quota"
         triggerIcon={<Trash2 />}
         message="Elimino la quota automatica? I versamenti già registrati restano."
         confirmLabel="Elimina"
-        onConfirm={() => start(async () => setResult(await deleteContribution(c.id)))}
+        onConfirm={() => run(() => deleteContribution(c.id), onDone)}
       />
     </div>
   );
@@ -63,7 +61,7 @@ export function ContributionList({ items, accounts, categories }: { items: Contr
             <span className="text-xs text-ink-subtle">questo mese</span>
           </span>
         ),
-        content: open.includes(c.id) ? <Body c={c} accounts={accounts} categories={categories} /> : null,
+        content: open.includes(c.id) ? <Body c={c} accounts={accounts} categories={categories} onDone={() => setOpen([])} /> : null,
       }))}
     />
   );

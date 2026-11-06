@@ -1,18 +1,19 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { AmountInput, Button, TextField } from "@monetio/ui";
 import { clearOccurrenceAmount, setOccurrenceAmount } from "@/app/actions/overrides";
 import { FormMessage } from "@/components/common/FormMessage";
 import { useFormAction } from "@/hooks/useFormAction";
+import { useToastAction } from "@/hooks/useToastAction";
 import type { DueView } from "./DueList";
 
 /** Actual amount and due date of one occurrence (e.g. the bill arrived), without paying it. */
 export function ActualAmountForm({ entry, onClose }: { entry: DueView; onClose: () => void }) {
   const [amount, setAmount] = useState<number | null>(Math.abs(entry.amountCents));
   const { state, pending, onSubmit, error } = useFormAction(setOccurrenceAmount.bind(null, entry.key), onClose);
-  const [clearing, start] = useTransition();
+  const { pending: clearing, run } = useToastAction();
   return (
     <form
       onSubmit={(e) => {
@@ -39,12 +40,7 @@ export function ActualAmountForm({ entry, onClose }: { entry: DueView; onClose: 
             variant="ghost"
             iconStart={<Trash2 />}
             loading={clearing}
-            onClick={() =>
-              start(async () => {
-                await clearOccurrenceAmount(entry.key);
-                onClose();
-              })
-            }
+            onClick={() => run(() => clearOccurrenceAmount(entry.key), onClose)}
           >
             Torna alla stima
           </Button>

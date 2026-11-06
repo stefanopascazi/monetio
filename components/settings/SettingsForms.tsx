@@ -1,13 +1,13 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { Alert, Button, FormPanel, InlineConfirm, Select, TextField } from "@monetio/ui";
+import { useState } from "react";
+import { Button, FormPanel, InlineConfirm, Select, TextField } from "@monetio/ui";
 import { archiveCategory, createCategory, updateProfile } from "@/app/actions/settings";
-import type { ActionState } from "@/app/actions/state";
 import { CATEGORY_ICON_NAMES, CategoryIcon } from "@/components/common/CategoryIcon";
 import { FormMessage } from "@/components/common/FormMessage";
 import { useFormAction } from "@/hooks/useFormAction";
+import { useToastAction } from "@/hooks/useToastAction";
 import type { Category } from "@/lib/domain/types";
 
 export function ProfileForm({ displayName, householdName }: { displayName: string; householdName: string }) {
@@ -26,8 +26,7 @@ const KIND_LABEL = { expense: "Uscite", income: "Entrate", both: "Entrambe" } as
 export function CategoryManager({ categories }: { categories: Category[] }) {
   const [formKey, setFormKey] = useState(0);
   const { state, pending, onSubmit, error } = useFormAction(createCategory, () => setFormKey((k) => k + 1));
-  const [result, setResult] = useState<ActionState | null>(null);
-  const [, start] = useTransition();
+  const { run } = useToastAction();
   return (
     <div className="flex flex-col gap-4">
       <FormPanel
@@ -44,7 +43,6 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
         <Select name="icon" label="Icona" defaultValue="sparkles" options={CATEGORY_ICON_NAMES.map((n) => ({ value: n, label: n }))} />
         <Select name="colorIndex" label="Colore" defaultValue="1" options={[1, 2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: `Colore ${n}` }))} />
       </FormPanel>
-      {result?.message && <Alert tone={result.ok ? "success" : "danger"}>{result.message}</Alert>}
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((c) => (
           <li key={c.id} className="flex items-center justify-between gap-3 rounded-[14px] bg-surface px-4 py-2">
@@ -65,7 +63,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
               triggerIcon={<Trash2 />}
               message="Archivio la categoria? I movimenti la mantengono."
               confirmLabel="Archivia"
-              onConfirm={() => start(async () => setResult(await archiveCategory(c.id)))}
+              onConfirm={() => run(() => archiveCategory(c.id))}
             />
           </li>
         ))}

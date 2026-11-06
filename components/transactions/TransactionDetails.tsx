@@ -1,20 +1,17 @@
 "use client";
 
 import { Check, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { Alert, Button, InlineConfirm } from "@monetio/ui";
+import { Button, InlineConfirm } from "@monetio/ui";
 import { confirmPlanned, deleteTransaction, updateTransaction } from "@/app/actions/transactions";
-import type { ActionState } from "@/app/actions/state";
 import type { NamedRef } from "@/components/common/options";
+import { useToastAction } from "@/hooks/useToastAction";
 import { SOURCE_LABEL, type TxnView } from "@/lib/data/views";
 import { TransactionForm } from "./TransactionForm";
 
-/** Expanded body of a transaction: notes, edit form, delete. */
-export function TransactionDetails({ t, accounts, categories }: { t: TxnView; accounts: NamedRef[]; categories: NamedRef[] }) {
-  const [result, setResult] = useState<ActionState | null>(null);
-  const [pending, start] = useTransition();
+/** Expanded body of a transaction: notes, edit form, delete. `onDone` closes the row after a change. */
+export function TransactionDetails({ t, accounts, categories, onDone }: { t: TxnView; accounts: NamedRef[]; categories: NamedRef[]; onDone?: () => void }) {
+  const { pending, run } = useToastAction();
   const editable = t.kind !== "adjustment";
-  const run = (fn: () => Promise<ActionState>) => start(async () => setResult(await fn()));
 
   return (
     <div className="flex flex-col gap-4 pb-2">
@@ -30,9 +27,8 @@ export function TransactionDetails({ t, accounts, categories }: { t: TxnView; ac
           </div>
         )}
       </dl>
-      {result?.message && <Alert tone={result.ok ? "success" : "danger"}>{result.message}</Alert>}
       {t.status === "planned" && (
-        <Button variant="secondary" size="sm" iconStart={<Check />} loading={pending} onClick={() => run(() => confirmPlanned(t.id))} className="w-fit">
+        <Button variant="secondary" size="sm" iconStart={<Check />} loading={pending} onClick={() => run(() => confirmPlanned(t.id), onDone)} className="w-fit">
           Registra come avvenuto
         </Button>
       )}
@@ -45,6 +41,7 @@ export function TransactionDetails({ t, accounts, categories }: { t: TxnView; ac
           action={updateTransaction.bind(null, t.id)}
           accounts={accounts}
           categories={categories}
+          onSaved={onDone}
           defaults={{
             kind: t.isTransfer ? "transfer" : t.amountCents >= 0 ? "income" : "expense",
             accountId: t.accountId,
@@ -63,7 +60,7 @@ export function TransactionDetails({ t, accounts, categories }: { t: TxnView; ac
         triggerIcon={<Trash2 />}
         message={t.isTransfer ? "Elimino il giroconto su entrambi i conti? Resterà nello storico modifiche." : "Elimino il movimento? Resterà nello storico modifiche."}
         confirmLabel="Elimina"
-        onConfirm={() => run(() => deleteTransaction(t.id))}
+        onConfirm={() => run(() => deleteTransaction(t.id), onDone)}
       />
     </div>
   );

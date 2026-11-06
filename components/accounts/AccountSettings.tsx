@@ -1,18 +1,21 @@
 "use client";
 
 import { Archive, ArchiveRestore } from "lucide-react";
-import { useState, useTransition } from "react";
-import { Accordion, Alert, Button } from "@monetio/ui";
+import { useState } from "react";
+import { Accordion, Button } from "@monetio/ui";
 import { setAccountArchived, updateAccount } from "@/app/actions/accounts";
-import type { ActionState } from "@/app/actions/state";
+import { useToastAction } from "@/hooks/useToastAction";
 import type { AccountWithBalance } from "@/lib/data/queries";
 import { AccountForm } from "./AccountForm";
 
 export function AccountSettings({ account, canMakePrivate }: { account: AccountWithBalance; canMakePrivate: boolean }) {
-  const [result, setResult] = useState<ActionState | null>(null);
-  const [pending, start] = useTransition();
+  const [open, setOpen] = useState<string[]>([]);
+  const { pending, run } = useToastAction();
+  const close = () => setOpen([]);
   return (
     <Accordion
+      value={open}
+      onValueChange={setOpen}
       items={[
         {
           id: "settings",
@@ -23,6 +26,7 @@ export function AccountSettings({ account, canMakePrivate }: { account: AccountW
                 embedded
                 canMakePrivate={canMakePrivate}
                 action={updateAccount.bind(null, account.id)}
+                onSaved={close}
                 defaults={{
                   name: account.name,
                   institution: account.institution,
@@ -32,14 +36,13 @@ export function AccountSettings({ account, canMakePrivate }: { account: AccountW
                   openingDate: account.openingDate,
                 }}
               />
-              {result?.message && <Alert tone={result.ok ? "success" : "danger"}>{result.message}</Alert>}
               <Button
                 variant="secondary"
                 size="sm"
                 className="w-fit"
                 loading={pending}
                 iconStart={account.archived ? <ArchiveRestore /> : <Archive />}
-                onClick={() => start(async () => setResult(await setAccountArchived(account.id, !account.archived)))}
+                onClick={() => run(() => setAccountArchived(account.id, !account.archived), close)}
               >
                 {account.archived ? "Ripristina conto" : "Archivia conto"}
               </Button>

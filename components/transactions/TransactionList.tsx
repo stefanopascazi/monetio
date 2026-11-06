@@ -40,7 +40,7 @@ export function TransactionList({ items, accounts, categories, showAccount = tru
             )}
           </span>
         ),
-        content: open.includes(t.id) ? <TransactionDetails t={t} accounts={accounts} categories={categories} /> : null,
+        content: open.includes(t.id) ? <TransactionDetails t={t} accounts={accounts} categories={categories} onDone={() => setOpen([])} /> : null,
       }))}
     />
   );

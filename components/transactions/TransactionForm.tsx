@@ -32,20 +32,26 @@ export interface TransactionFormProps {
   /** Edit mode: embedded (no collapsible panel) and kind locked for transfers. */
   embedded?: boolean;
   lockKind?: boolean;
+  /** Embedded mode: called after a successful save (e.g. to close the parent accordion). */
+  onSaved?: () => void;
 }
 
 /** Add or edit a transaction inline (modal-free). */
-export function TransactionForm({ action, accounts, categories, defaults, title = "Nuovo movimento", submitLabel = "Salva movimento", embedded, lockKind }: TransactionFormProps) {
+export function TransactionForm({ action, accounts, categories, defaults, title = "Nuovo movimento", submitLabel = "Salva movimento", embedded, lockKind, onSaved }: TransactionFormProps) {
   const [kind, setKind] = useState<Kind>(defaults.kind);
   const [amount, setAmount] = useState<number | null>(defaults.amountCents ?? null);
   const [planned, setPlanned] = useState(defaults.planned ?? false);
   const [formKey, setFormKey] = useState(0);
   const [open, setOpen] = useState(!!embedded);
+  // After saving: close the panel so the outcome is visible, and clear the create form.
   const reset = useCallback(() => {
-    if (embedded) return;
+    if (embedded) return onSaved?.();
+    setOpen(false);
     setAmount(null);
+    setPlanned(false);
+    setKind(defaults.kind);
     setFormKey((k) => k + 1);
-  }, [embedded]);
+  }, [embedded, onSaved, defaults.kind]);
   const { state, pending, onSubmit, error } = useFormAction(action, reset);
 
   return (

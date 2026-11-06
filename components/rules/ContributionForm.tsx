@@ -14,10 +14,12 @@ export interface ContributionFormProps {
   accounts: NamedRef[];
   categories: NamedRef[];
   contribution?: ContributionRule;
+  /** Edit mode: called after a successful save (e.g. to close the parent accordion). */
+  onSaved?: () => void;
 }
 
 /** Monthly quota towards a shared account: fixed part + share of the shared spending. */
-export function ContributionForm({ action, accounts, categories, contribution: c }: ContributionFormProps) {
+export function ContributionForm({ action, accounts, categories, contribution: c, onSaved }: ContributionFormProps) {
   const embedded = !!c;
   const [fixed, setFixed] = useState<number | null>(c?.fixedCents ?? null);
   const [estimate, setEstimate] = useState<number | null>(c?.estimatedSpendingCents ?? null);
@@ -25,13 +27,15 @@ export function ContributionForm({ action, accounts, categories, contribution: c
   const [active, setActive] = useState(c?.active ?? true);
   const [open, setOpen] = useState(embedded);
   const [formKey, setFormKey] = useState(0);
+  // After saving: close the panel so the outcome is visible, and clear the create form.
   const reset = useCallback(() => {
-    if (embedded) return;
+    if (embedded) return onSaved?.();
+    setOpen(false);
     setFixed(null);
     setEstimate(null);
     setCats([]);
     setFormKey((k) => k + 1);
-  }, [embedded]);
+  }, [embedded, onSaved]);
   const { state, pending, onSubmit, error } = useFormAction(action, reset);
   const toggle = (id: string) => setCats((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
