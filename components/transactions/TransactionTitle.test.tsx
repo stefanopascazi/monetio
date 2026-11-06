@@ -17,4 +17,13 @@ describe("TransactionTitle", () => {
     render(<TransactionTitle t={view(null)} />);
     expect(screen.queryByText(/di /)).not.toBeInTheDocument();
   });
+
+  it("labels bonifico payments and their fees", () => {
+    const pay = toTxnView(txn({ amountCents: -300000, bookedOn: "2026-11-01", paymentMethod: "bank_transfer" }), [{ id: "a1", name: "Cointestato" }], []);
+    const { unmount } = render(<TransactionTitle t={pay} />);
+    expect(screen.getByText(/^Bonifico · Cointestato/)).toBeInTheDocument();
+    unmount();
+    render(<TransactionTitle t={toTxnView(txn({ amountCents: -65, bookedOn: "2026-11-01", parentTransactionId: "p" }), [{ id: "a1", name: "Cointestato" }], [])} />);
+    expect(screen.getByText(/^Spese · Cointestato/)).toBeInTheDocument();
+  });
 });

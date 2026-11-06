@@ -12,6 +12,8 @@ export function txn(p: Partial<Transaction> & Pick<Transaction, "amountCents" | 
     description: "x",
     notes: null,
     transferGroupId: null,
+    paymentMethod: null,
+    parentTransactionId: null,
     recurringRuleId: null,
     contributionRuleId: null,
     occurrenceDate: null,

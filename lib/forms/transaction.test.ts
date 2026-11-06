@@ -15,7 +15,7 @@ describe("parseTransactionForm", () => {
     const res = parseTransactionForm(form({ kind: "expense", accountId: A, amountCents: "1250", bookedOn: "2026-11-04", description: "Bar" }), "2026-11-05");
     expect(res).toEqual({
       ok: true,
-      value: { kind: "expense", accountId: A, counterpartAccountId: null, categoryId: null, amountCents: -1250, bookedOn: "2026-11-04", description: "Bar", notes: null, status: "booked" },
+      value: { kind: "expense", accountId: A, counterpartAccountId: null, categoryId: null, amountCents: -1250, bookedOn: "2026-11-04", description: "Bar", notes: null, status: "booked", paymentMethod: null, feeCents: null },
     });
   });
 
@@ -29,6 +29,20 @@ describe("parseTransactionForm", () => {
     expect(res).toEqual({ ok: false, errors: { counterpartAccountId: "Scegli un conto diverso da quello di partenza" } });
     const ok = parseTransactionForm(form({ kind: "transfer", accountId: A, counterpartAccountId: B, amountCents: "100", bookedOn: "2026-11-05", description: "Giro" }), "2026-11-05");
     expect(ok.ok && ok.value.counterpartAccountId).toBe(B);
+  });
+
+  it("books bonifico and CBill as expenses with an optional fee", () => {
+    const res = parseTransactionForm(form({ kind: "bank_transfer", accountId: A, amountCents: "300000", feeCents: "65", bookedOn: "2026-11-05", description: "Affitto" }), "2026-11-05");
+    expect(res.ok && res.value).toMatchObject({ kind: "expense", paymentMethod: "bank_transfer", amountCents: -300000, feeCents: 65, counterpartAccountId: null });
+    const noFee = parseTransactionForm(form({ kind: "cbill", accountId: A, amountCents: "5000", feeCents: "", bookedOn: "2026-11-05", description: "Bolletta" }), "2026-11-05");
+    expect(noFee.ok && noFee.value).toMatchObject({ kind: "expense", paymentMethod: "cbill", feeCents: null });
+  });
+
+  it("rejects an invalid fee and ignores fees on plain expenses", () => {
+    const bad = parseTransactionForm(form({ kind: "cbill", accountId: A, amountCents: "5000", feeCents: "0", bookedOn: "2026-11-05", description: "Bolletta" }), "2026-11-05");
+    expect(bad).toEqual({ ok: false, errors: { feeCents: "Le spese devono essere maggiori di zero" } });
+    const plain = parseTransactionForm(form({ kind: "expense", accountId: A, amountCents: "5000", feeCents: "65", bookedOn: "2026-11-05", description: "Bar" }), "2026-11-05");
+    expect(plain.ok && plain.value).toMatchObject({ paymentMethod: null, feeCents: null });
   });
 
   it("reports missing fields", () => {

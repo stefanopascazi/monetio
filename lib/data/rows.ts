@@ -1,8 +1,10 @@
 // Builds `transactions` insert rows; transfers become two linked rows (one per account).
 import type { DueEntry } from "../domain/schedule";
-import type { ISODate, TransactionKind } from "../domain/types";
+import type { ISODate, PaymentMethod, TransactionKind } from "../domain/types";
 
 export interface NewTransaction {
+  /** Explicit id, needed when another row (e.g. a fee) references this one. */
+  id?: string;
   householdId: string;
   accountId: string;
   counterpartAccountId?: string | null;
@@ -19,6 +21,8 @@ export interface NewTransaction {
   contributionRuleId?: string | null;
   occurrenceDate?: ISODate | null;
   createdBy?: string | null;
+  paymentMethod?: PaymentMethod | null;
+  parentTransactionId?: string | null;
 }
 
 export type TransactionInsert = Record<string, string | number | null>;
@@ -40,14 +44,42 @@ export function transactionRows(t: NewTransaction, newId: () => string = () => c
     contribution_rule_id: t.contributionRuleId ?? null,
     occurrence_date: t.occurrenceDate ?? null,
     created_by: t.createdBy ?? null,
+    payment_method: t.paymentMethod ?? null,
+    parent_transaction_id: t.parentTransactionId ?? null,
   };
   const rows: TransactionInsert[] = [
-    { ...base, account_id: t.accountId, counterpart_account_id: t.counterpartAccountId ?? null, amount_cents: t.amountCents },
+    { ...(t.id ? { id: t.id } : {}), ...base, account_id: t.accountId, counterpart_account_id: t.counterpartAccountId ?? null, amount_cents: t.amountCents },
   ];
   if (isTransfer) {
     rows.push({ ...base, account_id: t.counterpartAccountId!, counterpart_account_id: t.accountId, amount_cents: -t.amountCents });
   }
   return rows;
+}
+
+/** Description of the fee row of a payment, e.g. "Spese bonifico · Affitto". */
+export const feeDescription = (method: PaymentMethod, description: string) =>
+  `Spese ${method === "cbill" ? "CBill" : "bonifico"} · ${description}`.slice(0, 200);
+
+/**
+ * Rows for a bonifico/CBill: the payment plus, when `feeCents` is set, a linked expense row
+ * for the fee on the same account, date and status. Plain transactions pass through unchanged.
+ */
+export function paymentRows(t: NewTransaction, feeCents: number | null, newId: () => string = () => crypto.randomUUID()): TransactionInsert[] {
+  if (!t.paymentMethod || !feeCents) return transactionRows(t, newId);
+  const id = t.id ?? newId();
+  const fee: NewTransaction = {
+    householdId: t.householdId,
+    accountId: t.accountId,
+    kind: "expense",
+    amountCents: -Math.abs(feeCents),
+    bookedOn: t.bookedOn,
+    description: feeDescription(t.paymentMethod, t.description),
+    status: t.status,
+    source: t.source,
+    createdBy: t.createdBy,
+    parentTransactionId: id,
+  };
+  return [...transactionRows({ ...t, id }, newId), ...transactionRows(fee, newId)];
 }
 
 /** Transaction for a due entry (rule or contribution occurrence), optionally with the actual amount/date. */

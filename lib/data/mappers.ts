@@ -54,6 +54,8 @@ export function mapTransaction(r: Row): Transaction {
     description: String(r.description),
     notes: str(r.notes),
     transferGroupId: str(r.transfer_group_id),
+    paymentMethod: (str(r.payment_method) as Transaction["paymentMethod"]) ?? null,
+    parentTransactionId: str(r.parent_transaction_id),
     recurringRuleId: str(r.recurring_rule_id),
     contributionRuleId: str(r.contribution_rule_id),
     occurrenceDate: str(r.occurrence_date),

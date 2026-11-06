@@ -1,5 +1,5 @@
 // Serializable view models passed from Server to Client Components.
-import type { Account, Category, Member, Transaction } from "../domain/types";
+import type { Account, Category, Member, PaymentMethod, Transaction } from "../domain/types";
 
 export interface TxnView {
   id: string;
@@ -20,10 +20,15 @@ export interface TxnView {
   source: Transaction["source"];
   recurring: boolean;
   isTransfer: boolean;
+  paymentMethod: PaymentMethod | null;
+  /** Fee row of a bonifico/CBill. */
+  isFee: boolean;
   /** Display name of whoever entered it; null when unknown (imports, automatic bookings). */
   createdByName: string | null;
   balanceAfterCents?: number;
 }
+
+export const PAYMENT_LABEL: Record<PaymentMethod, string> = { bank_transfer: "Bonifico", cbill: "CBill" };
 
 export const HIDDEN_ACCOUNT = "Conto privato";
 export const FORMER_MEMBER = "Ex membro";
@@ -59,11 +64,13 @@ export function toTxnView(
     counterpartName: t.counterpartAccountId ? (acc.get(t.counterpartAccountId) ?? HIDDEN_ACCOUNT) : null,
     categoryId: t.categoryId,
     categoryName: cat?.name ?? null,
-    categoryIcon: cat?.icon ?? (t.kind === "transfer" ? "arrow-left-right" : null),
+    categoryIcon: cat?.icon ?? (t.kind === "transfer" ? "arrow-left-right" : t.paymentMethod ? "landmark" : t.parentTransactionId ? "percent" : null),
     colorIndex: cat?.colorIndex ?? 3,
     source: t.source,
     recurring: !!(t.recurringRuleId || t.contributionRuleId),
     isTransfer: !!t.transferGroupId || t.kind === "transfer",
+    paymentMethod: t.paymentMethod,
+    isFee: !!t.parentTransactionId,
     createdByName: creatorName(t.createdBy, members),
     balanceAfterCents: t.balanceAfterCents,
   };

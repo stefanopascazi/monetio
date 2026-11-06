@@ -7,6 +7,8 @@ export type AccountType = "checking" | "savings" | "investment" | "card" | "cash
 export type Visibility = "shared" | "private";
 export type TransactionKind = "income" | "expense" | "transfer" | "adjustment";
 export type TransactionStatus = "booked" | "planned";
+/** How an expense was paid when it may carry a fee (bonifico, CBill). */
+export type PaymentMethod = "bank_transfer" | "cbill";
 export type RuleFrequency = "weekly" | "monthly" | "bimonthly" | "quarterly" | "semiannual" | "yearly";
 export type RuleSchedule = "auto" | "due" | "estimate";
 
@@ -51,6 +53,9 @@ export interface Transaction {
   description: string;
   notes: string | null;
   transferGroupId: string | null;
+  paymentMethod: PaymentMethod | null;
+  /** Set on fee rows: the payment they belong to. */
+  parentTransactionId: string | null;
   recurringRuleId: string | null;
   contributionRuleId: string | null;
   occurrenceDate: ISODate | null;

@@ -49,7 +49,7 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           categories={categories}
           onSaved={onDone}
           defaults={{
-            kind: t.isTransfer ? "transfer" : t.amountCents >= 0 ? "income" : "expense",
+            kind: t.isTransfer ? "transfer" : (t.paymentMethod ?? (t.amountCents >= 0 ? "income" : "expense")),
             accountId: t.accountId,
             counterpartAccountId: t.counterpartAccountId,
             categoryId: t.categoryId,
@@ -64,7 +64,13 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
       <InlineConfirm
         triggerLabel="Elimina movimento"
         triggerIcon={<Trash2 />}
-        message={t.isTransfer ? "Elimino il giroconto su entrambi i conti? Resterà nello storico modifiche." : "Elimino il movimento? Resterà nello storico modifiche."}
+        message={
+          t.isTransfer
+            ? "Elimino il giroconto su entrambi i conti? Resterà nello storico modifiche."
+            : t.paymentMethod
+              ? "Elimino il movimento e le sue eventuali spese? Resterà nello storico modifiche."
+              : "Elimino il movimento? Resterà nello storico modifiche."
+        }
         confirmLabel="Elimina"
         onConfirm={() => run(() => deleteTransaction(t.id), onDone)}
       />

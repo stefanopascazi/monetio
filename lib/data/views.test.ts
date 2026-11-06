@@ -17,6 +17,15 @@ describe("toTxnView", () => {
   });
 });
 
+describe("toTxnView payments", () => {
+  it("flags bonifico/CBill payments and their fee rows", () => {
+    const pay = toTxnView(txn({ amountCents: -300000, bookedOn: "2026-11-01", paymentMethod: "bank_transfer" }), [], []);
+    expect(pay).toMatchObject({ paymentMethod: "bank_transfer", isFee: false, categoryIcon: "landmark" });
+    const fee = toTxnView(txn({ amountCents: -65, bookedOn: "2026-11-01", parentTransactionId: "p" }), [], []);
+    expect(fee).toMatchObject({ paymentMethod: null, isFee: true, categoryIcon: "percent" });
+  });
+});
+
 describe("creatorName", () => {
   const members = [{ userId: "u1", displayName: "Ste" }, { userId: null, displayName: "Invitata" }];
 
