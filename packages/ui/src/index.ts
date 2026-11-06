@@ -25,6 +25,7 @@ export * from "./components/FormPanel/FormPanel";
 export * from "./components/Accordion/Accordion";
 export * from "./components/Tabs/Tabs";
 export * from "./components/InlineConfirm/InlineConfirm";
+export * from "./components/Modal/Modal";
 
 // Layout and navigation
 export * from "./components/Card/Card";

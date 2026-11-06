@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { Amount, Card, PageHeader, ProjectionChart } from "@monetio/ui";
+import { Card, ProjectionChart } from "@monetio/ui";
 import { createTransaction } from "@/app/actions/transactions";
+import { AccountHeader } from "@/components/accounts/AccountHeader";
 import { AccountSettings } from "@/components/accounts/AccountSettings";
 import { PendingTransfersNote } from "@/components/accounts/PendingTransfersNote";
 import { PeriodNav } from "@/components/common/PeriodNav";
@@ -49,16 +50,13 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
 
   return (
     <>
-      <PageHeader
-        eyebrow={account.visibility === "shared" ? "Conto condiviso" : `Conto privato di ${owner?.displayName ?? "un membro"}`}
-        title={account.name}
-        description={account.institution ?? undefined}
-        actions={
-          <span className="flex flex-col items-end gap-2">
-            <Amount cents={account.balanceCents} tone="neutral" size="xl" />
-            <PendingTransfersNote pending={pending[id]} />
-          </span>
-        }
+      <AccountHeader
+        name={account.name}
+        context={account.visibility === "shared" ? "Conto condiviso" : `Conto privato di ${owner?.displayName ?? "un membro"}`}
+        institution={account.institution}
+        balanceCents={account.balanceCents}
+        settings={<AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />}
+        note={<PendingTransfersNote pending={pending[id]} />}
       />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.4fr]">
         <div className="flex flex-col gap-4">
@@ -73,7 +71,6 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
               <TransactionList items={planned.map((t) => toTxnView(t, accounts, categories, members))} accounts={refs} categories={catRefs} showAccount={false} />
             </Card>
           )}
-          <AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />
         </div>
         <Card
           title="Estratto conto"

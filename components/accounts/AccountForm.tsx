@@ -52,6 +52,7 @@ export function AccountForm({ action, defaults, embedded, canMakePrivate = true,
       description={embedded ? undefined : "Conto corrente, risparmio, investimenti o contanti"}
       icon={embedded ? undefined : <Plus />}
       collapsible={!embedded}
+      plain={embedded}
       open={open}
       onOpenChange={setOpen}
       onSubmit={onSubmit}

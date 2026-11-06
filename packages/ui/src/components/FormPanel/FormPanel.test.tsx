@@ -28,6 +28,16 @@ describe("FormPanel", () => {
     expect(screen.getByLabelText("Name")).toBeVisible();
   });
 
+  it("renders only the form in plain mode", () => {
+    render(
+      <FormPanel title="Hidden title" plain>
+        <input aria-label="Name" />
+      </FormPanel>,
+    );
+    expect(screen.queryByText("Hidden title")).toBeNull();
+    expect(screen.getByLabelText("Name")).toBeVisible();
+  });
+
   it("calls onSubmit without page reload", () => {
     const onSubmit = vi.fn();
     render(
