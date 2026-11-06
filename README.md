@@ -43,6 +43,18 @@ docker compose up -d --build
 - Invite a member: `docker compose run --rm migrate node scripts/dev/invite.ts you@example.com`.
 - Reset everything (deletes local data): `docker compose down -v`.
 
+### `npm run dev` against the local stack
+
+`.env.stack` (committed, local-only values) points the app and scripts at the Docker stack and
+takes precedence over `.env.local`, so nothing reaches production.
+
+```bash
+docker compose up -d db auth migrate rest gateway mailpit   # stack without the dockerized app
+npm run dev:local                                          # Next dev on http://localhost:3000
+```
+
+Also available: `db:migrate:local`, `db:import:local`, `auth:invite:local`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

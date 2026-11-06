@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:local": "node scripts/dev/with-env.ts .env.stack next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -13,8 +14,11 @@
     "ds:tokens": "node packages/ui/scripts/build-tokens.ts",
     "ds:artifact": "node packages/ui/scripts/build-tokens.ts && node packages/ui/scripts/build-artifact.ts",
     "db:migrate": "node --env-file=.env.local scripts/db/migrate.ts",
+    "db:migrate:local": "node --env-file=.env.stack scripts/db/migrate.ts",
     "db:import": "node --env-file=.env.local scripts/import/run-import.ts",
-    "auth:invite": "node --env-file=.env.local scripts/dev/invite.ts"
+    "db:import:local": "node --env-file=.env.stack scripts/import/run-import.ts",
+    "auth:invite": "node --env-file=.env.local scripts/dev/invite.ts",
+    "auth:invite:local": "node --env-file=.env.stack scripts/dev/invite.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
