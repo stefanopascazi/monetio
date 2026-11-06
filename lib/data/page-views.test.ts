@@ -31,7 +31,12 @@ describe("page views", () => {
 
   it("adds next occurrence to rules", () => {
     const [v] = ruleViews([rule({ amountCents: -100, dayOfMonth: 10 })], accounts, "2026-11-05");
-    expect(v).toMatchObject({ accountName: "Conto Ste", nextDate: "2026-11-10" });
+    expect(v).toMatchObject({ accountName: "Conto Ste", nextDate: "2026-11-10", editable: true });
+  });
+
+  it("marks transfers from hidden accounts as read-only", () => {
+    const [v] = ruleViews([rule({ kind: "transfer", accountId: "asha", counterpartAccountId: "joint", amountCents: -80000 })], accounts, "2026-11-05");
+    expect(v).toMatchObject({ accountName: "Conto privato → Cointestato", editable: false });
   });
 
   it("computes the current contribution", () => {

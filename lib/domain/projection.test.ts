@@ -34,6 +34,13 @@ describe("projectBalances", () => {
     expect(res[0].totalCents).toBe(150000);
   });
 
+  it("credits the counterpart of a transfer from an account missing from balances", () => {
+    // Quota from a private account the viewer cannot see: only the joint side matters.
+    const quota = rule({ id: "q", kind: "transfer", accountId: "asha", counterpartAccountId: "joint", amountCents: -80000, dayOfMonth: 27, startDate: "2026-11-01" });
+    const res = projectBalances({ ...base, months: 1, balances: { joint: 100000 }, rules: [quota] });
+    expect(res[0].byAccount.joint).toBe(180000);
+  });
+
   it("uses only the remaining part of an estimate in the current month", () => {
     const spesa = rule({ id: "s", accountId: "joint", categoryId: "spesa", amountCents: -45000, schedule: "estimate", dayOfMonth: 15 });
     const res = projectBalances({ ...base, months: 2, rules: [spesa], categorySpent: () => 30000 });

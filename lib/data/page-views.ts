@@ -4,6 +4,7 @@ import { monthKey } from "../domain/dates";
 import { nextOccurrence } from "../domain/recurrence";
 import type { DueEntry, SpendingLookup } from "../domain/schedule";
 import type { Account, Category, ContributionRule, RecurringRule, RuleFrequency } from "../domain/types";
+import { ownsRule } from "./rule-visibility";
 import { HIDDEN_ACCOUNT } from "./views";
 
 type Named = Pick<Account, "id" | "name">;
@@ -30,11 +31,14 @@ export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: 
 }
 
 export function ruleViews(rules: RecurringRule[], accounts: Named[], today: string, categories: Pick<Category, "id" | "name">[] = []) {
+  const visible = new Set(accounts.map((a) => a.id));
   return rules.map((r) => ({
     ...r,
     categoryName: categories.find((c) => c.id === r.categoryId)?.name ?? null,
     accountName: r.counterpartAccountId ? `${nameOf(accounts, r.accountId)} → ${nameOf(accounts, r.counterpartAccountId)}` : nameOf(accounts, r.accountId),
     nextDate: r.active ? nextOccurrence(r, today) : null,
+    /** False for transfers seen only through the counterpart: read-only for the viewer. */
+    editable: ownsRule(r, visible),
   }));
 }
 

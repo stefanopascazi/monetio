@@ -15,10 +15,12 @@ export interface RuleView extends RecurringRule {
   accountName: string;
   categoryName: string | null;
   nextDate: string | null;
+  editable: boolean;
 }
 
 function RuleBody({ rule, accounts, categories, today, onDone }: { rule: RuleView; accounts: NamedRef[]; categories: NamedRef[]; today: string; onDone: () => void }) {
   const { run } = useToastAction();
+  if (!rule.editable) return <p className="pb-2 text-sm text-ink-muted">Può modificarla solo chi vede il conto di partenza.</p>;
   return (
     <div className="flex flex-col gap-4 pb-2">
       <RuleForm rule={rule} action={updateRule.bind(null, rule.id)} accounts={accounts} categories={categories} today={today} onSaved={onDone} />

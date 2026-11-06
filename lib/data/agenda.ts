@@ -9,6 +9,7 @@ import { categorySpentFrom, contributionSpendingFrom } from "./flows";
 import { lastMonths } from "./history";
 import { pendingTransfersByAccount } from "./pending-transfers";
 import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
+import { touchesVisible } from "./rule-visibility";
 import { syncAutoRules } from "./sync";
 
 const LOOKBACK_DAYS = 90;
@@ -65,7 +66,8 @@ export const loadProjection = cache(async (months: number) => {
   ]);
   const active = accounts.filter((a) => !a.archived);
   const ids = new Set(active.map((a) => a.id));
-  const rules = agenda.rules.filter((r) => ids.has(r.accountId));
+  // Includes transfers from accounts the viewer cannot see (e.g. a private quota into the joint account).
+  const rules = agenda.rules.filter((r) => touchesVisible(r, ids));
   const contributions = agenda.contributions.filter((c) => ids.has(c.fromAccountId) || ids.has(c.toAccountId));
   const baseline = Object.fromEntries(
     Object.entries(variableBaseline(monthFlows, baselineMonths, coveredCategories(agenda.rules))).filter(([id]) => ids.has(id)),
