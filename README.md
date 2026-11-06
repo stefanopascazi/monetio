@@ -49,11 +49,12 @@ docker compose up -d --build
 takes precedence over `.env.local`, so nothing reaches production.
 
 ```bash
-docker compose up -d db auth migrate rest gateway mailpit   # stack without the dockerized app
-npm run dev:local                                          # Next dev on http://localhost:3000
+npm run stack:dev     # docker-compose.dev.yml: Supabase services only (no app, no cron)
+npm run dev:local     # Next dev on http://localhost:3000
 ```
 
-Also available: `db:migrate:local`, `db:import:local`, `auth:invite:local`.
+Also available: `db:migrate:local`, `db:import:local`, `auth:invite:local`, `stack:down`.
+`docker-compose.yml` includes `docker-compose.dev.yml`, so both share the same project and data.
 
 ## Learn More
 

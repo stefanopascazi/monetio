@@ -1,115 +1,13 @@
-# MonetIO + minimal self-hosted Supabase (Postgres, GoTrue, PostgREST) for local use.
+# MonetIO full local stack: Supabase services (docker-compose.dev.yml) + dockerized app and cron.
 # Start: docker compose up -d --build   ->  app http://localhost:3000, email http://localhost:8025
 # Defaults are LOCAL-ONLY demo secrets; override them in .env (see .env.docker.example).
 
-x-secrets: &secrets
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-monetio-local-password}
-  JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
-
 name: monetio
 
+include:
+  - docker-compose.dev.yml
+
 services:
-  db:
-    image: supabase/postgres:15.8.1.085
-    restart: unless-stopped
-    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c", "log_min_messages=fatal"]
-    environment:
-      <<: *secrets
-      POSTGRES_HOST: /var/run/postgresql
-      POSTGRES_DB: postgres
-      PGPORT: 5432
-      POSTGRES_PORT: 5432
-      PGDATABASE: postgres
-      JWT_EXP: 3600
-    volumes:
-      - db-data:/var/lib/postgresql/data
-      - ./docker/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
-    ports:
-      - "${DB_PORT:-54322}:5432"
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  auth:
-    image: supabase/gotrue:v2.180.0
-    restart: unless-stopped
-    depends_on:
-      db: { condition: service_healthy }
-    environment:
-      GOTRUE_API_HOST: 0.0.0.0
-      GOTRUE_API_PORT: 9999
-      # Public URL of the gateway: email links point here.
-      API_EXTERNAL_URL: ${API_EXTERNAL_URL:-http://localhost:8000}
-      GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-monetio-local-password}@db:5432/postgres
-      GOTRUE_SITE_URL: ${SITE_URL:-http://localhost:3000}
-      GOTRUE_URI_ALLOW_LIST: ${SITE_URL:-http://localhost:3000}/**
-      GOTRUE_DISABLE_SIGNUP: "false"
-      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
-      GOTRUE_JWT_EXP: 3600
-      GOTRUE_JWT_AUD: authenticated
-      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
-      GOTRUE_JWT_ADMIN_ROLES: service_role
-      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
-      GOTRUE_MAILER_AUTOCONFIRM: "false"
-      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
-      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
-      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
-      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
-      GOTRUE_RATE_LIMIT_EMAIL_SENT: 1000
-      # All mail is caught by Mailpit (nothing leaves the machine).
-      GOTRUE_SMTP_HOST: mailpit
-      GOTRUE_SMTP_PORT: 1025
-      # No SMTP credentials: Go refuses AUTH over plain TCP, and Mailpit needs none.
-      GOTRUE_SMTP_ADMIN_EMAIL: noreply@monetio.local
-      GOTRUE_SMTP_SENDER_NAME: MonetIO
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9999/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  # One-shot: applies supabase/migrations (needs auth.users, created by GoTrue).
-  migrate:
-    build: { context: ., target: tools }
-    depends_on:
-      auth: { condition: service_healthy }
-    environment:
-      POSTGRES_URL_NON_POOLING: postgres://postgres:${POSTGRES_PASSWORD:-monetio-local-password}@db:5432/postgres?sslmode=disable
-      # Also lets maintenance scripts run here, e.g. scripts/dev/invite.ts.
-      SUPABASE_URL: http://gateway:8000
-      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
-    restart: "no"
-
-  rest:
-    image: postgrest/postgrest:v13.0.7
-    restart: unless-stopped
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-    environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-monetio-local-password}@db:5432/postgres
-      PGRST_DB_SCHEMAS: public
-      PGRST_DB_ANON_ROLE: anon
-      PGRST_DB_USE_LEGACY_GUCS: "false"
-      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
-
-  gateway:
-    image: caddy:2.10-alpine
-    restart: unless-stopped
-    depends_on: [auth, rest]
-    volumes:
-      - ./docker/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
-    ports:
-      - "${GATEWAY_PORT:-8000}:8000"
-
-  mailpit:
-    image: axllent/mailpit:v1.27
-    restart: unless-stopped
-    ports:
-      - "${MAILPIT_PORT:-8025}:8025"
-
   app:
     build: { context: ., target: app }
     image: monetio:latest
@@ -142,5 +40,3 @@ services:
           sleep 86400
         done
 
-volumes:
-  db-data:
