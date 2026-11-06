@@ -55,6 +55,8 @@ export interface Transaction {
   contributionRuleId: string | null;
   occurrenceDate: ISODate | null;
   source: "manual" | "import" | "rule" | "contribution";
+  /** Auth user id of whoever entered it; null for imports and automatic bookings. */
+  createdBy: string | null;
 }
 
 export interface RecurringRule {

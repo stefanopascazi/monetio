@@ -58,6 +58,7 @@ export function mapTransaction(r: Row): Transaction {
     contributionRuleId: str(r.contribution_rule_id),
     occurrenceDate: str(r.occurrence_date),
     source: r.source as Transaction["source"],
+    createdBy: str(r.created_by),
   };
 }
 

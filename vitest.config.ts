@@ -15,7 +15,13 @@ const shared = {
 
 export default defineConfig({
   plugins: [react()],
-  resolve: { alias: { "@monetio/ui": new URL("./packages/ui/src/index.ts", import.meta.url).pathname.replace(/^\/(\w:)/, "$1") } },
+  resolve: {
+    alias: {
+      "@monetio/ui": new URL("./packages/ui/src/index.ts", import.meta.url).pathname.replace(/^\/(\w:)/, "$1"),
+      // Mirrors the `@/*` path in tsconfig.json.
+      "@": new URL(".", import.meta.url).pathname.replace(/^\/(\w:)/, "$1").replace(/\/$/, ""),
+    },
+  },
   test: {
     projects: [
       {

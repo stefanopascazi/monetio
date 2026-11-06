@@ -6,6 +6,7 @@ import { PeriodNav } from "@/components/common/PeriodNav";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { ensureSynced, loadPendingTransfers } from "@/lib/data/agenda";
+import { getContext } from "@/lib/data/context";
 import { PendingTransfersNote } from "@/components/accounts/PendingTransfersNote";
 import { withQuery, yearParam } from "@/lib/data/params";
 import { balanceBefore, listAccounts, listCategories, listMonthlyBalances, listTransactions } from "@/lib/data/queries";
@@ -26,7 +27,8 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
   const year = yearParam(sp.anno, thisYear, firstYear, thisYear + 1);
   const from = `${year}-01-01`;
   const to = `${year}-12-31`;
-  const [categories, txns, opening, monthly, planned, pending] = await Promise.all([
+  const [{ members }, categories, txns, opening, monthly, planned, pending] = await Promise.all([
+    getContext(),
     listCategories(),
     listTransactions({ accountId: id, from, to, status: "booked", limit: 1000 }),
     balanceBefore(id, from),
@@ -36,7 +38,7 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
   ]);
   const rows = withRunningBalance(opening, txns);
   const groups = groupByMonthDesc(rows);
-  const views = new Map(rows.map((r) => [r.id, toTxnView(r, accounts, categories)]));
+  const views = new Map(rows.map((r) => [r.id, toTxnView(r, accounts, categories, members)]));
   const refs = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
   const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
   const history = monthly.filter((m) => m.accountId === id && m.month <= `${year}-12`).map((m) => ({ label: monthLabel(m.month).split(" ")[0], valueCents: m.balanceCents }));
@@ -65,7 +67,7 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
           )}
           {planned.length > 0 && (
             <Card title="Pianificati" subtitle="Non ancora avvenuti" padding="none">
-              <TransactionList items={planned.map((t) => toTxnView(t, accounts, categories))} accounts={refs} categories={catRefs} showAccount={false} />
+              <TransactionList items={planned.map((t) => toTxnView(t, accounts, categories, members))} accounts={refs} categories={catRefs} showAccount={false} />
             </Card>
           )}
           <AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />

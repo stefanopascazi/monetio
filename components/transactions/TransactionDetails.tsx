@@ -20,6 +20,12 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           <dt className="inline text-ink-muted">Origine: </dt>
           <dd className="inline">{SOURCE_LABEL[t.source]}</dd>
         </div>
+        {t.createdByName && (
+          <div>
+            <dt className="inline text-ink-muted">Inserito da: </dt>
+            <dd className="inline">{t.createdByName}</dd>
+          </div>
+        )}
         {t.notes && (
           <div className="sm:col-span-2">
             <dt className="text-ink-muted">Note</dt>
