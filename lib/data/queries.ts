@@ -3,7 +3,7 @@ import { cache } from "react";
 import type { Account, Category, ContributionRule, ISODate, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
 import { createClient } from "../supabase/server";
 import { type MonthlyFlow, mapFlow } from "./flows";
-import { mapAccount, mapCategory, mapContribution, mapRule, mapTransaction } from "./mappers";
+import { attachFees, mapAccount, mapCategory, mapContribution, mapRule, mapTransaction } from "./mappers";
 import { hiddenAccountName } from "./views";
 
 export interface AccountWithBalance extends Account {
@@ -41,12 +41,24 @@ export interface TransactionFilter {
   limit?: number;
 }
 
-/** Transactions with their linked fee rows (bonifico/CBill) embedded. */
-const TXN_SELECT = "*, fees:transactions!transactions_parent_transaction_id_fkey(amount_cents)";
+type Client = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Maps rows and attaches the fee total of bonifico/CBill payments with a separate query
+ * (no PostgREST embedding: it depends on the relationship being in the schema cache).
+ */
+async function withFees(supabase: Client, rows: Record<string, unknown>[]): Promise<Transaction[]> {
+  const txns = rows.map(mapTransaction);
+  const ids = txns.filter((t) => t.paymentMethod).map((t) => t.id);
+  if (!ids.length) return txns;
+  const { data, error } = await supabase.from("transactions").select("parent_transaction_id, amount_cents").in("parent_transaction_id", ids);
+  if (error) throw error;
+  return attachFees(txns, (data ?? []).map((r) => ({ parentId: String(r.parent_transaction_id), amountCents: Number(r.amount_cents) })));
+}
 
 export async function listTransactions(f: TransactionFilter = {}): Promise<Transaction[]> {
   const supabase = await createClient();
-  let q = supabase.from("transactions").select(TXN_SELECT).order("booked_on", { ascending: false }).order("id", { ascending: false });
+  let q = supabase.from("transactions").select("*").order("booked_on", { ascending: false }).order("id", { ascending: false });
   if (f.accountId) q = q.eq("account_id", f.accountId);
   if (f.categoryId) q = q.eq("category_id", f.categoryId);
   if (f.from) q = q.gte("booked_on", f.from);
@@ -55,13 +67,13 @@ export async function listTransactions(f: TransactionFilter = {}): Promise<Trans
   if (f.search) q = q.ilike("description", `%${f.search.replace(/[%_]/g, "")}%`);
   const { data, error } = await q.limit(f.limit ?? 500);
   if (error) throw error;
-  return (data ?? []).map(mapTransaction);
+  return withFees(supabase, data ?? []);
 }
 
 export async function getTransaction(id: string): Promise<Transaction | null> {
   const supabase = await createClient();
-  const { data } = await supabase.from("transactions").select(TXN_SELECT).eq("id", id).maybeSingle();
-  return data ? mapTransaction(data) : null;
+  const { data } = await supabase.from("transactions").select("*").eq("id", id).maybeSingle();
+  return data ? (await withFees(supabase, [data]))[0] : null;
 }
 
 export interface AuditEntry {

@@ -41,10 +41,11 @@ export function mapCategory(r: Row): Category {
   };
 }
 
-/** Sum of embedded fee rows (`fees:transactions(amount_cents)`), as positive cents. */
-function feeTotal(fees: unknown): number | null {
-  if (!Array.isArray(fees) || !fees.length) return null;
-  return fees.reduce((sum: number, f: Row) => sum + Math.abs(num(f.amount_cents)), 0);
+/** Sets `feeCents` (positive total) on payments from their linked fee rows. */
+export function attachFees(txns: Transaction[], fees: { parentId: string; amountCents: number }[]): Transaction[] {
+  const totals = new Map<string, number>();
+  for (const f of fees) totals.set(f.parentId, (totals.get(f.parentId) ?? 0) + Math.abs(f.amountCents));
+  return txns.map((t) => (totals.has(t.id) ? { ...t, feeCents: totals.get(t.id)! } : t));
 }
 
 export function mapTransaction(r: Row): Transaction {
@@ -62,7 +63,7 @@ export function mapTransaction(r: Row): Transaction {
     transferGroupId: str(r.transfer_group_id),
     paymentMethod: (str(r.payment_method) as Transaction["paymentMethod"]) ?? null,
     parentTransactionId: str(r.parent_transaction_id),
-    feeCents: feeTotal(r.fees),
+    feeCents: null,
     recurringRuleId: str(r.recurring_rule_id),
     contributionRuleId: str(r.contribution_rule_id),
     occurrenceDate: str(r.occurrence_date),

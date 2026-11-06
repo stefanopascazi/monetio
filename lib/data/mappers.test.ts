@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapAccount, mapCategory, mapContribution, mapMember, mapRule, mapTransaction } from "./mappers";
+import { attachFees, mapAccount, mapCategory, mapContribution, mapMember, mapRule, mapTransaction } from "./mappers";
 
 describe("mappers", () => {
   it("maps accounts with bigint strings", () => {
@@ -14,7 +14,14 @@ describe("mappers", () => {
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: 1, booked_on: "2026-11-01", description: "x", created_by: "u1" }).createdBy).toBe("u1");
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -65, booked_on: "2026-11-01", description: "x", payment_method: "cbill", parent_transaction_id: "p" })).toMatchObject({ paymentMethod: "cbill", parentTransactionId: "p" });
     expect(t).toMatchObject({ paymentMethod: null, parentTransactionId: null, feeCents: null });
-    expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -1, booked_on: "2026-11-01", description: "x", fees: [{ amount_cents: "-65" }, { amount_cents: -10 }] }).feeCents).toBe(75);
+  });
+
+  it("attaches fee totals to their payments", () => {
+    const pay = mapTransaction({ id: "p", account_id: "a", amount_cents: -1, booked_on: "2026-11-01", description: "x", payment_method: "cbill" });
+    const other = mapTransaction({ id: "o", account_id: "a", amount_cents: -1, booked_on: "2026-11-01", description: "y" });
+    const [p, o] = attachFees([pay, other], [{ parentId: "p", amountCents: -65 }, { parentId: "p", amountCents: -10 }]);
+    expect(p.feeCents).toBe(75);
+    expect(o.feeCents).toBeNull();
   });
 
   it("maps rules, contributions, categories and members", () => {
