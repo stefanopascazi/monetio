@@ -5,7 +5,8 @@ import { autoBookings, bookedOccurrences } from "../domain/schedule";
 import { createClient } from "../supabase/server";
 import type { AppContext } from "./context";
 import { mapRule } from "./mappers";
-import { listBookedOccurrences, listRules } from "./queries";
+import { listAccounts, listBookedOccurrences, listRules } from "./queries";
+import { ownsRule } from "./rule-visibility";
 import { entryTransaction, transactionRows } from "./rows";
 import type { DueEntry } from "../domain/schedule";
 
@@ -26,8 +27,11 @@ async function insertBookings(client: SupabaseClient, entries: DueEntry[], house
 /** Books passed automatic rules visible to the signed-in user (runs on page load). */
 export async function syncAutoRules(ctx: AppContext, today: string): Promise<number> {
   const since = addDays(today, -CATCH_UP_DAYS);
-  const [rules, occ] = await Promise.all([listRules(), listBookedOccurrences(since)]);
-  const pending = autoBookings(rules, bookedOccurrences(occ, rules), today, since);
+  const [all, occ, accounts] = await Promise.all([listRules(), listBookedOccurrences(since), listAccounts()]);
+  // Rules seen only through their counterpart are booked by their owner or by the daily cron.
+  const visible = new Set(accounts.map((a) => a.id));
+  const rules = all.filter((r) => ownsRule(r, visible));
+  const pending = autoBookings(rules, bookedOccurrences(occ, all), today, since);
   if (!pending.length) return 0;
   // Automatic bookings are not entered by anyone: no creator, same as the daily cron.
   return insertBookings(await createClient(), pending, ctx.householdId, null);

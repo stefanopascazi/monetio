@@ -11,7 +11,7 @@ import { getContext } from "@/lib/data/context";
 import { cashflowSeries, categorySlices } from "@/lib/data/flows";
 import { lastMonths, projectionPoints } from "@/lib/data/history";
 import { dueViews } from "@/lib/data/page-views";
-import { listAccounts, listCategories, listFlows, listTransactions } from "@/lib/data/queries";
+import { listAccounts, listCategories, listFlows, listHiddenAccounts, listTransactions } from "@/lib/data/queries";
 import { toTxnView } from "@/lib/data/views";
 import { addMonthsToKey, monthKey, monthLabel, startOfMonth } from "@/lib/domain/dates";
 
@@ -21,13 +21,14 @@ export async function Dashboard() {
   const today = agenda.today;
   const month = monthKey(today);
   const months = lastMonths(month, 6);
-  const [accounts, categories, flows, recent, { projection }, pending] = await Promise.all([
+  const [accounts, categories, flows, recent, { projection }, pending, hidden] = await Promise.all([
     listAccounts(),
     listCategories(),
     listFlows(startOfMonth(months[0])),
     listTransactions({ to: today, status: "booked", limit: 8 }),
     loadProjection(12),
     loadPendingTransfers(),
+    listHiddenAccounts(),
   ]);
   const active = accounts.filter((a) => !a.archived);
   const total = active.reduce((s, a) => s + a.balanceCents, 0);
@@ -61,7 +62,7 @@ export async function Dashboard() {
 
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
         <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: refs[0]?.id ?? "", bookedOn: today }} />
-        <DueList items={dueViews(agenda.due, agenda.rules, active).slice(0, 6)} today={today} title="In scadenza" subtitle="Prossimi 31 giorni" />
+        <DueList items={dueViews(agenda.due, agenda.rules, active, hidden).slice(0, 6)} today={today} title="In scadenza" subtitle="Prossimi 31 giorni" />
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">

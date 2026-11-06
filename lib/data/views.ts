@@ -28,6 +28,9 @@ export interface TxnView {
 export const HIDDEN_ACCOUNT = "Conto privato";
 export const FORMER_MEMBER = "Ex membro";
 
+/** Label of an account the viewer cannot see, naming its owner when known. */
+export const hiddenAccountName = (ownerName: string | null | undefined) => (ownerName?.trim() ? `${HIDDEN_ACCOUNT} di ${ownerName.trim()}` : HIDDEN_ACCOUNT);
+
 /** Name of the member who created a transaction; FORMER_MEMBER when the user left the household. */
 export function creatorName(createdBy: string | null, members: Pick<Member, "userId" | "displayName">[]): string | null {
   if (!createdBy) return null;

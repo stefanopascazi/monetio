@@ -1,5 +1,5 @@
 import { contributionAmount, contributionBase } from "./contribution";
-import { addDays, addMonthsToKey, daysInMonth, endOfMonth, monthKey, parseISO, startOfMonth } from "./dates";
+import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
 import { occurrences } from "./recurrence";
 import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
 import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
@@ -23,8 +23,6 @@ export interface ProjectionInput {
   lookbackDays?: number;
   /** Actual amounts/dates entered for single occurrences. */
   overrides?: OverrideMap;
-  /** Monthly averages (positive cents) of income/spending not covered by rules, per account. */
-  baseline?: Record<string, { incomeCents: number; expenseCents: number }>;
 }
 
 export interface ProjectionMonth {
@@ -33,13 +31,24 @@ export interface ProjectionMonth {
   totalCents: number;
 }
 
-interface Movement {
+/** Where a projected movement comes from, for the month detail. */
+export type MovementSource = "rule" | "estimate" | "contribution" | "planned";
+
+export interface Movement {
   date: ISODate;
   accountId: string;
   amountCents: number;
+  label: string;
+  source: MovementSource;
+  /** Due before today and still unpaid: counted as if it happened today. */
+  overdue?: boolean;
 }
 
-/** Expected movements after today, from rules, contributions and planned transactions. */
+
+/**
+ * Expected movements after today, only from rules, contributions and planned transactions:
+ * the projection reflects what is declared, without historical averages.
+ */
 export function projectedMovements(input: ProjectionInput): Movement[] {
   const { today, rules, contributions, booked, planned, lookbackDays = 90 } = input;
   const currentMonth = monthKey(today);
@@ -47,10 +56,11 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
   const from = addDays(today, -lookbackDays);
   const out: Movement[] = [];
   // Overdue items still count, as if they happened today.
-  const push = (date: ISODate, accountId: string, amountCents: number, counterpart: string | null) => {
-    const d = date < today ? today : date;
-    out.push({ date: d, accountId, amountCents });
-    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents });
+  const push = (date: ISODate, accountId: string, amountCents: number, counterpart: string | null, label: string, source: MovementSource) => {
+    const overdue = date < today;
+    const d = overdue ? today : date;
+    out.push({ date: d, accountId, amountCents, label, source, overdue });
+    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue });
   };
 
   for (const r of rules) {
@@ -63,7 +73,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
           const remaining = Math.max(0, Math.abs(r.amountCents) - input.categorySpent(r.accountId, r.categoryId, currentMonth));
           amount = Math.sign(r.amountCents) * remaining;
         }
-        if (amount) push(d, r.accountId, amount, counterpart);
+        if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate");
       }
       continue;
     }
@@ -71,7 +81,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       const key = ruleKey(r.id, d, r.frequency);
       if (booked.has(key)) continue;
       const o = input.overrides?.get(key);
-      push(o?.dueDate ?? d, r.accountId, o?.amountCents ?? r.amountCents, counterpart);
+      push(o?.dueDate ?? d, r.accountId, o?.amountCents ?? r.amountCents, counterpart, r.description, "rule");
     }
   }
 
@@ -81,26 +91,12 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     for (const d of dates) {
       if (booked.has(contributionKey(c.id, d))) continue;
       const { baseCents } = contributionBase(c, monthKey(d), currentMonth, input.contributionSpending);
-      push(d, c.fromAccountId, -contributionAmount(c, baseCents), c.toAccountId);
-    }
-  }
-
-  // Historical averages: full months ahead, only the remaining share of the current month.
-  if (input.baseline) {
-    const { y, m, d } = parseISO(today);
-    const remaining = (daysInMonth(y, m) - d) / daysInMonth(y, m);
-    for (let n = 0; n < input.months; n++) {
-      const month = addMonthsToKey(currentMonth, n);
-      const share = n === 0 ? remaining : 1;
-      for (const [accountId, b] of Object.entries(input.baseline)) {
-        const net = Math.round((b.incomeCents - b.expenseCents) * share);
-        if (net) out.push({ date: endOfMonth(month), accountId, amountCents: net });
-      }
+      push(d, c.fromAccountId, -contributionAmount(c, baseCents), c.toAccountId, c.description, "contribution");
     }
   }
 
   for (const t of planned) {
-    if (t.status === "planned") push(t.bookedOn, t.accountId, t.amountCents, null);
+    if (t.status === "planned") push(t.bookedOn, t.accountId, t.amountCents, null, t.description, "planned");
   }
   return out;
 }

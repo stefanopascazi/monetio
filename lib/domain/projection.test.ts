@@ -27,11 +27,26 @@ describe("projectBalances", () => {
     ]);
   });
 
+  it("never overlaps a rule that ends with the one that replaces it", () => {
+    const old = rule({ id: "o", accountId: "ste", amountCents: 177000, dayOfMonth: 10, startDate: "2026-11-01", endDate: "2027-01-31" });
+    const next = rule({ id: "n", accountId: "ste", amountCents: 190000, dayOfMonth: 10, startDate: "2027-02-01" });
+    const res = projectBalances({ ...base, months: 5, rules: [old, next] });
+    const deltas = res.map((p, i) => p.byAccount.ste - (i ? res[i - 1].byAccount.ste : 50000));
+    expect(deltas).toEqual([177000, 177000, 177000, 190000, 190000]);
+  });
+
   it("moves transfers between accounts and keeps the total", () => {
     const giro = rule({ id: "g", kind: "transfer", accountId: "ste", counterpartAccountId: "joint", amountCents: -26950, dayOfMonth: 27, startDate: "2026-11-01" });
     const res = projectBalances({ ...base, months: 1, rules: [giro] });
     expect(res[0].byAccount).toEqual({ joint: 126950, ste: 23050 });
     expect(res[0].totalCents).toBe(150000);
+  });
+
+  it("credits the counterpart of a transfer from an account missing from balances", () => {
+    // Quota from a private account the viewer cannot see: only the joint side matters.
+    const quota = rule({ id: "q", kind: "transfer", accountId: "asha", counterpartAccountId: "joint", amountCents: -80000, dayOfMonth: 27, startDate: "2026-11-01" });
+    const res = projectBalances({ ...base, months: 1, balances: { joint: 100000 }, rules: [quota] });
+    expect(res[0].byAccount.joint).toBe(180000);
   });
 
   it("uses only the remaining part of an estimate in the current month", () => {
@@ -62,9 +77,4 @@ describe("projectBalances", () => {
     expect(res.map((p) => p.byAccount.joint)).toEqual([100000, 91260]);
   });
 
-  it("adds historical averages: remaining share now, full months after", () => {
-    // 5 Nov: 25 of 30 days left.
-    const res = projectBalances({ ...base, months: 2, baseline: { ste: { incomeCents: 220000, expenseCents: 40000 } } });
-    expect(res.map((p) => p.byAccount.ste)).toEqual([50000 + 150000, 50000 + 150000 + 180000]);
-  });
 });

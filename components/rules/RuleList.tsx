@@ -15,10 +15,16 @@ export interface RuleView extends RecurringRule {
   accountName: string;
   categoryName: string | null;
   nextDate: string | null;
+  /** Paying account label (hidden accounts name their owner). */
+  sourceName: string;
+  /** Amount from the viewer's side (incoming transfers from hidden accounts are positive). */
+  viewCents: number;
+  editable: boolean;
 }
 
 function RuleBody({ rule, accounts, categories, today, onDone }: { rule: RuleView; accounts: NamedRef[]; categories: NamedRef[]; today: string; onDone: () => void }) {
   const { run } = useToastAction();
+  if (!rule.editable) return <p className="pb-2 text-sm text-ink-muted">Può modificarla solo chi vede il conto di partenza.</p>;
   return (
     <div className="flex flex-col gap-4 pb-2">
       <RuleForm rule={rule} action={updateRule.bind(null, rule.id)} accounts={accounts} categories={categories} today={today} onSaved={onDone} />
@@ -68,7 +74,7 @@ function RuleAccordion({
             </span>
           </span>
         ),
-        meta: <Amount cents={r.amountCents} tone={r.kind === "transfer" ? "transfer" : "auto"} showSign />,
+        meta: <Amount cents={r.viewCents} tone={r.kind === "transfer" ? "transfer" : "auto"} showSign />,
         content: open.includes(r.id) ? <RuleBody rule={r} accounts={accounts} categories={categories} today={today} onDone={() => setOpen([])} /> : null,
       }))}
     />
@@ -92,22 +98,33 @@ export function RuleList({ rules, accounts, categories, today }: { rules: RuleVi
         className="max-w-md"
       />
       {groups.length === 0 && <EmptyState icon={<Search />} title="Nessun risultato" description={`Nessuna ricorrenza contiene "${query}".`} />}
-      {groups.map((g) => (
-        <Card key={g.accountId} title={g.accountName} subtitle={`${g.effective.length + g.estimates.length} ricorrenze`} padding="none">
-          {g.effective.length > 0 && (
-            <section aria-label={`${g.accountName}: effettive`}>
-              <h3 className="bg-surface-sunken px-5 py-2 text-sm font-semibold text-ink">Effettive · automatiche e a scadenza</h3>
-              <RuleAccordion rules={g.effective} open={open} setOpen={setOpen} accounts={accounts} categories={categories} today={today} />
-            </section>
-          )}
-          {g.estimates.length > 0 && (
-            <section aria-label={`${g.accountName}: stime`}>
-              <h3 className="bg-forecast-soft px-5 py-2 text-sm font-semibold text-forecast-ink">Stime · solo per le proiezioni</h3>
-              <RuleAccordion rules={g.estimates} open={open} setOpen={setOpen} accounts={accounts} categories={categories} today={today} />
-            </section>
-          )}
-        </Card>
-      ))}
+      {groups.map((g) => {
+        // Rules paid from accounts the viewer cannot see: lighter and read-only.
+        const foreign = [...g.effective, ...g.estimates].every((r) => !r.editable);
+        const count = `${g.effective.length + g.estimates.length} ricorrenze`;
+        return (
+          <Card
+            key={g.accountId}
+            title={g.accountName}
+            subtitle={foreign ? `${count} · in arrivo sui tuoi conti, sola lettura` : count}
+            padding="none"
+            className={foreign ? "opacity-75" : undefined}
+          >
+            {g.effective.length > 0 && (
+              <section aria-label={`${g.accountName}: effettive`}>
+                <h3 className="bg-surface-sunken px-5 py-2 text-sm font-semibold text-ink">Effettive · automatiche e a scadenza</h3>
+                <RuleAccordion rules={g.effective} open={open} setOpen={setOpen} accounts={accounts} categories={categories} today={today} />
+              </section>
+            )}
+            {g.estimates.length > 0 && (
+              <section aria-label={`${g.accountName}: stime`}>
+                <h3 className="bg-forecast-soft px-5 py-2 text-sm font-semibold text-forecast-ink">Stime · solo per le proiezioni</h3>
+                <RuleAccordion rules={g.estimates} open={open} setOpen={setOpen} accounts={accounts} categories={categories} today={today} />
+              </section>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 }
