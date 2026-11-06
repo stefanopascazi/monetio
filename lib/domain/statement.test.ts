@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { txn } from "./fixtures";
-import { balanceAt, groupByMonthDesc, monthlyTotals, withRunningBalance } from "./statement";
+import { balanceAt, groupByMonthDesc, monthlyTotals, withRunningBalance, withRunningBalanceToClosing } from "./statement";
 
 const txns = [
   txn({ id: "b", amountCents: -5000, bookedOn: "2026-10-10" }),
@@ -17,6 +17,18 @@ describe("withRunningBalance", () => {
       ["b", 205000],
       ["c", 204000],
     ]);
+  });
+});
+
+describe("withRunningBalanceToClosing", () => {
+  it("derives the opening so the newest row ends on the closing balance", () => {
+    const rows = withRunningBalanceToClosing(204000, txns);
+    expect(rows.map((r) => [r.id, r.balanceAfterCents])).toEqual([
+      ["a", 210000],
+      ["b", 205000],
+      ["c", 204000],
+    ]);
+    expect(withRunningBalanceToClosing(500, [])).toEqual([]);
   });
 });
 

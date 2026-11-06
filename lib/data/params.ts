@@ -24,3 +24,11 @@ export function withQuery(path: string, query: Record<string, string | number | 
   const s = q.toString();
   return s ? `${path}?${s}` : path;
 }
+
+/** Valid `YYYY-MM-DD` calendar date from a param, or undefined. */
+export function dateParam(v: string | string[] | undefined): string | undefined {
+  const s = Array.isArray(v) ? v[0] : v;
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : undefined;
+}

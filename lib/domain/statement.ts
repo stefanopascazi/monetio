@@ -19,6 +19,16 @@ export function withRunningBalance(openingCents: number, txns: Transaction[]): S
   });
 }
 
+/**
+ * Running balance for a partial window (e.g. the latest N rows), anchored on the balance
+ * after its newest row: the opening is derived by subtracting the window's rows.
+ */
+export function withRunningBalanceToClosing(closingCents: number, txns: Transaction[]): StatementRow[] {
+  const booked = txns.filter((t) => t.status === "booked");
+  const opening = booked.reduce((s, t) => s - t.amountCents, closingCents);
+  return withRunningBalance(opening, booked);
+}
+
 /** Balance at the end of `date` (inclusive). */
 export function balanceAt(openingCents: number, txns: Transaction[], date: ISODate): number {
   return txns.filter((t) => t.status === "booked" && t.bookedOn <= date).reduce((s, t) => s + t.amountCents, openingCents);

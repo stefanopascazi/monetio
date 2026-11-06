@@ -2,17 +2,22 @@ import { notFound } from "next/navigation";
 import { Amount, Card, PageHeader, ProjectionChart } from "@monetio/ui";
 import { createTransaction } from "@/app/actions/transactions";
 import { AccountSettings } from "@/components/accounts/AccountSettings";
+import { PendingTransfersNote } from "@/components/accounts/PendingTransfersNote";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { ensureSynced, loadPendingTransfers } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
-import { PendingTransfersNote } from "@/components/accounts/PendingTransfersNote";
-import { withQuery, yearParam } from "@/lib/data/params";
-import { balanceBefore, listAccounts, listCategories, listMonthlyBalances, listTransactions } from "@/lib/data/queries";
+import { withQuery } from "@/lib/data/params";
+import { listAccounts, listCategories, listMonthlyBalances, listTransactions } from "@/lib/data/queries";
+import { adjacentMonths, periodLabel, statementPeriod } from "@/lib/data/statement-period";
+import { loadStatementRows } from "@/lib/data/statement-rows";
 import { toTxnView } from "@/lib/data/views";
-import { monthLabel, todayISO } from "@/lib/domain/dates";
-import { groupByMonthDesc, withRunningBalance } from "@/lib/domain/statement";
+import { monthKey, monthLabel, todayISO } from "@/lib/domain/dates";
+import { StatementFilters } from "./StatementFilters";
+import { StatementMonths } from "./StatementMonths";
+
+const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 
 export async function StatementView({ id, searchParams }: { id: string; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await ensureSynced();
@@ -22,27 +27,25 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
   const account = accounts.find((a) => a.id === id);
   if (!account) notFound();
 
-  const firstYear = Number(account.openingDate.slice(0, 4));
-  const thisYear = Number(today.slice(0, 4));
-  const year = yearParam(sp.anno, thisYear, firstYear, thisYear + 1);
-  const from = `${year}-01-01`;
-  const to = `${year}-12-31`;
-  const [{ members }, categories, txns, opening, monthly, planned, pending] = await Promise.all([
+  const basePath = `/conti/${id}`;
+  const period = statementPeriod(sp, today, account.openingDate);
+  // Chart year follows the selected period; the latest rows show the current year.
+  const year = Number((period.kind === "recent" ? today : period.to).slice(0, 4));
+  const [{ members }, categories, { rows, openingCents }, monthly, planned, pending] = await Promise.all([
     getContext(),
     listCategories(),
-    listTransactions({ accountId: id, from, to, status: "booked", limit: 1000 }),
-    balanceBefore(id, from),
+    loadStatementRows(id, period),
     listMonthlyBalances(`${year}-01-01`),
     listTransactions({ accountId: id, status: "planned", limit: 200 }),
     loadPendingTransfers(),
   ]);
-  const rows = withRunningBalance(opening, txns);
-  const groups = groupByMonthDesc(rows);
   const views = new Map(rows.map((r) => [r.id, toTxnView(r, accounts, categories, members)]));
   const refs = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
   const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
   const history = monthly.filter((m) => m.accountId === id && m.month <= `${year}-12`).map((m) => ({ label: monthLabel(m.month).split(" ")[0], valueCents: m.balanceCents }));
   const owner = ctx.members.find((m) => m.id === account.ownerMemberId);
+  const label = periodLabel(period);
+  const nav = period.kind === "month" ? adjacentMonths(period.month, monthKey(account.openingDate), monthKey(today)) : null;
 
   return (
     <>
@@ -74,34 +77,20 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
         </div>
         <Card
           title="Estratto conto"
-          subtitle={`Saldo a inizio ${year}: ${new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(opening / 100)}`}
+          subtitle={openingCents === null ? label : `${label} · saldo iniziale ${eur.format(openingCents / 100)}`}
           action={
-            <PeriodNav
-              label={String(year)}
-              prevHref={year > firstYear ? withQuery(`/conti/${id}`, { anno: year - 1 }) : null}
-              nextHref={year < thisYear ? withQuery(`/conti/${id}`, { anno: year + 1 }) : null}
-            />
+            nav && (
+              <PeriodNav
+                label={label}
+                prevHref={nav.prev ? withQuery(basePath, { mese: nav.prev }) : null}
+                nextHref={nav.next ? withQuery(basePath, { mese: nav.next }) : null}
+              />
+            )
           }
           padding="none"
         >
-          {groups.length === 0 ? (
-            <TransactionList items={[]} accounts={refs} categories={catRefs} emptyTitle={`Nessun movimento nel ${year}`} />
-          ) : (
-            groups.map((g) => {
-              const last = g.rows[0];
-              return (
-                <section key={g.month} aria-label={monthLabel(g.month, true)}>
-                  <h3 className="flex items-center justify-between bg-surface-sunken px-5 py-2 text-sm font-semibold capitalize text-ink-muted">
-                    <span>{monthLabel(g.month, true)}</span>
-                    <span>
-                      Saldo a fine mese <Amount cents={last.balanceAfterCents} tone="neutral" size="sm" />
-                    </span>
-                  </h3>
-                  <TransactionList items={g.rows.map((r) => views.get(r.id)!)} accounts={refs} categories={catRefs} showAccount={false} showBalance />
-                </section>
-              );
-            })
-          )}
+          <StatementFilters basePath={basePath} period={period} />
+          <StatementMonths rows={rows} views={views} accounts={refs} categories={catRefs} emptyTitle={period.kind === "recent" ? "Nessun movimento" : `Nessun movimento: ${label.toLowerCase()}`} />
         </Card>
       </section>
     </>
