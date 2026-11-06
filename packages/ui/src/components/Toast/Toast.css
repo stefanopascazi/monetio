@@ -1,0 +1,62 @@
+/* Mobile: bottom stack, above the floating nav (≈ 80px tall). */
+.mio-toaster {
+  position: fixed;
+  left: max(var(--mio-space-3), env(safe-area-inset-left, 0px));
+  right: max(var(--mio-space-3), env(safe-area-inset-right, 0px));
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  z-index: calc(var(--mio-z-nav) + 10);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--mio-space-2);
+  pointer-events: none;
+}
+.mio-toast {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--mio-space-3);
+  width: 100%;
+  max-width: 420px;
+  padding: var(--mio-space-2) var(--mio-space-2) var(--mio-space-2) var(--mio-space-3);
+  border-radius: var(--mio-radius-lg);
+  background: var(--mio-surface-raised);
+  box-shadow: var(--mio-shadow-lg);
+  pointer-events: auto;
+  animation: mio-toast-in var(--mio-duration-slow) var(--mio-ease);
+}
+.mio-toast__icon { display: grid; place-items: center; flex: none; }
+.mio-toast__icon svg { width: 20px; height: 20px; stroke-width: 2; }
+.mio-toast__text { flex: 1; min-width: 0; font: 500 14px/20px var(--mio-font-sans); color: var(--mio-ink); }
+.mio-toast__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--mio-radius-pill);
+  background: transparent;
+  color: var(--mio-ink-muted);
+  cursor: pointer;
+}
+.mio-toast__close:hover { background: var(--mio-surface-sunken); color: var(--mio-ink); }
+.mio-toast__close svg { width: 16px; height: 16px; }
+.mio-toast--info .mio-toast__icon { color: var(--mio-info); }
+.mio-toast--success .mio-toast__icon { color: var(--mio-success); }
+.mio-toast--warning .mio-toast__icon { color: var(--mio-warning); }
+.mio-toast--danger { background: var(--mio-danger-soft); }
+.mio-toast--danger .mio-toast__icon { color: var(--mio-danger); }
+
+@keyframes mio-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mio-toast { animation: none; }
+}
+
+/* Desktop: nav is a left rail, so stack bottom-right. */
+@media (min-width: 960px) {
+  .mio-toaster { left: auto; right: var(--mio-space-5, 24px); bottom: var(--mio-space-5, 24px); width: 380px; align-items: stretch; }
+}

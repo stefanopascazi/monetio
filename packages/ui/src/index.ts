@@ -52,5 +52,6 @@ export * from "./components/CategoryDonut/CategoryDonut";
 
 // Feedback
 export * from "./components/Alert/Alert";
+export * from "./components/Toast/Toast";
 export * from "./components/EmptyState/EmptyState";
 export * from "./components/Skeleton/Skeleton";

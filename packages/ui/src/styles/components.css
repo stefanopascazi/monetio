@@ -28,5 +28,6 @@
 @import "../components/ProjectionChart/ProjectionChart.css";
 @import "../components/CategoryDonut/CategoryDonut.css";
 @import "../components/Alert/Alert.css";
+@import "../components/Toast/Toast.css";
 @import "../components/EmptyState/EmptyState.css";
 @import "../components/Skeleton/Skeleton.css";

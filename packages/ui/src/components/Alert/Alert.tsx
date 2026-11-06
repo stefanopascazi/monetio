@@ -22,7 +22,7 @@ const ICON: Record<AlertTone, ReactNode> = {
   danger: <OctagonAlert aria-hidden="true" />,
 };
 
-/** In-flow notice. Replaces alert dialogs and toasts: it stays where the problem is. */
+/** In-flow notice that stays where the problem is; use Toast for transient action feedback. */
 export function Alert({ tone = "info", title, children, action, onDismiss, className }: AlertProps) {
   return (
     <div role={tone === "danger" || tone === "warning" ? "alert" : "status"} className={cx("mio-alert", `mio-alert--${tone}`, className)}>
