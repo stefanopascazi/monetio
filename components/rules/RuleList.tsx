@@ -9,7 +9,8 @@ import { groupRules } from "@/lib/data/rule-groups";
 import { dateLabel } from "@/lib/domain/dates";
 import type { RecurringRule } from "@/lib/domain/types";
 import { useToastAction } from "@/hooks/useToastAction";
-import { paymentLabel } from "./payment-label";
+import { AmountWithFee } from "@/components/payments/AmountWithFee";
+import { PAYMENT_LABEL } from "@/lib/domain/fees";
 import { RuleForm } from "./RuleForm";
 
 export interface RuleView extends RecurringRule {
@@ -69,13 +70,13 @@ function RuleAccordion({
               {!r.active && <Badge size="sm">Disattivata</Badge>}
             </span>
             <span className="truncate text-sm font-normal text-ink-muted">
-              {[SCHEDULE_LABEL[r.schedule], FREQUENCY_LABEL[r.frequency], paymentLabel(r), r.categoryName, r.counterpartAccountId ? r.accountName : null, r.nextDate ? `prossima ${dateLabel(r.nextDate)}` : "conclusa"]
+              {[SCHEDULE_LABEL[r.schedule], FREQUENCY_LABEL[r.frequency], r.paymentMethod ? PAYMENT_LABEL[r.paymentMethod] : null, r.categoryName, r.counterpartAccountId ? r.accountName : null, r.nextDate ? `prossima ${dateLabel(r.nextDate)}` : "conclusa"]
                 .filter(Boolean)
                 .join(" · ")}
             </span>
           </span>
         ),
-        meta: <Amount cents={r.viewCents} tone={r.kind === "transfer" ? "transfer" : "auto"} showSign />,
+        meta: r.paymentMethod ? <AmountWithFee cents={r.viewCents} feeCents={r.feeCents} /> : <Amount cents={r.viewCents} tone={r.kind === "transfer" ? "transfer" : "auto"} showSign />,
         content: open.includes(r.id) ? <RuleBody rule={r} accounts={accounts} categories={categories} today={today} onDone={() => setOpen([])} /> : null,
       }))}
     />

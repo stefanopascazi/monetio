@@ -15,6 +15,13 @@ describe("dueStatus", () => {
   });
 });
 
+describe("DueItem amountNote", () => {
+  it("shows the note under the amount", () => {
+    render(<DueItem title="Tasse" dueDate={new Date(2026, 10, 7)} amountCents={4733} amountNote="46,33 € + 1,00 € spese" today={today} />);
+    expect(screen.getByText("46,33 € + 1,00 € spese").closest(".mio-due__amount")).not.toBeNull();
+  });
+});
+
 describe("DueItem", () => {
   it("renders leaf date, frequency and due-soon badge", () => {
     render(<DueItem title="Rent" dueDate={new Date(2026, 10, 7)} amountCents={95000} account="Joint" today={today} />);

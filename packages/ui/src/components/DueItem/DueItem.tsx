@@ -15,6 +15,8 @@ export interface DueItemProps {
   /** Expected amount in cents (positive). */
   amountCents: number;
   kind?: "expense" | "income";
+  /** Small text right under the amount, e.g. how it splits into payment and fees. */
+  amountNote?: ReactNode;
   frequency?: Frequency;
   account?: string;
   paid?: boolean;
@@ -47,6 +49,7 @@ export function DueItem({
   dueDate,
   amountCents,
   kind = "expense",
+  amountNote,
   frequency = "monthly",
   account,
   paid,
@@ -100,7 +103,10 @@ export function DueItem({
           </span>
         </div>
         <div className="mio-due__end">
-          <Amount cents={kind === "expense" ? -amountCents : amountCents} tone={kind} hidden={hidden} />
+          <span className="mio-due__amount">
+            <Amount cents={kind === "expense" ? -amountCents : amountCents} tone={kind} hidden={hidden} />
+            {amountNote && <span className="mio-due__amount-note">{amountNote}</span>}
+          </span>
           {!paid && (onMarkPaid || action) && (
             <div className="mio-due__actions">
               {action}

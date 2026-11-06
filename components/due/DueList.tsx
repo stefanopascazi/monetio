@@ -7,6 +7,7 @@ import type { NamedRef } from "@/components/common/options";
 import { groupDueByMonth } from "@/lib/data/due-groups";
 import { isoToDate } from "@/lib/domain/dates";
 import type { PaymentMethod, RuleFrequency } from "@/lib/domain/types";
+import { feeBreakdown } from "@/components/payments/fee-breakdown";
 import { ActualAmountForm } from "./ActualAmountForm";
 import { PayEntryForm } from "./PayEntryForm";
 
@@ -101,7 +102,9 @@ export function DueList({
                     e.estimated ? `${e.description} (stima)` : e.description
                   }
                   dueDate={isoToDate(e.date)}
-                  amountCents={Math.abs(e.amountCents)}
+                  // Bonifico/CBill: total including the fee; the split is shown below.
+                  amountCents={Math.abs(feeBreakdown(e.amountCents, e.feeCents).totalCents)}
+                  amountNote={feeBreakdown(e.amountCents, e.feeCents).label}
                   kind={e.amountCents >= 0 ? "income" : "expense"}
                   frequency={e.frequency}
                   account={e.accountName}

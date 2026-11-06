@@ -1,5 +1,6 @@
 import { Repeat } from "lucide-react";
-import { Amount, EmptyState } from "@monetio/ui";
+import { EmptyState } from "@monetio/ui";
+import { AmountWithFee } from "@/components/payments/AmountWithFee";
 import { dateLabel } from "@/lib/domain/dates";
 import type { DueView } from "./DueList";
 
@@ -16,7 +17,7 @@ export function UpcomingList({ items }: { items: DueView[] }) {
               {dateLabel(e.date)} · {e.accountName}
             </span>
           </span>
-          <Amount cents={e.amountCents} tone="auto" showSign />
+          <AmountWithFee cents={e.amountCents} feeCents={e.feeCents} />
         </li>
       ))}
     </ul>
