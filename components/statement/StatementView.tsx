@@ -10,9 +10,10 @@ import { TransactionList } from "@/components/transactions/TransactionList";
 import { ensureSynced, loadPendingTransfers } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { withQuery } from "@/lib/data/params";
-import { listAccounts, listCategories, listMonthlyBalances, listTransactions } from "@/lib/data/queries";
+import { listAccounts, listCategories, listHiddenAccounts, listMonthlyBalances, listTransactions } from "@/lib/data/queries";
 import { adjacentMonths, periodLabel, statementPeriod } from "@/lib/data/statement-period";
 import { loadStatementRows } from "@/lib/data/statement-rows";
+import { transferTargets } from "@/lib/data/transfer-targets";
 import { toTxnView } from "@/lib/data/views";
 import { monthKey, monthLabel, todayISO } from "@/lib/domain/dates";
 import { StatementFilters } from "./StatementFilters";
@@ -32,13 +33,14 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
   const period = statementPeriod(sp, today, account.openingDate);
   // Chart year follows the selected period; the latest rows show the current year.
   const year = Number((period.kind === "recent" ? today : period.to).slice(0, 4));
-  const [{ members }, categories, { rows, openingCents }, monthly, planned, pending] = await Promise.all([
+  const [{ members }, categories, { rows, openingCents }, monthly, planned, pending, hidden] = await Promise.all([
     getContext(),
     listCategories(),
     loadStatementRows(id, period),
     listMonthlyBalances(`${year}-01-01`),
     listTransactions({ accountId: id, status: "planned", limit: 200 }),
     loadPendingTransfers(),
+    listHiddenAccounts(),
   ]);
   const views = new Map(rows.map((r) => [r.id, toTxnView(r, accounts, categories, members)]));
   const refs = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
@@ -60,7 +62,7 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
       />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-4">
-          <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: id, bookedOn: today }} />
+          <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} transferTargets={transferTargets(hidden)} defaults={{ kind: "expense", accountId: id, bookedOn: today }} />
           {history.length > 1 && (
             <Card title="Andamento saldo" subtitle={`Fine mese, ${year}`} collapsible>
               <ProjectionChart data={history} title={`Saldo ${account.name}`} />

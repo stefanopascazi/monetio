@@ -24,12 +24,26 @@ export interface RuleView extends RecurringRule {
   editable: boolean;
 }
 
-function RuleBody({ rule, accounts, categories, today, onDone }: { rule: RuleView; accounts: NamedRef[]; categories: NamedRef[]; today: string; onDone: () => void }) {
+function RuleBody({
+  rule,
+  accounts,
+  categories,
+  transferTargets,
+  today,
+  onDone,
+}: {
+  rule: RuleView;
+  accounts: NamedRef[];
+  categories: NamedRef[];
+  transferTargets?: NamedRef[];
+  today: string;
+  onDone: () => void;
+}) {
   const { run } = useToastAction();
   if (!rule.editable) return <p className="pb-2 text-sm text-ink-muted">Può modificarla solo chi vede il conto di partenza.</p>;
   return (
     <div className="flex flex-col gap-4 pb-2">
-      <RuleForm rule={rule} action={updateRule.bind(null, rule.id)} accounts={accounts} categories={categories} today={today} onSaved={onDone} />
+      <RuleForm rule={rule} action={updateRule.bind(null, rule.id)} accounts={accounts} categories={categories} transferTargets={transferTargets} today={today} onSaved={onDone} />
       <InlineConfirm
         triggerLabel="Elimina ricorrenza"
         triggerIcon={<Trash2 />}
@@ -47,6 +61,7 @@ function RuleAccordion({
   setOpen,
   accounts,
   categories,
+  transferTargets,
   today,
 }: {
   rules: RuleView[];
@@ -54,6 +69,7 @@ function RuleAccordion({
   setOpen: (v: string[]) => void;
   accounts: NamedRef[];
   categories: NamedRef[];
+  transferTargets?: NamedRef[];
   today: string;
 }) {
   return (
@@ -77,14 +93,27 @@ function RuleAccordion({
           </span>
         ),
         meta: <AmountWithFee cents={r.viewCents} feeCents={r.feeCents} tone={r.kind === "transfer" ? "transfer" : "auto"} />,
-        content: open.includes(r.id) ? <RuleBody rule={r} accounts={accounts} categories={categories} today={today} onDone={() => setOpen([])} /> : null,
+        content: open.includes(r.id) ? <RuleBody rule={r} accounts={accounts} categories={categories} transferTargets={transferTargets} today={today} onDone={() => setOpen([])} /> : null,
       }))}
     />
   );
 }
 
 /** Rules grouped by account, each split into real movements and estimates, with a search box. */
-export function RuleList({ rules, accounts, categories, today }: { rules: RuleView[]; accounts: NamedRef[]; categories: NamedRef[]; today: string }) {
+export function RuleList({
+  rules,
+  accounts,
+  categories,
+  transferTargets,
+  today,
+}: {
+  rules: RuleView[];
+  accounts: NamedRef[];
+  categories: NamedRef[];
+  /** Household accounts the viewer cannot see, offered as transfer destinations. */
+  transferTargets?: NamedRef[];
+  today: string;
+}) {
   const [open, setOpen] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   if (!rules.length) return <EmptyState icon={<Repeat />} title="Nessuna ricorrenza" description="Aggiungi stipendi, rate e bollette per vedere scadenze e proiezioni." />;
@@ -115,13 +144,13 @@ export function RuleList({ rules, accounts, categories, today }: { rules: RuleVi
             {g.effective.length > 0 && (
               <section aria-label={`${g.accountName}: effettive`}>
                 <h3 className="bg-surface-sunken px-5 py-2 text-sm font-semibold text-ink">Effettive · automatiche e a scadenza</h3>
-                <RuleAccordion rules={g.effective} open={open} setOpen={setOpen} accounts={accounts} categories={categories} today={today} />
+                <RuleAccordion rules={g.effective} open={open} setOpen={setOpen} accounts={accounts} categories={categories} transferTargets={transferTargets} today={today} />
               </section>
             )}
             {g.estimates.length > 0 && (
               <section aria-label={`${g.accountName}: stime`}>
                 <h3 className="bg-forecast-soft px-5 py-2 text-sm font-semibold text-forecast-ink">Stime · solo per le proiezioni</h3>
-                <RuleAccordion rules={g.estimates} open={open} setOpen={setOpen} accounts={accounts} categories={categories} today={today} />
+                <RuleAccordion rules={g.estimates} open={open} setOpen={setOpen} accounts={accounts} categories={categories} transferTargets={transferTargets} today={today} />
               </section>
             )}
           </Card>

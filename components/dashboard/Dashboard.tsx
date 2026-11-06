@@ -4,6 +4,7 @@ import { AccountGrid } from "@/components/accounts/AccountGrid";
 import { DueList } from "@/components/due/DueList";
 import { ProjectionPanel } from "@/components/projection/ProjectionPanel";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
+import { transferTargets } from "@/lib/data/transfer-targets";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { createTransaction } from "@/app/actions/transactions";
 import { loadAgenda, loadPendingTransfers, loadProjection } from "@/lib/data/agenda";
@@ -61,7 +62,7 @@ export async function Dashboard() {
       <AccountGrid accounts={active} members={ctx.members} pending={pending} />
 
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: refs[0]?.id ?? "", bookedOn: today }} />
+        <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} transferTargets={transferTargets(hidden)} defaults={{ kind: "expense", accountId: refs[0]?.id ?? "", bookedOn: today }} />
         <DueList items={dueViews(agenda.due, agenda.rules, active, hidden).slice(0, 6)} today={today} title="In scadenza" subtitle="Prossimi 31 giorni" />
       </section>
 

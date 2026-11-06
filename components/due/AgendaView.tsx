@@ -8,6 +8,7 @@ import { loadAgenda } from "@/lib/data/agenda";
 import { contributionSpendingFrom } from "@/lib/data/flows";
 import { contributionViews, dueViews, ruleViews } from "@/lib/data/page-views";
 import { listAccounts, listCategories, listHiddenAccounts } from "@/lib/data/queries";
+import { transferTargets } from "@/lib/data/transfer-targets";
 import { DueList } from "./DueList";
 import { UpcomingList } from "./UpcomingList";
 
@@ -17,6 +18,7 @@ export async function AgendaView() {
   const active = accounts.filter((a) => !a.archived);
   const refs = active.map((a) => ({ id: a.id, name: a.name }));
   const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
+  const targets = transferTargets(hidden);
   const due = dueViews(agenda.due, agenda.rules, active, hidden);
   const overdue = due.filter((d) => d.date < agenda.today);
   const rules = ruleViews(agenda.rules, accounts, agenda.today, categories, hidden);
@@ -47,8 +49,8 @@ export async function AgendaView() {
             count: rules.filter((r) => r.active).length,
             content: (
               <section className="flex flex-col gap-4 pt-4">
-                <RuleForm action={createRule} accounts={refs} categories={catRefs} today={agenda.today} />
-                <RuleList rules={rules} accounts={refs} categories={catRefs} today={agenda.today} />
+                <RuleForm action={createRule} accounts={refs} categories={catRefs} transferTargets={targets} today={agenda.today} />
+                <RuleList rules={rules} accounts={refs} categories={catRefs} transferTargets={targets} today={agenda.today} />
               </section>
             ),
           },

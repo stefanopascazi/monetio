@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextField } from "@monetio/ui";
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
+import { counterpartOptions } from "@/components/common/counterpart-options";
 import { type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, toOptions } from "@/components/common/options";
 import { FeeInput } from "@/components/payments/FeeInput";
 import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS, takesFee } from "@/components/payments/movement-kind";
@@ -19,6 +20,8 @@ export interface RuleFormProps {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   accounts: NamedRef[];
   categories: NamedRef[];
+  /** Household accounts the viewer cannot see, offered as transfer destinations. */
+  transferTargets?: NamedRef[];
   rule?: RecurringRule;
   today: string;
   /** Edit mode: called after a successful save (e.g. to close the parent accordion). */
@@ -26,7 +29,7 @@ export interface RuleFormProps {
 }
 
 /** Create (collapsible panel) or edit (embedded) a recurring rule. */
-export function RuleForm({ action, accounts, categories, rule, today, onSaved }: RuleFormProps) {
+export function RuleForm({ action, accounts, categories, transferTargets, rule, today, onSaved }: RuleFormProps) {
   const embedded = !!rule;
   const [kind, setKind] = useState<Kind>(rule ? formKindOf(rule.kind, rule.paymentMethod) : "expense");
   const [fee, setFee] = useState<number | null>(rule?.feeCents || null);
@@ -113,7 +116,7 @@ export function RuleForm({ action, accounts, categories, rule, today, onSaved }:
           label="Al conto"
           defaultValue={rule?.counterpartAccountId ?? ""}
           placeholder="Scegli il conto"
-          options={toOptions(accounts)}
+          options={counterpartOptions(accounts, transferTargets, rule?.counterpartAccountId ? { id: rule.counterpartAccountId, name: "Conto privato" } : null)}
           error={error("counterpartAccountId")}
         />
       )}

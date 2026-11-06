@@ -5,6 +5,7 @@ import { createClient } from "../supabase/server";
 import { activeHouseholdId } from "./context";
 import { type MonthlyFlow, mapFlow } from "./flows";
 import { attachFees, mapAccount, mapCategory, mapContribution, mapRule, mapTransaction } from "./mappers";
+import type { HiddenAccount } from "./transfer-targets";
 import { hiddenAccountName } from "./views";
 
 export interface AccountWithBalance extends Account {
@@ -167,11 +168,15 @@ export async function balanceBefore(accountId: string, date: ISODate): Promise<n
 }
 
 /** Accounts the viewer cannot see, labelled with their owner (e.g. "Conto privato di Asha"). */
-export const listHiddenAccounts = cache(async (): Promise<{ id: string; name: string }[]> => {
+export const listHiddenAccounts = cache(async (): Promise<HiddenAccount[]> => {
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const { data, error } = await supabase.rpc("hidden_account_owners", { p_household: hh });
   if (error) throw error;
-  return ((data ?? []) as { id: string; owner_name: string | null }[]).map((r) => ({ id: String(r.id), name: hiddenAccountName(r.owner_name) }));
+  return ((data ?? []) as { id: string; owner_name: string | null; archived?: boolean }[]).map((r) => ({
+    id: String(r.id),
+    name: hiddenAccountName(r.owner_name),
+    archived: !!r.archived,
+  }));
 });
 
 export const listOverrides = cache(async (): Promise<OccurrenceOverride[]> => {

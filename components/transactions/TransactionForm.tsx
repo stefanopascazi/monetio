@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextField } from "@monetio/ui";
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
+import { counterpartOptions } from "@/components/common/counterpart-options";
 import { type NamedRef, toOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
 import { FeeInput } from "@/components/payments/FeeInput";
@@ -17,6 +18,8 @@ export interface TransactionDefaults {
   kind: Kind;
   accountId: string;
   counterpartAccountId?: string | null;
+  /** Label of the current destination, kept listed when it is a hidden account. */
+  counterpartName?: string | null;
   categoryId?: string | null;
   amountCents?: number | null;
   /** Linked fee of a bonifico/CBill/transfer being edited. */
@@ -31,6 +34,8 @@ export interface TransactionFormProps {
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   accounts: NamedRef[];
   categories: NamedRef[];
+  /** Household accounts the viewer cannot see, offered as transfer destinations. */
+  transferTargets?: NamedRef[];
   defaults: TransactionDefaults;
   title?: string;
   submitLabel?: string;
@@ -42,7 +47,7 @@ export interface TransactionFormProps {
 }
 
 /** Add or edit a transaction inline (modal-free). */
-export function TransactionForm({ action, accounts, categories, defaults, title = "Nuovo movimento", submitLabel = "Salva movimento", embedded, lockKind, onSaved }: TransactionFormProps) {
+export function TransactionForm({ action, accounts, categories, transferTargets, defaults, title = "Nuovo movimento", submitLabel = "Salva movimento", embedded, lockKind, onSaved }: TransactionFormProps) {
   const [kind, setKind] = useState<Kind>(defaults.kind);
   const [amount, setAmount] = useState<number | null>(defaults.amountCents ?? null);
   const [fee, setFee] = useState<number | null>(defaults.feeCents ?? null);
@@ -120,7 +125,11 @@ export function TransactionForm({ action, accounts, categories, defaults, title 
             label="Al conto"
             defaultValue={defaults.counterpartAccountId ?? ""}
             placeholder="Scegli il conto"
-            options={toOptions(accounts)}
+            options={counterpartOptions(
+              accounts,
+              transferTargets,
+              defaults.counterpartAccountId ? { id: defaults.counterpartAccountId, name: defaults.counterpartName ?? "Conto privato" } : null,
+            )}
             error={error("counterpartAccountId")}
             disabled={lockKind}
           />

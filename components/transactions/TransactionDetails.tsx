@@ -55,6 +55,7 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
             feeCents: t.feeCents,
             accountId: t.accountId,
             counterpartAccountId: t.counterpartAccountId,
+            counterpartName: t.counterpartName,
             categoryId: t.categoryId,
             amountCents: Math.abs(t.amountCents),
             bookedOn: t.bookedOn,
