@@ -29,7 +29,9 @@ describe("paymentRows", () => {
     const rows = paymentRows({ ...base, paymentMethod: "bank_transfer" }, 65, () => ids.shift()!);
     expect(rows).toHaveLength(2);
     expect(rows[0]).toMatchObject({ id: "p1", amount_cents: -300000, payment_method: "bank_transfer", parent_transaction_id: null });
+    expect(Object.keys(rows[1]).sort()).toEqual(Object.keys(rows[0]).sort());
     expect(rows[1]).toMatchObject({
+      id: "f1",
       account_id: "a",
       amount_cents: -65,
       kind: "expense",

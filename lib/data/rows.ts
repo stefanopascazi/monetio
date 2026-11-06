@@ -63,11 +63,14 @@ export const feeDescription = (method: PaymentMethod, description: string) =>
 /**
  * Rows for a bonifico/CBill: the payment plus, when `feeCents` is set, a linked expense row
  * for the fee on the same account, date and status. Plain transactions pass through unchanged.
+ * Both rows carry an explicit id: a bulk insert nulls keys missing from some rows instead of
+ * applying column defaults.
  */
 export function paymentRows(t: NewTransaction, feeCents: number | null, newId: () => string = () => crypto.randomUUID()): TransactionInsert[] {
   if (!t.paymentMethod || !feeCents) return transactionRows(t, newId);
   const id = t.id ?? newId();
   const fee: NewTransaction = {
+    id: newId(),
     householdId: t.householdId,
     accountId: t.accountId,
     kind: "expense",
