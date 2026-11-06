@@ -1,8 +1,12 @@
+/* The item sizes itself on its own width (cards can be narrow even on desktop). */
 .mio-due {
+  container-type: inline-size;
+  padding: var(--mio-space-3) var(--mio-space-4);
+}
+.mio-due__row {
   display: flex;
   align-items: center;
   gap: var(--mio-space-3);
-  padding: var(--mio-space-3) var(--mio-space-4);
 }
 
 /* Calendar leaf: the signature date mark for scheduled payments. */
@@ -41,18 +45,18 @@
 .mio-due__status { margin-top: 2px; }
 .mio-due__end { display: flex; flex-direction: column; align-items: flex-end; gap: var(--mio-space-2); flex: none; }
 .mio-due__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--mio-space-2); }
-/* Mobile: amount + actions drop under the text, aligned with it, wrapping instead of overflowing. */
-@media (max-width: 480px) {
-  .mio-due { flex-wrap: wrap; }
-  .mio-due__end {
-    box-sizing: border-box;
-    flex: 1 1 100%;
-    min-width: 0;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    padding-left: 64px;
+/* Narrow: one piece of information per row — date + title, then amount, then full-width actions. */
+@container (max-width: 640px) {
+  .mio-due__row {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    grid-template-areas: "leaf main" ". end";
+    align-items: start;
+    row-gap: var(--mio-space-2);
   }
+  .mio-due__leaf { grid-area: leaf; }
+  .mio-due__main { grid-area: main; }
+  .mio-due__end { grid-area: end; flex-direction: column; align-items: stretch; min-width: 0; }
+  .mio-due__end > .mio-amount { align-self: flex-start; }
   .mio-due__actions { justify-content: flex-start; }
 }

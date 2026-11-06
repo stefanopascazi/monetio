@@ -63,52 +63,55 @@ export function DueItem({
   const month = new Intl.DateTimeFormat(locale, { month: "short" }).format(date);
 
   return (
+    // Outer element is the size container; the inner row switches to a stacked layout when narrow.
     <div className={cx("mio-due", `mio-due--${status}`, className)}>
-      <time className="mio-due__leaf" dateTime={date.toISOString().slice(0, 10)}>
-        <span className="mio-due__month">{month}</span>
-        <span className="mio-due__day">{date.getDate()}</span>
-      </time>
-      <div className="mio-due__main">
-        <span className="mio-due__title">{title}</span>
-        <span className="mio-due__meta">
-          <Repeat aria-hidden="true" />
-          {[FREQ[frequency], account].filter(Boolean).join(" · ")}
-        </span>
-        <span className="mio-due__status">
-          {status === "paid" && (
-            <Badge tone="success" size="sm" icon={<Check aria-hidden="true" />}>
-              {messages.paid}
-            </Badge>
-          )}
-          {status === "overdue" && (
-            <Badge tone="danger" size="sm" icon={<AlertTriangle aria-hidden="true" />}>
-              {relativeDueLabel(days)}
-            </Badge>
-          )}
-          {status === "soon" && (
-            <Badge tone="warning" size="sm">
-              {relativeDueLabel(days)}
-            </Badge>
-          )}
-          {status === "upcoming" && (
-            <Badge tone="neutral" size="sm">
-              {relativeDueLabel(days)}
-            </Badge>
-          )}
-        </span>
-      </div>
-      <div className="mio-due__end">
-        <Amount cents={kind === "expense" ? -amountCents : amountCents} tone={kind} hidden={hidden} />
-        {!paid && (onMarkPaid || action) && (
-          <div className="mio-due__actions">
-            {action}
-            {onMarkPaid && (
-              <Button variant="secondary" size="sm" iconStart={<Check aria-hidden="true" />} onClick={onMarkPaid}>
-                {messages.markAsPaid}
-              </Button>
+      <div className="mio-due__row">
+        <time className="mio-due__leaf" dateTime={date.toISOString().slice(0, 10)}>
+          <span className="mio-due__month">{month}</span>
+          <span className="mio-due__day">{date.getDate()}</span>
+        </time>
+        <div className="mio-due__main">
+          <span className="mio-due__title">{title}</span>
+          <span className="mio-due__meta">
+            <Repeat aria-hidden="true" />
+            {[FREQ[frequency], account].filter(Boolean).join(" · ")}
+          </span>
+          <span className="mio-due__status">
+            {status === "paid" && (
+              <Badge tone="success" size="sm" icon={<Check aria-hidden="true" />}>
+                {messages.paid}
+              </Badge>
             )}
-          </div>
-        )}
+            {status === "overdue" && (
+              <Badge tone="danger" size="sm" icon={<AlertTriangle aria-hidden="true" />}>
+                {relativeDueLabel(days)}
+              </Badge>
+            )}
+            {status === "soon" && (
+              <Badge tone="warning" size="sm">
+                {relativeDueLabel(days)}
+              </Badge>
+            )}
+            {status === "upcoming" && (
+              <Badge tone="neutral" size="sm">
+                {relativeDueLabel(days)}
+              </Badge>
+            )}
+          </span>
+        </div>
+        <div className="mio-due__end">
+          <Amount cents={kind === "expense" ? -amountCents : amountCents} tone={kind} hidden={hidden} />
+          {!paid && (onMarkPaid || action) && (
+            <div className="mio-due__actions">
+              {action}
+              {onMarkPaid && (
+                <Button variant="secondary" size="sm" iconStart={<Check aria-hidden="true" />} onClick={onMarkPaid}>
+                  {messages.markAsPaid}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
