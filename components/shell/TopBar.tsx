@@ -1,8 +1,8 @@
-import { Settings } from "lucide-react";
+import { CircleUserRound } from "lucide-react";
 import Link from "next/link";
 import { ThemeSwitcher } from "@monetio/ui";
 
-/** Wordmark, theme switch and settings link. Static: no session reads. */
+/** Wordmark, theme switch and personal area link (profile, households, settings). Static: no session reads. */
 export function TopBar() {
   return (
     <header className="flex items-center justify-between gap-3">
@@ -13,10 +13,10 @@ export function TopBar() {
         <ThemeSwitcher size="sm" />
         <Link
           href="/impostazioni"
-          aria-label="Impostazioni"
+          aria-label="Profilo e impostazioni"
           className="inline-flex size-10 items-center justify-center rounded-full bg-surface text-ink-muted hover:text-ink"
         >
-          <Settings className="size-5" aria-hidden="true" />
+          <CircleUserRound className="size-6" aria-hidden="true" />
         </Link>
       </div>
     </header>
