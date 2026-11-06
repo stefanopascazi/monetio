@@ -1,5 +1,5 @@
 import { contributionAmount, contributionBase } from "./contribution";
-import { addDays, addMonthsToKey, daysInMonth, endOfMonth, monthKey, parseISO, startOfMonth } from "./dates";
+import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
 import { occurrences } from "./recurrence";
 import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
 import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
@@ -23,8 +23,6 @@ export interface ProjectionInput {
   lookbackDays?: number;
   /** Actual amounts/dates entered for single occurrences. */
   overrides?: OverrideMap;
-  /** Monthly averages (positive cents) of income/spending not covered by rules, per account. */
-  baseline?: Record<string, { incomeCents: number; expenseCents: number }>;
 }
 
 export interface ProjectionMonth {
@@ -34,7 +32,7 @@ export interface ProjectionMonth {
 }
 
 /** Where a projected movement comes from, for the month detail. */
-export type MovementSource = "rule" | "estimate" | "contribution" | "baseline" | "planned";
+export type MovementSource = "rule" | "estimate" | "contribution" | "planned";
 
 export interface Movement {
   date: ISODate;
@@ -46,10 +44,11 @@ export interface Movement {
   overdue?: boolean;
 }
 
-export const BASELINE_INCOME_LABEL = "Entrate medie (storico)";
-export const BASELINE_EXPENSE_LABEL = "Spese medie (storico)";
 
-/** Expected movements after today, from rules, contributions and planned transactions. */
+/**
+ * Expected movements after today, only from rules, contributions and planned transactions:
+ * the projection reflects what is declared, without historical averages.
+ */
 export function projectedMovements(input: ProjectionInput): Movement[] {
   const { today, rules, contributions, booked, planned, lookbackDays = 90 } = input;
   const currentMonth = monthKey(today);
@@ -93,23 +92,6 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       if (booked.has(contributionKey(c.id, d))) continue;
       const { baseCents } = contributionBase(c, monthKey(d), currentMonth, input.contributionSpending);
       push(d, c.fromAccountId, -contributionAmount(c, baseCents), c.toAccountId, c.description, "contribution");
-    }
-  }
-
-  // Historical averages: full months ahead, only the remaining share of the current month.
-  if (input.baseline) {
-    const { y, m, d } = parseISO(today);
-    const remaining = (daysInMonth(y, m) - d) / daysInMonth(y, m);
-    for (let n = 0; n < input.months; n++) {
-      const month = addMonthsToKey(currentMonth, n);
-      const share = n === 0 ? remaining : 1;
-      for (const [accountId, b] of Object.entries(input.baseline)) {
-        const date = endOfMonth(month);
-        const income = Math.round(b.incomeCents * share);
-        const expense = Math.round(b.expenseCents * share);
-        if (income) out.push({ date, accountId, amountCents: income, label: BASELINE_INCOME_LABEL, source: "baseline" });
-        if (expense) out.push({ date, accountId, amountCents: -expense, label: BASELINE_EXPENSE_LABEL, source: "baseline" });
-      }
     }
   }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rule } from "./fixtures";
 import type { ProjectionInput } from "./projection";
-import { BASELINE_EXPENSE_LABEL, BASELINE_INCOME_LABEL, projectBalances } from "./projection";
+import { projectBalances } from "./projection";
 import { projectionDetails } from "./projection-details";
 
 const base: ProjectionInput = {
@@ -37,11 +37,10 @@ describe("projectionDetails", () => {
     expect(dec.byAccount.joint.closingCents).toBe(projectBalances(input)[1].byAccount.joint);
   });
 
-  it("keeps hidden accounts out and splits historical averages", () => {
-    const input = { ...base, months: 1, rules: [quota], baseline: { joint: { incomeCents: 1000, expenseCents: 30000 } } };
-    const [nov] = projectionDetails(input, ["joint"]);
+  it("keeps hidden accounts out", () => {
+    const [nov] = projectionDetails({ ...base, months: 1, rules: [quota] }, ["joint"]);
     expect(Object.keys(nov.byAccount)).toEqual(["joint"]);
-    expect(nov.byAccount.joint.items.map((x) => x.label)).toEqual(["Quota fissa Asha", BASELINE_INCOME_LABEL, BASELINE_EXPENSE_LABEL]);
+    expect(nov.byAccount.joint.items.map((x) => x.label)).toEqual(["Quota fissa Asha"]);
   });
 
   it("keeps unpaid past occurrences on a separate overdue line", () => {

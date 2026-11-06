@@ -1,7 +1,7 @@
 import { Card, PageHeader } from "@monetio/ui";
 import { DETAIL_MONTHS, loadProjection } from "@/lib/data/agenda";
 import { balanceHistory, lastMonths, projectionPoints } from "@/lib/data/history";
-import { listCategories, listMonthlyBalances } from "@/lib/data/queries";
+import { listMonthlyBalances } from "@/lib/data/queries";
 import { addMonthsToKey, monthKey, monthLabel, startOfMonth } from "@/lib/domain/dates";
 import { HORIZONS, horizonParam } from "./horizons";
 import { HorizonSwitch, ProjectionPanel } from "./ProjectionPanel";
@@ -14,8 +14,7 @@ const HISTORY_MONTHS = 6;
 export async function ProjectionView({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const horizon = horizonParam(sp.mesi);
-  const { today, accounts, projection, details, baseline, baselineMonths, summary } = await loadProjection(Number(horizon));
-  const categories = await listCategories();
+  const { today, accounts, projection, details, summary } = await loadProjection(Number(horizon));
   const current = monthKey(today);
   // History: the months before the current one, month-end balances.
   const months = lastMonths(addMonthsToKey(current, -1), HISTORY_MONTHS);
@@ -47,21 +46,12 @@ export async function ProjectionView({ searchParams }: { searchParams: Promise<R
     <>
       <PageHeader
         title="Proiezioni"
-        description="Saldi previsti a fine mese: ricorrenze, scadenze, quote, movimenti pianificati e medie dello storico per tutto il resto."
+        description="Saldi previsti a fine mese, calcolati solo da ricorrenze, stime, quote e movimenti pianificati: tienile aggiornate perché la proiezione sia fedele."
         actions={<HorizonSwitch value={horizon} />}
       />
       <ProjectionPanel title="Andamento previsto" subtitle={`Storico ${HISTORY_MONTHS} mesi e prossimi ${HORIZONS.find((h) => h.value === horizon)!.label}`} series={[all, ...perAccount]} />
-      <Card
-        title="Come si forma un mese tipo"
-        subtitle={`Medie su ${monthLabel(baselineMonths[0], true)} – ${monthLabel(baselineMonths.at(-1)!, true)}, al netto di ricorrenze e stime; entrate occasionali escluse`}
-        padding="none"
-      >
-        <ProjectionBreakdown
-          accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
-          summary={summary}
-          baseline={baseline}
-          categories={categories.map((c) => ({ id: c.id, name: c.name }))}
-        />
+      <Card title="Come si forma un mese tipo" subtitle="Media mensile di ricorrenze, stime e quote attive" padding="none">
+        <ProjectionBreakdown accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} summary={summary} />
       </Card>
       <Card
         title="Cosa entra e cosa esce, mese per mese"

@@ -11,7 +11,6 @@ const SOURCE: Record<DetailItem["source"], { label: string; tone: BadgeTone } | 
   rule: null,
   estimate: { label: "stima", tone: "forecast" },
   contribution: { label: "quota", tone: "transfer" },
-  baseline: { label: "media storico", tone: "forecast" },
   planned: { label: "pianificato", tone: "neutral" },
 };
 
