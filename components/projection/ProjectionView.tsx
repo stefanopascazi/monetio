@@ -1,11 +1,12 @@
 import { Card, PageHeader } from "@monetio/ui";
-import { loadProjection } from "@/lib/data/agenda";
+import { DETAIL_MONTHS, loadProjection } from "@/lib/data/agenda";
 import { balanceHistory, lastMonths, projectionPoints } from "@/lib/data/history";
 import { listCategories, listMonthlyBalances } from "@/lib/data/queries";
 import { addMonthsToKey, monthKey, monthLabel, startOfMonth } from "@/lib/domain/dates";
 import { HORIZONS, horizonParam } from "./horizons";
 import { HorizonSwitch, ProjectionPanel } from "./ProjectionPanel";
 import { ProjectionBreakdown } from "./ProjectionBreakdown";
+import { ProjectionDetail } from "./ProjectionDetail";
 import { ProjectionTable } from "./ProjectionTable";
 
 const HISTORY_MONTHS = 6;
@@ -13,7 +14,7 @@ const HISTORY_MONTHS = 6;
 export async function ProjectionView({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
   const horizon = horizonParam(sp.mesi);
-  const { today, accounts, projection, baseline, baselineMonths, summary } = await loadProjection(Number(horizon));
+  const { today, accounts, projection, details, baseline, baselineMonths, summary } = await loadProjection(Number(horizon));
   const categories = await listCategories();
   const current = monthKey(today);
   // History: the months before the current one, month-end balances.
@@ -61,6 +62,13 @@ export async function ProjectionView({ searchParams }: { searchParams: Promise<R
           baseline={baseline}
           categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         />
+      </Card>
+      <Card
+        title="Cosa entra e cosa esce, mese per mese"
+        subtitle={projection.length > DETAIL_MONTHS ? `Primi ${DETAIL_MONTHS} mesi; oltre restano solo i saldi` : "Movimenti previsti che formano ogni saldo"}
+        padding="none"
+      >
+        <ProjectionDetail details={details} accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
       </Card>
       <Card title="Dettaglio per conto" subtitle={`Saldo a fine mese fino a ${monthLabel(projection.at(-1)!.month, true)}`} padding="none">
         <ProjectionTable projection={projection} accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
