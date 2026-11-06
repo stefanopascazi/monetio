@@ -53,7 +53,7 @@ export async function ProjectionView({ searchParams }: { searchParams: Promise<R
       <ProjectionPanel title="Andamento previsto" subtitle={`Storico ${HISTORY_MONTHS} mesi e prossimi ${HORIZONS.find((h) => h.value === horizon)!.label}`} series={[all, ...perAccount]} />
       <Card
         title="Come si forma un mese tipo"
-        subtitle={`Medie su ${monthLabel(baselineMonths[0], true)} – ${monthLabel(baselineMonths.at(-1)!, true)}, escluse le categorie già coperte da una ricorrenza`}
+        subtitle={`Medie su ${monthLabel(baselineMonths[0], true)} – ${monthLabel(baselineMonths.at(-1)!, true)}, al netto di ricorrenze e stime; entrate occasionali escluse`}
         padding="none"
       >
         <ProjectionBreakdown

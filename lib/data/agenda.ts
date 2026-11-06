@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth, todayISO } from "../domain/dates";
-import { coveredCategories, monthlySummary, variableBaseline } from "../domain/baseline";
+import { monthlySummary, ruleCoverage, variableBaseline } from "../domain/baseline";
 import { type ProjectionInput, projectBalances } from "../domain/projection";
 import { projectionDetails } from "../domain/projection-details";
 import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
@@ -73,7 +73,7 @@ export const loadProjection = cache(async (months: number) => {
   const rules = agenda.rules.filter((r) => touchesVisible(r, ids));
   const contributions = agenda.contributions.filter((c) => ids.has(c.fromAccountId) || ids.has(c.toAccountId));
   const baseline = Object.fromEntries(
-    Object.entries(variableBaseline(monthFlows, baselineMonths, coveredCategories(agenda.rules))).filter(([id]) => ids.has(id)),
+    Object.entries(variableBaseline(monthFlows, baselineMonths, ruleCoverage(agenda.rules, agenda.today))).filter(([id]) => ids.has(id)),
   );
   const input: ProjectionInput = {
     today: agenda.today,

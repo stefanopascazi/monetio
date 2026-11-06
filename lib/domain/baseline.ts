@@ -26,56 +26,107 @@ export interface AccountBaseline {
   categories: CategoryAverage[];
 }
 
-/** Key of categories covered on every account. */
-export const ALL_ACCOUNTS = "*";
+/** Monthly amounts (signed) that rules already project, so history must not count them again. */
+export interface RuleCoverage {
+  /** Per paying account and category: every rule kind, estimates of transfers included. */
+  byAccount: Map<string, Map<string, number>>;
+  /**
+   * Categories budgeted by a spending/income estimate: the estimate replaces their history on
+   * every account (e.g. "Spesa del mese" on the card also stands for past spending on the joint).
+   */
+  shared: Map<string, number>;
+}
 
-/**
- * Categories whose history is replaced by rules: per account for regular rules, and on every
- * account for estimates (a budget like "Spesa del mese" stands for the whole category,
- * even if past spending was booked on another account).
- */
-export function coveredCategories(rules: Pick<RecurringRule, "accountId" | "categoryId" | "active" | "schedule">[]): Map<string, Set<string>> {
-  const map = new Map<string, Set<string>>();
-  const add = (key: string, cat: string) => {
-    if (!map.has(key)) map.set(key, new Set());
-    map.get(key)!.add(cat);
-  };
+/** Monthly equivalent of the active, not yet ended rules with a category. */
+export function ruleCoverage(
+  rules: Pick<RecurringRule, "accountId" | "categoryId" | "active" | "schedule" | "kind" | "amountCents" | "frequency" | "endDate">[],
+  today: string,
+): RuleCoverage {
+  const byAccount = new Map<string, Map<string, number>>();
+  const shared = new Map<string, number>();
   for (const r of rules) {
-    if (!r.active || !r.categoryId) continue;
-    add(r.accountId, r.categoryId);
-    if (r.schedule === "estimate") add(ALL_ACCOUNTS, r.categoryId);
+    if (!r.active || !r.categoryId || (r.endDate && r.endDate < today)) continue;
+    const m = monthlyEquivalent(r);
+    if (r.schedule === "estimate" && r.kind !== "transfer") {
+      shared.set(r.categoryId, (shared.get(r.categoryId) ?? 0) + m);
+      continue;
+    }
+    if (!byAccount.has(r.accountId)) byAccount.set(r.accountId, new Map());
+    const acc = byAccount.get(r.accountId)!;
+    acc.set(r.categoryId, (acc.get(r.categoryId) ?? 0) + m);
   }
-  return map;
+  return { byAccount, shared };
 }
 
 /**
- * Average monthly income and spending per account over `months`, per category, skipping
- * transfers/adjustments (modelled by rules and quotas) and categories covered by rules.
+ * Monthly average of a category, prudent on income: one-off income (a refund, a sale)
+ * must not inflate every future month, so positive averages use the median when lower.
  */
-export function variableBaseline(flows: FlowLike[], months: string[], covered: Map<string, Set<string>>): Record<string, AccountBaseline> {
+export function prudentAverage(values: number[]): number {
+  if (!values.length) return 0;
+  const mean = values.reduce((s, v) => s + v, 0) / values.length;
+  if (mean <= 0) return Math.round(mean);
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length / 2;
+  const median = sorted.length % 2 ? sorted[Math.floor(mid)] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return Math.round(Math.min(mean, median));
+}
+
+/** What history adds on top of rules: same-sign amounts are subtracted, opposite ones dropped. */
+export function residualAfterRules(avgCents: number, coveredCents: number | undefined): number {
+  if (!coveredCents) return avgCents;
+  if (Math.sign(avgCents) !== Math.sign(coveredCents)) return 0;
+  // `|| 0` avoids -0 when the rule covers it all.
+  return Math.sign(avgCents) * Math.max(0, Math.abs(avgCents) - Math.abs(coveredCents)) || 0;
+}
+
+/**
+ * Monthly income and spending per account not already projected by rules, per category.
+ * Transfers/adjustments are skipped (modelled by rules and quotas). A rule only removes its
+ * own amount from the category history, so e.g. a yearly insurance in "Extra" does not hide
+ * the rest of the extra spending.
+ */
+export function variableBaseline(flows: FlowLike[], months: string[], coverage: RuleCoverage = { byAccount: new Map(), shared: new Map() }): Record<string, AccountBaseline> {
   if (!months.length) return {};
-  const inRange = new Set(months);
-  const sums = new Map<string, Map<string | null, number>>();
+  const index = new Map(months.map((m, i) => [m, i]));
+  const series = new Map<string, Map<string | null, number[]>>();
   for (const f of flows) {
-    if (!inRange.has(f.month) || (f.kind !== "income" && f.kind !== "expense")) continue;
-    if (f.categoryId && (covered.get(f.accountId)?.has(f.categoryId) || covered.get(ALL_ACCOUNTS)?.has(f.categoryId))) continue;
-    if (!sums.has(f.accountId)) sums.set(f.accountId, new Map());
-    const byCat = sums.get(f.accountId)!;
-    byCat.set(f.categoryId, (byCat.get(f.categoryId) ?? 0) + f.totalCents);
+    const i = index.get(f.month);
+    if (i === undefined || (f.kind !== "income" && f.kind !== "expense")) continue;
+    if (!series.has(f.accountId)) series.set(f.accountId, new Map());
+    const byCat = series.get(f.accountId)!;
+    if (!byCat.has(f.categoryId)) byCat.set(f.categoryId, new Array(months.length).fill(0));
+    byCat.get(f.categoryId)![i] += f.totalCents;
   }
-  const out: Record<string, AccountBaseline> = {};
-  for (const [accountId, byCat] of sums) {
+
+  // Per account: history minus the rules paid from that account.
+  const avgs = new Map<string, Map<string | null, number>>();
+  for (const [accountId, byCat] of series) {
+    const covered = coverage.byAccount.get(accountId);
+    const out = new Map<string | null, number>();
+    for (const [categoryId, values] of byCat) {
+      const avg = prudentAverage(values);
+      out.set(categoryId, categoryId ? residualAfterRules(avg, covered?.get(categoryId)) : avg);
+    }
+    avgs.set(accountId, out);
+  }
+
+  // Estimates are budgets declared by the user: they replace the category history everywhere.
+  for (const categoryId of coverage.shared.keys()) for (const m of avgs.values()) m.delete(categoryId);
+
+  const result: Record<string, AccountBaseline> = {};
+  for (const [accountId, byCat] of avgs) {
     const categories = [...byCat.entries()]
-      .map(([categoryId, total]) => ({ categoryId, avgCents: Math.round(total / months.length) }))
+      .map(([categoryId, avgCents]) => ({ categoryId, avgCents }))
       .filter((c) => c.avgCents !== 0)
       .sort((a, b) => Math.abs(b.avgCents) - Math.abs(a.avgCents));
-    out[accountId] = {
+    result[accountId] = {
       incomeCents: categories.filter((c) => c.avgCents > 0).reduce((s, c) => s + c.avgCents, 0),
       expenseCents: -categories.filter((c) => c.avgCents < 0).reduce((s, c) => s + c.avgCents, 0),
       categories,
     };
   }
-  return out;
+  return result;
 }
 
 /** Average monthly amount of a rule (yearly items count 1/12 per month). */
