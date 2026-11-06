@@ -172,10 +172,11 @@ export const listHiddenAccounts = cache(async (): Promise<HiddenAccount[]> => {
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const { data, error } = await supabase.rpc("hidden_account_owners", { p_household: hh });
   if (error) throw error;
-  return ((data ?? []) as { id: string; owner_name: string | null; archived?: boolean }[]).map((r) => ({
+  return ((data ?? []) as { id: string; owner_name: string | null; archived?: boolean; account_name?: string | null }[]).map((r) => ({
     id: String(r.id),
     name: hiddenAccountName(r.owner_name),
     archived: !!r.archived,
+    accountName: r.account_name ?? null,
   }));
 });
 
