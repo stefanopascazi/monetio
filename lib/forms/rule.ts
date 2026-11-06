@@ -1,3 +1,4 @@
+import { anchorDay } from "../domain/recurrence";
 import type { ISODate, RuleFrequency, RuleSchedule } from "../domain/types";
 import { Checker, isISODate, isUUID, type ParseResult, positiveCents, text } from "./parse";
 
@@ -56,7 +57,8 @@ export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
     amountCents: kind === "income" ? (cents ?? 0) : -(cents ?? 0),
     frequency,
     schedule,
-    dayOfMonth: day,
+    // Non-monthly rules are anchored on their first due date (start date): it sets month and day.
+    dayOfMonth: frequency === "monthly" || !isISODate(startDate) ? day : anchorDay(startDate, day),
     startDate,
     endDate: endDate || null,
     active: text(fd, "active") !== "false",

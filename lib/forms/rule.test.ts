@@ -25,3 +25,15 @@ describe("parseRuleForm", () => {
     expect(res.ok && res.value.active).toBe(false);
   });
 });
+
+describe("parseRuleForm non-monthly anchor", () => {
+  it("derives the day from the first due date", () => {
+    const res = parseRuleForm(form({ ...valid, frequency: "yearly", dayOfMonth: "1", startDate: "2027-03-15" }));
+    expect(res.ok && res.value).toMatchObject({ dayOfMonth: 15, startDate: "2027-03-15" });
+  });
+
+  it("keeps the posted day for monthly rules", () => {
+    const res = parseRuleForm(form({ ...valid, dayOfMonth: "27", startDate: "2026-11-01" }));
+    expect(res.ok && res.value).toMatchObject({ dayOfMonth: 27 });
+  });
+});

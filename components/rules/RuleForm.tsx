@@ -5,9 +5,10 @@ import { useCallback, useState } from "react";
 import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextField } from "@monetio/ui";
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
-import { enumOptions, FREQUENCY_LABEL, type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, toOptions } from "@/components/common/options";
+import { type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, toOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
 import type { RecurringRule, RuleSchedule } from "@/lib/domain/types";
+import { RuleScheduleFields } from "./RuleScheduleFields";
 
 type Kind = "expense" | "income" | "transfer";
 
@@ -105,9 +106,7 @@ export function RuleForm({ action, accounts, categories, rule, today, onSaved }:
         />
       )}
       <Select name="categoryId" label="Categoria" optional defaultValue={rule?.categoryId ?? ""} options={[{ value: "", label: "Nessuna" }, ...toOptions(categories)]} />
-      <Select name="frequency" label="Frequenza" defaultValue={rule?.frequency ?? "monthly"} options={enumOptions(FREQUENCY_LABEL)} error={error("frequency")} />
-      <TextField name="dayOfMonth" label="Giorno del mese" type="number" min={1} max={31} defaultValue={rule?.dayOfMonth ?? 1} error={error("dayOfMonth")} hint="Per le settimanali conta la data di inizio" />
-      <TextField name="startDate" label="Dal" type="date" defaultValue={rule?.startDate ?? today} error={error("startDate")} required />
+      <RuleScheduleFields rule={rule} today={today} error={error} />
       <TextField name="endDate" label="Fino al" type="date" optional defaultValue={rule?.endDate ?? ""} error={error("endDate")} />
       {embedded && <Switch label="Attiva" description="Se disattivata non genera movimenti né proiezioni" checked={active} onCheckedChange={setActive} className="mio-span-full" />}
     </FormPanel>

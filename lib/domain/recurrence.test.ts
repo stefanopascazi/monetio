@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextOccurrence, occurrences, type Schedule } from "./recurrence";
+import { anchorDay, firstOccurrence, nextOccurrence, occurrences, type Schedule } from "./recurrence";
 
 const monthly: Schedule = { frequency: "monthly", dayOfMonth: 31, startDate: "2026-01-15", endDate: null };
 
@@ -37,5 +37,23 @@ describe("nextOccurrence", () => {
   it("finds the next date or null", () => {
     expect(nextOccurrence({ frequency: "yearly", dayOfMonth: 10, startDate: "2024-12-10", endDate: null }, "2026-11-05")).toBe("2026-12-10");
     expect(nextOccurrence({ ...monthly, endDate: "2026-02-01" }, "2026-11-05")).toBeNull();
+  });
+});
+
+describe("firstOccurrence", () => {
+  it("finds the first date on or after the start", () => {
+    expect(firstOccurrence({ frequency: "yearly", dayOfMonth: 15, startDate: "2026-01-01", endDate: null })).toBe("2026-01-15");
+    expect(firstOccurrence({ frequency: "yearly", dayOfMonth: 10, startDate: "2026-01-20", endDate: null })).toBe("2027-01-10");
+  });
+});
+
+describe("anchorDay", () => {
+  it("uses the day of the date", () => {
+    expect(anchorDay("2027-03-15", 1)).toBe(15);
+  });
+
+  it("keeps a month-end intent when the date is clamped", () => {
+    expect(anchorDay("2027-02-28", 31)).toBe(31);
+    expect(anchorDay("2027-02-27", 31)).toBe(27);
   });
 });

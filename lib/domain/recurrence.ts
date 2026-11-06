@@ -52,3 +52,18 @@ export function nextOccurrence(s: Schedule, from: ISODate): ISODate | null {
   const { y, m } = parseISO(from);
   return occurrences(s, from, makeDate(y + 2, m, 28))[0] ?? null;
 }
+
+/** First occurrence on or after the start date (the real "first due date" of a rule). */
+export function firstOccurrence(s: Schedule): ISODate | null {
+  return nextOccurrence(s, s.startDate);
+}
+
+/**
+ * Day of month anchored by a first due date. When the date falls on the last day of its
+ * month, a larger preferred day (e.g. 31) is kept so later months still land on month end.
+ */
+export function anchorDay(firstDate: ISODate, preferredDay?: number): number {
+  const { y, m, d } = parseISO(firstDate);
+  const isMonthEnd = makeDate(y, m, 31) === firstDate;
+  return isMonthEnd && preferredDay && preferredDay > d && preferredDay <= 31 ? preferredDay : d;
+}
