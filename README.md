@@ -53,7 +53,8 @@ npm run stack:dev     # docker-compose.dev.yml: Supabase services only (no app, 
 npm run dev:local     # Next dev on http://localhost:3000
 ```
 
-Also available: `db:migrate:local`, `db:import:local`, `auth:invite:local`, `stack:down`.
+Also available: `db:migrate:local`, `db:import:local`, `auth:invite:local`, `stack:up` (full stack), `stack:down`.
+The `stack:*` scripts find Docker on the PATH or, on Windows, inside WSL (`MONETIO_WSL_DISTRO` picks the distro).
 `docker-compose.yml` includes `docker-compose.dev.yml`, so both share the same project and data.
 
 ## Learn More

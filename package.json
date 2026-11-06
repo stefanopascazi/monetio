@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "dev:local": "node scripts/dev/with-env.ts .env.stack next dev",
-    "stack:dev": "docker compose -f docker-compose.dev.yml up -d",
-    "stack:down": "docker compose down",
+    "stack:dev": "node scripts/docker/compose.ts -f docker-compose.dev.yml up -d",
+    "stack:up": "node scripts/docker/compose.ts up -d --build",
+    "stack:down": "node scripts/docker/compose.ts down",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
