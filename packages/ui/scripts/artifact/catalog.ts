@@ -250,7 +250,8 @@ Do not open dialogs from buttons: expand a FormPanel, switch a Tab or reveal an 
 - \`neutral\` (default, \`mio-surface\`) for most content: charts, lists.
 - \`mint\` for money in and positive news, \`coral\` for things needing attention (upcoming payments), \`forecast\` for goals and projections. One tinted card per row at most, so the tint keeps its meaning.
 - \`raised\` (white sheet with shadow) for content the user is editing.
-- Lists of rows (TransactionRow, DueItem) use \`padding="none"\`.`,
+- Lists of rows (TransactionRow, DueItem) use \`padding="none"\`.
+- \`collapsible\` adds a chevron (∧ open, ∨ folded) that hides the body and the \`action\`, keeping title and subtitle: use it for secondary blocks that push the main content down on phones (charts above a list). \`defaultOpen\` / \`open\` + \`onOpenChange\` control it.`,
     demo: `
   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:16}}>
     <M.Card title="Monthly budget" subtitle="November" action={<M.Button variant="ghost" size="sm">Edit</M.Button>}>

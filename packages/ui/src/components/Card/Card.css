@@ -16,3 +16,25 @@
   .mio-card--pad-md { padding: var(--mio-space-5); }
   .mio-card--pad-none .mio-card__header { padding: var(--mio-space-5) var(--mio-space-5) 0; }
 }
+.mio-card__action { display: flex; align-items: center; gap: var(--mio-space-2); }
+/* Collapsible: chevron toggle; when folded the header is the whole card. */
+.mio-card__toggle {
+  display: grid;
+  place-items: center;
+  width: var(--mio-control-sm, 32px);
+  height: var(--mio-control-sm, 32px);
+  margin: -4px -6px 0 0;
+  border: 0;
+  border-radius: var(--mio-radius-pill);
+  background: transparent;
+  color: var(--mio-ink-muted);
+  cursor: pointer;
+  transition: background var(--mio-duration-fast) var(--mio-ease), color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-card__toggle:hover { background: var(--mio-surface-sunken); color: var(--mio-ink); }
+.mio-card__toggle:focus-visible { outline: 2px solid var(--mio-focus); outline-offset: 2px; }
+.mio-card__toggle svg { width: 20px; height: 20px; stroke-width: 2; transform: rotate(180deg); transition: transform var(--mio-duration-base) var(--mio-ease); }
+.mio-card.is-collapsed .mio-card__toggle svg { transform: none; }
+.mio-card.is-collapsed .mio-card__header { margin-bottom: 0; }
+.mio-card--pad-none.is-collapsed { padding-bottom: var(--mio-space-4); }
+@media (prefers-reduced-motion: reduce) { .mio-card__toggle, .mio-card__toggle svg { transition: none; } }

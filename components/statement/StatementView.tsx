@@ -59,7 +59,7 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
         <div className="flex flex-col gap-4">
           <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: id, bookedOn: today }} />
           {history.length > 1 && (
-            <Card title="Andamento saldo" subtitle={`Fine mese, ${year}`}>
+            <Card title="Andamento saldo" subtitle={`Fine mese, ${year}`} collapsible>
               <ProjectionChart data={history} title={`Saldo ${account.name}`} />
             </Card>
           )}
