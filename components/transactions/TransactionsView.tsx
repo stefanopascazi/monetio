@@ -2,6 +2,7 @@ import { Amount, Card, PageHeader } from "@monetio/ui";
 import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { ensureSynced } from "@/lib/data/agenda";
+import { getContext } from "@/lib/data/context";
 import { monthParam, stringParam, withQuery } from "@/lib/data/params";
 import { listAccounts, listCategories, listTransactions } from "@/lib/data/queries";
 import { toTxnView } from "@/lib/data/views";
@@ -22,7 +23,8 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
   const categoryId = stringParam(sp.categoria);
   const q = stringParam(sp.q);
 
-  const [accounts, categories, txns] = await Promise.all([
+  const [{ members }, accounts, categories, txns] = await Promise.all([
+    getContext(),
     listAccounts(),
     listCategories(),
     listTransactions({ from: startOfMonth(month), to: endOfMonth(month), accountId, categoryId, search: q, limit: 1000 }),
@@ -57,7 +59,7 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
             action={<PeriodNav label={monthLabel(month, true)} prevHref={nav(addMonthsToKey(month, -1))} nextHref={nav(addMonthsToKey(month, 1))} />}
             padding="none"
           >
-            <TransactionList items={txns.map((t) => toTxnView(t, accounts, categories))} accounts={refs} categories={catRefs} emptyTitle={`Nessun movimento a ${monthLabel(month, true)}`} />
+            <TransactionList items={txns.map((t) => toTxnView(t, accounts, categories, members))} accounts={refs} categories={catRefs} emptyTitle={`Nessun movimento a ${monthLabel(month, true)}`} />
           </Card>
         </div>
       </section>

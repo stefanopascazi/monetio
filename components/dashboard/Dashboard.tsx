@@ -80,7 +80,7 @@ export async function Dashboard() {
           <CategoryDonut data={categorySlices(flows, slicesMonth, categories)} />
         </Card>
         <Card title="Ultimi movimenti" action={<Link href="/movimenti" className="text-sm font-semibold text-brand-ink">Vedi tutti</Link>} padding="none">
-          <TransactionList items={recent.map((t) => toTxnView(t, accounts, categories))} accounts={refs} categories={catRefs} />
+          <TransactionList items={recent.map((t) => toTxnView(t, accounts, categories, ctx.members))} accounts={refs} categories={catRefs} />
         </Card>
       </section>
     </>

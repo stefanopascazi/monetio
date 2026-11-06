@@ -29,7 +29,8 @@ export async function syncAutoRules(ctx: AppContext, today: string): Promise<num
   const [rules, occ] = await Promise.all([listRules(), listBookedOccurrences(since)]);
   const pending = autoBookings(rules, bookedOccurrences(occ, rules), today, since);
   if (!pending.length) return 0;
-  return insertBookings(await createClient(), pending, ctx.householdId, ctx.userId);
+  // Automatic bookings are not entered by anyone: no creator, same as the daily cron.
+  return insertBookings(await createClient(), pending, ctx.householdId, null);
 }
 
 /** Books passed automatic rules of a whole household with a service-role client (daily cron). */

@@ -10,6 +10,7 @@ export function TransactionTitle({ t, showAccount = true }: { t: TxnView; showAc
     t.isTransfer && t.counterpartName ? `${t.amountCents < 0 ? "verso" : "da"} ${t.counterpartName}` : null,
     showAccount ? t.accountName : null,
     dateLabel(t.bookedOn),
+    t.createdByName ? `di ${t.createdByName}` : null,
   ].filter(Boolean);
   return (
     <span className="flex min-w-0 items-center gap-3">

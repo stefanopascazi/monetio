@@ -16,6 +16,7 @@ export function txn(p: Partial<Transaction> & Pick<Transaction, "amountCents" | 
     contributionRuleId: null,
     occurrenceDate: null,
     source: "manual",
+    createdBy: null,
     ...p,
   };
 }
