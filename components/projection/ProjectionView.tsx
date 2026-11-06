@@ -3,6 +3,7 @@ import { DETAIL_MONTHS, loadProjection } from "@/lib/data/agenda";
 import { balanceHistory, lastMonths, projectionPoints } from "@/lib/data/history";
 import { listMonthlyBalances } from "@/lib/data/queries";
 import { addMonthsToKey, monthKey, monthLabel, startOfMonth } from "@/lib/domain/dates";
+import { SUMMARY_MONTHS } from "@/lib/domain/monthly-summary";
 import { HORIZONS, horizonParam } from "./horizons";
 import { HorizonSwitch, ProjectionPanel } from "./ProjectionPanel";
 import { ProjectionBreakdown } from "./ProjectionBreakdown";
@@ -50,7 +51,7 @@ export async function ProjectionView({ searchParams }: { searchParams: Promise<R
         actions={<HorizonSwitch value={horizon} />}
       />
       <ProjectionPanel title="Andamento previsto" subtitle={`Storico ${HISTORY_MONTHS} mesi e prossimi ${HORIZONS.find((h) => h.value === horizon)!.label}`} series={[all, ...perAccount]} />
-      <Card title="Come si forma un mese tipo" subtitle="Media mensile di ricorrenze, stime e quote attive" padding="none">
+      <Card title="Come si forma un mese tipo" subtitle={`Media mensile dei prossimi ${SUMMARY_MONTHS} mesi da ricorrenze, stime e quote, secondo le loro date`} padding="none">
         <ProjectionBreakdown accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} summary={summary} />
       </Card>
       <Card

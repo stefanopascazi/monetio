@@ -27,6 +27,14 @@ describe("projectBalances", () => {
     ]);
   });
 
+  it("never overlaps a rule that ends with the one that replaces it", () => {
+    const old = rule({ id: "o", accountId: "ste", amountCents: 177000, dayOfMonth: 10, startDate: "2026-11-01", endDate: "2027-01-31" });
+    const next = rule({ id: "n", accountId: "ste", amountCents: 190000, dayOfMonth: 10, startDate: "2027-02-01" });
+    const res = projectBalances({ ...base, months: 5, rules: [old, next] });
+    const deltas = res.map((p, i) => p.byAccount.ste - (i ? res[i - 1].byAccount.ste : 50000));
+    expect(deltas).toEqual([177000, 177000, 177000, 190000, 190000]);
+  });
+
   it("moves transfers between accounts and keeps the total", () => {
     const giro = rule({ id: "g", kind: "transfer", accountId: "ste", counterpartAccountId: "joint", amountCents: -26950, dayOfMonth: 27, startDate: "2026-11-01" });
     const res = projectBalances({ ...base, months: 1, rules: [giro] });
