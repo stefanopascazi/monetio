@@ -8,5 +8,5 @@ const [file, cmd, ...args] = process.argv.slice(2);
 if (!file || !cmd) throw new Error("Uso: node scripts/dev/with-env.ts <env-file> <comando> [argomenti]");
 
 // Single command string: the shell resolves `next` from node_modules/.bin (next.cmd on Windows).
-const child = spawn([cmd, ...args].join(" "), { stdio: "inherit", shell: true, env: mergeEnv(process.env, readFileSync(file, "utf8")) });
+const child = spawn([cmd, ...args].join(" "), { stdio: "inherit", shell: true, env: mergeEnv(process.env, readFileSync(file, "utf8")) as NodeJS.ProcessEnv });
 child.on("exit", (code, signal) => (signal ? process.kill(process.pid, signal) : process.exit(code ?? 0)));
