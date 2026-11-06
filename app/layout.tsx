@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Gabarito, JetBrains_Mono, Onest } from "next/font/google";
 import { ToastProvider, themeInitScript } from "@monetio/ui";
+import { Analytics } from "@vercel/analytics/next";
 import { ServiceWorker } from "@/components/shell/ServiceWorker";
 import "./globals.css";
 
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="mio-root min-h-full">
         <ToastProvider>{children}</ToastProvider>
         <ServiceWorker />
+        <Analytics />
       </body>
     </html>
   );
