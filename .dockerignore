@@ -1,0 +1,13 @@
+.git
+.github
+.claude
+.vercel
+.next
+node_modules
+coverage
+packages/ui/dist-artifact
+*.tsbuildinfo
+# Never ship credentials or private data into an image.
+.env*
+*.xlsx
+*.pem

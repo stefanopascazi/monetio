@@ -20,6 +20,29 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Run with Docker (local, self-contained)
+
+The repo ships a Docker Compose stack with the app and a minimal self-hosted Supabase
+(Postgres, GoTrue auth, PostgREST, a Caddy gateway and Mailpit). It never touches production.
+
+```bash
+docker compose up -d --build
+```
+
+| Service | URL |
+| --- | --- |
+| App | http://localhost:3000 |
+| Emails (signup, invites, password reset) | http://localhost:8025 |
+| Supabase API gateway | http://localhost:8000 |
+| Postgres | `postgres://postgres:monetio-local-password@localhost:54322/postgres?sslmode=disable` |
+
+- Migrations in `supabase/migrations` run automatically (`migrate` service) on every `up`.
+- A `cron` service replaces the Vercel Cron and calls `/api/cron/sync` daily.
+- Defaults are local-only demo secrets. To change them, copy `.env.docker.example` to `.env`
+  and run `node scripts/docker/gen-keys.ts` for a new JWT secret and matching keys.
+- Invite a member: `docker compose run --rm migrate node scripts/dev/invite.ts you@example.com`.
+- Reset everything (deletes local data): `docker compose down -v`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
