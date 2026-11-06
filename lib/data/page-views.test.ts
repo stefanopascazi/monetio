@@ -25,6 +25,8 @@ describe("page views", () => {
       overdue: false,
       estimated: true,
       confirmed: false,
+      paymentMethod: null,
+      feeCents: 0,
     };
     expect(dueViews([e], [], accounts)[0]).toMatchObject({ accountName: "Conto privato → Cointestato", payable: false, frequency: "monthly", amountCents: 95000 });
     const named = dueViews([e], [], accounts, [{ id: "asha", name: "Conto privato di Asha" }])[0];

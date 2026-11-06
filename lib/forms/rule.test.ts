@@ -20,6 +20,18 @@ describe("parseRuleForm", () => {
     expect(res).toEqual({ ok: false, errors: { dayOfMonth: "Giorno tra 1 e 31", endDate: "La fine deve essere dopo l'inizio" } });
   });
 
+  it("parses bonifico/CBill rules as expenses with a fee", () => {
+    const res = parseRuleForm(form({ ...valid, kind: "cbill", schedule: "due", feeCents: "150" }));
+    expect(res.ok && res.value).toMatchObject({ kind: "expense", paymentMethod: "cbill", feeCents: 150, amountCents: -78110 });
+    const plain = parseRuleForm(form(valid));
+    expect(plain.ok && plain.value).toMatchObject({ paymentMethod: null, feeCents: 0 });
+  });
+
+  it("rejects estimate payments and invalid fees", () => {
+    const res = parseRuleForm(form({ ...valid, kind: "bank_transfer", schedule: "estimate", feeCents: "0" }));
+    expect(res).toEqual({ ok: false, errors: { schedule: "Un bonifico o CBill non può essere una stima", feeCents: "Le spese devono essere maggiori di zero" } });
+  });
+
   it("reads the active flag", () => {
     const res = parseRuleForm(form({ ...valid, active: "false" }));
     expect(res.ok && res.value.active).toBe(false);

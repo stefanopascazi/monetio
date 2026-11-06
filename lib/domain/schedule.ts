@@ -1,7 +1,7 @@
 import { type ContributionSpending, contributionAmount, contributionBase } from "./contribution";
 import { addDays, endOfMonth, makeDate, monthKey, parseISO } from "./dates";
 import { occurrences } from "./recurrence";
-import type { ContributionRule, ISODate, OccurrenceOverride, RecurringRule, RuleFrequency, Transaction } from "./types";
+import type { ContributionRule, ISODate, OccurrenceOverride, PaymentMethod, RecurringRule, RuleFrequency, Transaction } from "./types";
 
 /**
  * Period an occurrence belongs to: its month for month-based schedules, the date for weekly ones.
@@ -55,6 +55,10 @@ export interface DueEntry {
   /** Actual amount/date entered for this occurrence (e.g. the bill arrived). */
   confirmed: boolean;
   note?: string | null;
+  /** Bonifico/CBill rule: booking also books `feeCents` as a linked expense. */
+  paymentMethod: PaymentMethod | null;
+  /** Positive, 0 = no fee. */
+  feeCents: number;
 }
 
 function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate, overrides?: OverrideMap): DueEntry {
@@ -77,6 +81,8 @@ function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate, overrides?: 
     estimated: false,
     confirmed: !!o,
     note: o?.note ?? null,
+    paymentMethod: r.paymentMethod,
+    feeCents: r.paymentMethod ? r.feeCents : 0,
   };
 }
 
@@ -108,6 +114,8 @@ export function contributionEntry(c: ContributionRule, date: ISODate, today: ISO
     // The share keeps changing until the referenced month closes.
     estimated,
     confirmed: false,
+    paymentMethod: null,
+    feeCents: 0,
   };
 }
 

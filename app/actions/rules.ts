@@ -4,9 +4,11 @@ import { refresh } from "next/cache";
 import { todayISO } from "@/lib/domain/dates";
 import { loadAgenda } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
-import { entryTransaction, transactionRows } from "@/lib/data/rows";
+import { fetchFeeCategoryId } from "@/lib/data/fee-category";
+import { entryTransaction, paymentRows } from "@/lib/data/rows";
 import { parseContributionForm } from "@/lib/forms/contribution";
 import { isISODate, isUUID, positiveCents } from "@/lib/forms/parse";
+import { feeFromForm } from "@/lib/forms/payment";
 import { parseRuleForm } from "@/lib/forms/rule";
 import { createClient } from "@/lib/supabase/server";
 import { type ActionState, dbErrorMessage, failure, success } from "./state";
@@ -26,6 +28,8 @@ function ruleRow(v: ReturnType<typeof parseRuleForm> & { ok: true }) {
     start_date: r.startDate,
     end_date: r.endDate,
     active: r.active,
+    payment_method: r.paymentMethod,
+    fee_cents: r.paymentMethod ? r.feeCents : 0,
   };
 }
 
@@ -126,11 +130,14 @@ export async function markEntryPaid(key: string, prev: ActionState, fd: FormData
   const date = String(fd.get("bookedOn") ?? "") || todayISO();
   if (cents === null) return failure("Inserisci un importo maggiore di zero.", { amountCents: "Importo non valido" });
   if (!isISODate(date)) return failure("Inserisci una data valida.", { bookedOn: "Data non valida" });
+  // Bonifico/CBill: the fee can be corrected on payment (empty = none).
+  const feeCents = entry.paymentMethod ? (fd.has("feeCents") ? feeFromForm(fd) : entry.feeCents) : 0;
+  if (feeCents === undefined) return failure("Controlla i campi evidenziati.", { feeCents: "Le spese devono essere maggiori di zero" });
   const signed = Math.sign(entry.amountCents || -1) * cents;
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("transactions")
-    .insert(transactionRows(entryTransaction(entry, { householdId: ctx.householdId, userId: ctx.userId }, { amountCents: signed, bookedOn: date })));
+  const feeCategoryId = feeCents ? await fetchFeeCategoryId(supabase, ctx.householdId) : null;
+  const payment = entryTransaction(entry, { householdId: ctx.householdId, userId: ctx.userId }, { amountCents: signed, bookedOn: date });
+  const { error } = await supabase.from("transactions").insert(paymentRows(payment, feeCents, { feeCategoryId }));
   if (error) return failure(dbErrorMessage(error));
   refresh();
   return success(`${entry.description}: registrato.`, prev);

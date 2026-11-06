@@ -38,7 +38,8 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
     <>
       <PageHeader title="Movimenti" description="Tutti i movimenti dei conti che vedi, mese per mese." />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1.6fr]">
-        <div className="flex flex-col gap-4 lg:sticky lg:top-6">
+        {/* Sticky side column scrolls on its own when taller than the viewport (open form). */}
+        <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-[22px]">
           <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: accountId ?? refs[0]?.id ?? "", bookedOn: today }} />
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1 rounded-[22px] bg-brand-soft p-4">

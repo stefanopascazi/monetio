@@ -38,6 +38,8 @@ export function dueViews(entries: DueEntry[], rules: RecurringRule[], accounts: 
     /** Only rule occurrences accept an actual amount (contributions are computed). */
     canConfirm: e.source === "rule",
     payable: visible.has(e.accountId),
+    paymentMethod: e.paymentMethod,
+    feeCents: e.feeCents,
   }));
 }
 

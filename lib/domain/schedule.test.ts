@@ -42,6 +42,15 @@ describe("autoBookings", () => {
   });
 });
 
+describe("rule entries with fees", () => {
+  it("carry payment method and fee of bonifico/CBill rules", () => {
+    const r = rule({ id: "b", amountCents: -5000, schedule: "due", dayOfMonth: 20, startDate: "2026-01-01", paymentMethod: "cbill", feeCents: 150 });
+    const [e] = upcomingOccurrences([r, rule({ id: "p", amountCents: -1, dayOfMonth: 20, startDate: "2026-01-01" })], new Set(), "2026-11-15", 10);
+    expect(e).toMatchObject({ paymentMethod: "cbill", feeCents: 150 });
+    expect(upcomingOccurrences([rule({ id: "p", amountCents: -1, dayOfMonth: 20, startDate: "2026-01-01" })], new Set(), "2026-11-15", 10)[0]).toMatchObject({ paymentMethod: null, feeCents: 0 });
+  });
+});
+
 describe("dueEntries", () => {
   const spending = () => 28057;
 

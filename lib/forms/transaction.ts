@@ -1,5 +1,6 @@
-import type { ISODate } from "../domain/types";
+import type { ISODate, PaymentMethod } from "../domain/types";
 import { Checker, isISODate, isUUID, optionalText, type ParseResult, positiveCents, text } from "./parse";
+import { parsePaymentKind } from "./payment";
 
 export interface TransactionInput {
   kind: "income" | "expense" | "transfer";
@@ -12,11 +13,14 @@ export interface TransactionInput {
   description: string;
   notes: string | null;
   status: "booked" | "planned";
+  paymentMethod: PaymentMethod | null;
+  /** Optional fee of a bonifico/CBill, positive; booked as a separate expense row. */
+  feeCents: number | null;
 }
 
 /** Validates the transaction form; future dates become planned unless booked is forced. */
 export function parseTransactionForm(fd: FormData, today: ISODate): ParseResult<TransactionInput> {
-  const kind = text(fd, "kind") as TransactionInput["kind"];
+  const { kind, paymentMethod, feeCents, kindValid, feeValid } = parsePaymentKind(fd);
   const accountId = text(fd, "accountId");
   const counterpart = text(fd, "counterpartAccountId");
   const categoryId = text(fd, "categoryId");
@@ -25,12 +29,13 @@ export function parseTransactionForm(fd: FormData, today: ISODate): ParseResult<
   const description = text(fd, "description");
 
   const c = new Checker()
-    .check(["income", "expense", "transfer"].includes(kind), "kind", "Scegli il tipo di movimento")
+    .check(kindValid, "kind", "Scegli il tipo di movimento")
     .check(isUUID(accountId), "accountId", "Scegli un conto")
     .check(cents !== null, "amountCents", "Inserisci un importo maggiore di zero")
     .check(isISODate(bookedOn), "bookedOn", "Inserisci una data valida")
     .check(description.length > 0 && description.length <= 200, "description", "Scrivi una descrizione")
-    .check(!categoryId || isUUID(categoryId), "categoryId", "Categoria non valida");
+    .check(!categoryId || isUUID(categoryId), "categoryId", "Categoria non valida")
+    .check(feeValid, "feeCents", "Le spese devono essere maggiori di zero");
   if (kind === "transfer") {
     c.check(isUUID(counterpart), "counterpartAccountId", "Scegli il conto di destinazione").check(
       counterpart !== accountId,
@@ -50,5 +55,7 @@ export function parseTransactionForm(fd: FormData, today: ISODate): ParseResult<
     description,
     notes: optionalText(fd, "notes"),
     status,
+    paymentMethod,
+    feeCents,
   });
 }

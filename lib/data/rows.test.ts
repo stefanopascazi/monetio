@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { DueEntry } from "../domain/schedule";
-import { entryTransaction, transactionRows } from "./rows";
+import { entryTransaction, feeTransaction, paymentRows, transactionRows } from "./rows";
+
+describe("feeTransaction", () => {
+  it("links the fee to its payment with the same account, date and status", () => {
+    const fee = feeTransaction(
+      { id: "p", householdId: "h", accountId: "a", kind: "expense", amountCents: -100, bookedOn: "2026-11-05", description: "Luce", status: "planned", paymentMethod: "cbill" },
+      150,
+      "fees",
+    );
+    expect(fee).toMatchObject({ parentTransactionId: "p", accountId: "a", amountCents: -150, categoryId: "fees", status: "planned", description: "Spese CBill · Luce" });
+  });
+});
 
 describe("transactionRows", () => {
   it("creates a single row for income/expense", () => {
@@ -21,6 +32,46 @@ describe("transactionRows", () => {
   });
 });
 
+describe("paymentRows", () => {
+  const base = { householdId: "h", accountId: "a", kind: "expense" as const, amountCents: -300000, bookedOn: "2026-11-05", description: "Affitto", status: "planned" as const, createdBy: "u" };
+
+  it("adds a linked negative fee row for a bonifico", () => {
+    const ids = ["p1", "f1"];
+    const rows = paymentRows({ ...base, paymentMethod: "bank_transfer" }, 65, { feeCategoryId: "fees", newId: () => ids.shift()! });
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ id: "p1", amount_cents: -300000, payment_method: "bank_transfer", parent_transaction_id: null });
+    expect(Object.keys(rows[1]).sort()).toEqual(Object.keys(rows[0]).sort());
+    expect(rows[1]).toMatchObject({
+      id: "f1",
+      category_id: "fees",
+      account_id: "a",
+      amount_cents: -65,
+      kind: "expense",
+      status: "planned",
+      booked_on: "2026-11-05",
+      description: "Spese bonifico · Affitto",
+      parent_transaction_id: "p1",
+      payment_method: null,
+      created_by: "u",
+    });
+  });
+
+  it("creates only the payment row without a fee", () => {
+    const rows = paymentRows({ ...base, paymentMethod: "cbill" }, null);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ payment_method: "cbill", parent_transaction_id: null });
+    expect(rows[0]).not.toHaveProperty("id");
+  });
+
+  it("ignores the fee for plain transactions", () => {
+    expect(paymentRows(base, 65)).toHaveLength(1);
+  });
+
+  it("leaves the fee uncategorized without a default category", () => {
+    expect(paymentRows({ ...base, paymentMethod: "cbill" }, 65)[1]).toMatchObject({ category_id: null, description: "Spese CBill · Affitto" });
+  });
+});
+
 describe("entryTransaction", () => {
   const entry: DueEntry = {
     key: "c:c1|2026-11-28",
@@ -37,6 +88,8 @@ describe("entryTransaction", () => {
     overdue: false,
     estimated: true,
     confirmed: false,
+    paymentMethod: null,
+    feeCents: 0,
   };
 
   it("links the scheduled occurrence even when the due date moved", () => {

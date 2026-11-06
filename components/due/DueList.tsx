@@ -6,7 +6,8 @@ import { Badge, Button, Card, DueItem, EmptyState, Select, TextField } from "@mo
 import type { NamedRef } from "@/components/common/options";
 import { groupDueByMonth } from "@/lib/data/due-groups";
 import { isoToDate } from "@/lib/domain/dates";
-import type { RuleFrequency } from "@/lib/domain/types";
+import type { PaymentMethod, RuleFrequency } from "@/lib/domain/types";
+import { feeBreakdown } from "@/components/payments/fee-breakdown";
 import { ActualAmountForm } from "./ActualAmountForm";
 import { PayEntryForm } from "./PayEntryForm";
 
@@ -25,6 +26,9 @@ export interface DueView {
   canConfirm: boolean;
   /** False when the paying account is not visible to the viewer. */
   payable: boolean;
+  /** Bonifico/CBill: paying also books `feeCents` (positive, 0 = none). */
+  paymentMethod: PaymentMethod | null;
+  feeCents: number;
 }
 
 const normalize = (s: string) => s.toLocaleLowerCase("it").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -98,7 +102,9 @@ export function DueList({
                     e.estimated ? `${e.description} (stima)` : e.description
                   }
                   dueDate={isoToDate(e.date)}
-                  amountCents={Math.abs(e.amountCents)}
+                  // Bonifico/CBill: total including the fee; the split is shown below.
+                  amountCents={Math.abs(feeBreakdown(e.amountCents, e.feeCents).totalCents)}
+                  amountNote={feeBreakdown(e.amountCents, e.feeCents).label}
                   kind={e.amountCents >= 0 ? "income" : "expense"}
                   frequency={e.frequency}
                   account={e.accountName}

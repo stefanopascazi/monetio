@@ -7,17 +7,22 @@ import type { AppContext } from "./context";
 import { mapRule } from "./mappers";
 import { listAccounts, listBookedOccurrences, listRules } from "./queries";
 import { ownsRule } from "./rule-visibility";
-import { entryTransaction, transactionRows } from "./rows";
+import { fetchFeeCategoryId } from "./fee-category";
+import { entryTransaction, paymentRows } from "./rows";
 import type { DueEntry } from "../domain/schedule";
 
 /** How far back missed automatic occurrences are still booked. */
 export const CATCH_UP_DAYS = 120;
 
-/** Inserts bookings one by one; duplicates (unique occurrence index) are skipped. */
+/**
+ * Inserts bookings one by one; duplicates (unique occurrence index) are skipped.
+ * Bonifico/CBill rules also book their fee as a linked row in the same insert.
+ */
 async function insertBookings(client: SupabaseClient, entries: DueEntry[], householdId: string, userId: string | null): Promise<number> {
   let booked = 0;
+  const feeCategoryId = entries.some((e) => e.feeCents) ? await fetchFeeCategoryId(client, householdId) : null;
   for (const e of entries) {
-    const { error } = await client.from("transactions").insert(transactionRows(entryTransaction(e, { householdId, userId })));
+    const { error } = await client.from("transactions").insert(paymentRows(entryTransaction(e, { householdId, userId }), e.feeCents, { feeCategoryId }));
     if (!error) booked++;
     else if (error.code !== "23505") throw error;
   }

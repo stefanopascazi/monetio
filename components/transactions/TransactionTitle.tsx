@@ -1,12 +1,14 @@
 import { Clock, Repeat } from "lucide-react";
 import { dateLabel } from "@/lib/domain/dates";
 import type { TxnView } from "@/lib/data/views";
+import { PAYMENT_LABEL } from "@/lib/domain/fees";
 import { CategoryIcon } from "@/components/common/CategoryIcon";
 
 /** Compact transaction summary used as an accordion title (phrasing content only). */
 export function TransactionTitle({ t, showAccount = true }: { t: TxnView; showAccount?: boolean }) {
   const meta = [
-    t.categoryName ?? (t.isTransfer ? "Giroconto" : t.kind === "adjustment" ? "Rettifica" : null),
+    t.categoryName ?? (t.isTransfer ? "Giroconto" : t.kind === "adjustment" ? "Rettifica" : t.isFee ? "Spese" : null),
+    t.paymentMethod ? PAYMENT_LABEL[t.paymentMethod] : null,
     t.isTransfer && t.counterpartName ? `${t.amountCents < 0 ? "verso" : "da"} ${t.counterpartName}` : null,
     showAccount ? t.accountName : null,
     dateLabel(t.bookedOn),

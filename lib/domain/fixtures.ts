@@ -12,6 +12,9 @@ export function txn(p: Partial<Transaction> & Pick<Transaction, "amountCents" | 
     description: "x",
     notes: null,
     transferGroupId: null,
+    paymentMethod: null,
+    parentTransactionId: null,
+    feeCents: null,
     recurringRuleId: null,
     contributionRuleId: null,
     occurrenceDate: null,
@@ -35,6 +38,8 @@ export function rule(p: Partial<RecurringRule> & Pick<RecurringRule, "amountCent
     startDate: "2026-01-01",
     endDate: null,
     active: true,
+    paymentMethod: null,
+    feeCents: 0,
     ...p,
   };
 }
