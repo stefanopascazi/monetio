@@ -1,3 +1,5 @@
+import { cacheLife } from "next/cache";
+import { PAGE_CACHE, type SearchParams } from "@/lib/data/page-cache";
 import { notFound } from "next/navigation";
 import { Card, ProjectionChart } from "@monetio/ui";
 import { createTransaction } from "@/app/actions/transactions";
@@ -21,9 +23,10 @@ import { StatementMonths } from "./StatementMonths";
 
 const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 
-export async function StatementView({ id, searchParams }: { id: string; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export async function StatementView({ id, sp }: { id: string; sp: SearchParams }) {
+  "use cache: private";
+  cacheLife(PAGE_CACHE);
   const ctx = await getContext();
-  const sp = await searchParams;
   const today = todayISO();
   const accounts = await listAccounts();
   const account = accounts.find((a) => a.id === id);

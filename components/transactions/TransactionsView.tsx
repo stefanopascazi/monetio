@@ -1,3 +1,5 @@
+import { cacheLife } from "next/cache";
+import { PAGE_CACHE, type SearchParams } from "@/lib/data/page-cache";
 import { Amount, Card, PageHeader } from "@monetio/ui";
 import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
@@ -11,10 +13,9 @@ import { TransactionFilters } from "./TransactionFilters";
 import { TransactionForm } from "./TransactionForm";
 import { TransactionList } from "./TransactionList";
 
-type SP = Record<string, string | string[] | undefined>;
-
-export async function TransactionsView({ searchParams }: { searchParams: Promise<SP> }) {
-  const sp = await searchParams;
+export async function TransactionsView({ sp }: { sp: SearchParams }) {
+  "use cache: private";
+  cacheLife(PAGE_CACHE);
   const today = todayISO();
   const month = monthParam(sp.mese, monthKey(today));
   const accountId = stringParam(sp.conto);

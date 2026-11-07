@@ -1,3 +1,5 @@
+import { cacheLife } from "next/cache";
+import { PAGE_CACHE } from "@/lib/data/page-cache";
 import { LogOut } from "lucide-react";
 import { Button, Card, PageHeader, ThemeSwitcher } from "@monetio/ui";
 import { signOut } from "@/app/actions/auth";
@@ -12,6 +14,8 @@ import { MemberList } from "./MemberList";
 import { CategoryManager, ProfileForm } from "./SettingsForms";
 
 export async function SettingsView() {
+  "use cache: private";
+  cacheLife(PAGE_CACHE);
   const ctx = await getContext();
   const categories = await listCategories();
   const admin = isAdmin(ctx.me);

@@ -8,7 +8,12 @@ export const metadata: Metadata = { title: "Movimenti" };
 export default function TransactionsPage({ searchParams }: PageProps<"/movimenti">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <TransactionsView searchParams={searchParams} />
+      <TransactionsContent searchParams={searchParams} />
     </Suspense>
   );
+}
+
+// Plain params keep the cached view's arguments serializable.
+async function TransactionsContent({ searchParams }: Pick<PageProps<"/movimenti">, "searchParams">) {
+  return <TransactionsView sp={await searchParams} />;
 }

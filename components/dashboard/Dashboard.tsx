@@ -1,3 +1,5 @@
+import { cacheLife } from "next/cache";
+import { PAGE_CACHE } from "@/lib/data/page-cache";
 import Link from "next/link";
 import { Amount, Card, CashflowChart, CategoryDonut, StatTile } from "@monetio/ui";
 import { AccountGrid } from "@/components/accounts/AccountGrid";
@@ -17,6 +19,8 @@ import { toTxnView } from "@/lib/data/views";
 import { addMonthsToKey, monthKey, monthLabel, startOfMonth } from "@/lib/domain/dates";
 
 export async function Dashboard() {
+  "use cache: private";
+  cacheLife(PAGE_CACHE);
   const ctx = await getContext();
   const agenda = await loadAgenda();
   const today = agenda.today;

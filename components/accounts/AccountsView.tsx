@@ -1,3 +1,5 @@
+import { cacheLife } from "next/cache";
+import { PAGE_CACHE } from "@/lib/data/page-cache";
 import { Amount, PageHeader } from "@monetio/ui";
 import { createAccount } from "@/app/actions/accounts";
 import { loadPendingTransfers } from "@/lib/data/agenda";
@@ -8,6 +10,8 @@ import { AccountForm } from "./AccountForm";
 import { AccountGrid } from "./AccountGrid";
 
 export async function AccountsView() {
+  "use cache: private";
+  cacheLife(PAGE_CACHE);
   const [ctx, accounts, pending] = await Promise.all([getContext(), listAccounts(), loadPendingTransfers()]);
   const active = accounts.filter((a) => !a.archived);
   const archived = accounts.filter((a) => a.archived);
