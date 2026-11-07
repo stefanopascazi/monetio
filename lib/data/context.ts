@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 import type { Membership } from "../domain/household";
 import type { Member } from "../domain/types";
@@ -22,7 +23,8 @@ export interface AppContext {
 
 /** Signed-in user, without household checks. Redirects guests to /login. */
 export const getUser = cache(async () => {
-  // Reading the session cookies keeps this per request (no connection(): private caches forbid it).
+  // Session data is per request: never prerender past this point (dates are read later).
+  await connection();
   const supabase = await createClient();
   // Local JWT verification: the proxy already refreshed the session on this request.
   const { data } = await supabase.auth.getClaims();

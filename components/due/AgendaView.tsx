@@ -1,5 +1,3 @@
-import { cacheLife } from "next/cache";
-import { PAGE_CACHE } from "@/lib/data/page-cache";
 import { Card, PageHeader, Tabs } from "@monetio/ui";
 import { createContribution, createRule } from "@/app/actions/rules";
 import { ContributionForm } from "@/components/rules/ContributionForm";
@@ -15,8 +13,6 @@ import { DueList } from "./DueList";
 import { UpcomingList } from "./UpcomingList";
 
 export async function AgendaView() {
-  "use cache: private";
-  cacheLife(PAGE_CACHE);
   const agenda = await loadAgenda();
   const [accounts, categories, hidden] = await Promise.all([listAccounts(), listCategories(), listHiddenAccounts()]);
   const active = accounts.filter((a) => !a.archived);

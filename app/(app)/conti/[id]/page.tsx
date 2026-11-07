@@ -11,7 +11,6 @@ export default function AccountPage({ params, searchParams }: PageProps<"/conti/
 }
 
 async function AccountContent({ params, searchParams }: Pick<PageProps<"/conti/[id]">, "params" | "searchParams">) {
-  // Plain values keep the cached view's arguments serializable.
-  const [{ id }, sp] = await Promise.all([params, searchParams]);
-  return <StatementView id={id} sp={sp} />;
+  const { id } = await params;
+  return <StatementView id={id} searchParams={searchParams} />;
 }

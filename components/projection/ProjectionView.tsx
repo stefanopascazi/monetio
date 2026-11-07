@@ -1,5 +1,3 @@
-import { cacheLife } from "next/cache";
-import { PAGE_CACHE, type SearchParams } from "@/lib/data/page-cache";
 import { Card, PageHeader } from "@monetio/ui";
 import { DETAIL_MONTHS, loadProjection } from "@/lib/data/agenda";
 import { balanceHistory, lastMonths, projectionPoints } from "@/lib/data/history";
@@ -14,9 +12,8 @@ import { ProjectionTable } from "./ProjectionTable";
 
 const HISTORY_MONTHS = 6;
 
-export async function ProjectionView({ sp }: { sp: SearchParams }) {
-  "use cache: private";
-  cacheLife(PAGE_CACHE);
+export async function ProjectionView({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams;
   const horizon = horizonParam(sp.mesi);
   const { today, accounts, projection, details, summary } = await loadProjection(Number(horizon));
   const current = monthKey(today);
