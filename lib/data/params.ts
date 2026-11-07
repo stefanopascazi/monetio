@@ -48,3 +48,8 @@ export function searchTerm(v: string | undefined): string | undefined {
   const s = v?.replace(/[%_]/g, "").trim();
   return s || undefined;
 }
+
+/** First `limit` rows of a list fetched with one extra row, and whether more exist. */
+export function takePage<T>(rows: T[], limit: number): { page: T[]; hasMore: boolean } {
+  return { page: rows.slice(0, limit), hasMore: rows.length > limit };
+}

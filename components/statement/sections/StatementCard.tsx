@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { Card } from "@monetio/ui";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { withQuery } from "@/lib/data/params";
-import { adjacentMonths, periodLabel, type StatementPeriod } from "@/lib/data/statement-period";
+import { transactionTotals } from "@/lib/data/queries";
+import { adjacentMonths, periodLabel, periodQuery, RECENT_LIMIT, type StatementPeriod } from "@/lib/data/statement-period";
 import { loadStatementRows } from "@/lib/data/statement-rows";
 import { toTxnView } from "@/lib/data/views";
 import { monthKey } from "@/lib/domain/dates";
@@ -13,7 +15,12 @@ const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" 
 
 /** Booked rows of the period with running balance, filters and month navigation. */
 export async function StatementCard({ accountId, openingDate, period, today }: { accountId: string; openingDate: string; period: StatementPeriod; today: string }) {
-  const [{ accounts, categories, members, refs, catRefs }, { rows, openingCents }] = await Promise.all([loadStatementRefs(), loadStatementRows(accountId, period)]);
+  const dated = period.kind === "recent" ? {} : { from: period.from, to: period.to };
+  const [{ accounts, categories, members, refs, catRefs }, { rows, openingCents, hasMore }, totals] = await Promise.all([
+    loadStatementRefs(),
+    loadStatementRows(accountId, period),
+    transactionTotals({ accountId, status: "booked", ...dated }),
+  ]);
   const views = new Map(rows.map((r) => [r.id, toTxnView(r, accounts, categories, members)]));
   const basePath = `/conti/${accountId}`;
   const label = periodLabel(period);
@@ -35,6 +42,17 @@ export async function StatementCard({ accountId, openingDate, period, today }: {
     >
       <StatementFilters basePath={basePath} period={period} />
       <StatementMonths rows={rows} views={views} accounts={refs} categories={catRefs} emptyTitle={period.kind === "recent" ? "Nessun movimento" : `Nessun movimento: ${label.toLowerCase()}`} />
+      {hasMore && (
+        <div className="flex justify-center border-t border-border p-4">
+          <Link
+            href={withQuery(basePath, { ...periodQuery(period), n: period.limit + RECENT_LIMIT })}
+            scroll={false}
+            className="rounded-full bg-surface-sunken px-5 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-soft"
+          >
+            Mostra altri ({totals.count - rows.length})
+          </Link>
+        </div>
+      )}
     </Card>
   );
 }

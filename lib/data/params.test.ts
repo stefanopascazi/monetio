@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateParam, monthParam, pageSizeParam, searchTerm, stringParam, withQuery, yearParam } from "./params";
+import { dateParam, monthParam, pageSizeParam, searchTerm, stringParam, takePage, withQuery, yearParam } from "./params";
 
 describe("params", () => {
   it("parses months and years with fallbacks", () => {
@@ -44,5 +44,13 @@ describe("searchTerm", () => {
     expect(searchTerm("50%_off")).toBe("50off");
     expect(searchTerm("%_")).toBeUndefined();
     expect(searchTerm(undefined)).toBeUndefined();
+  });
+});
+
+describe("takePage", () => {
+  it("cuts the extra row and reports it", () => {
+    expect(takePage([1, 2, 3], 2)).toEqual({ page: [1, 2], hasMore: true });
+    expect(takePage([1, 2], 2)).toEqual({ page: [1, 2], hasMore: false });
+    expect(takePage([], 2)).toEqual({ page: [], hasMore: false });
   });
 });
