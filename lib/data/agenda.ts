@@ -10,22 +10,18 @@ import { categorySpentFrom, contributionSpendingFrom } from "./flows";
 import { pendingTransfersByAccount } from "./pending-transfers";
 import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
 import { touchesVisible } from "./rule-visibility";
-import { syncAutoRules } from "./sync";
 
 const LOOKBACK_DAYS = 90;
 /** Months with a movement-by-movement breakdown (longer horizons show balances only). */
 export const DETAIL_MONTHS = 36;
 
-/** Books passed automatic rules once per request, before any page reads balances. */
-export const ensureSynced = cache(async () => {
-  const ctx = await getContext();
-  await syncAutoRules(ctx, todayISO());
-  return ctx;
-});
-
-/** Deadlines to pay and upcoming automatic movements. */
+/**
+ * Deadlines to pay and upcoming automatic movements.
+ * Automatic rules are booked by the daily cron and by rule saves, never on page load.
+ */
 export const loadAgenda = cache(async () => {
-  await ensureSynced();
+  // Session first: marks the render as dynamic before reading today's date.
+  await getContext();
   const today = todayISO();
   const since = addDays(today, -LOOKBACK_DAYS);
   const [rules, contributions, occ, flows, overrideList] = await Promise.all([

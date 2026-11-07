@@ -6,6 +6,7 @@ import { feeSource } from "@/lib/domain/fees";
 import { loadAgenda } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { fetchFeeCategoryId } from "@/lib/data/fee-category";
+import { syncAutoRules } from "@/lib/data/sync";
 import { entryTransaction, paymentRows } from "@/lib/data/rows";
 import { parseContributionForm } from "@/lib/forms/contribution";
 import { isISODate, isUUID, positiveCents } from "@/lib/forms/parse";
@@ -34,6 +35,15 @@ function ruleRow(v: ReturnType<typeof parseRuleForm> & { ok: true }) {
   };
 }
 
+/** Books automatic occurrences already due (e.g. a rule starting in the past); the rule is saved either way. */
+async function bookPassedOccurrences(ctx: Awaited<ReturnType<typeof getContext>>) {
+  try {
+    await syncAutoRules(ctx, todayISO());
+  } catch (e) {
+    console.error("syncAutoRules failed", e instanceof Error ? e.message : e);
+  }
+}
+
 export async function createRule(prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await getContext();
   const parsed = parseRuleForm(fd);
@@ -41,18 +51,20 @@ export async function createRule(prev: ActionState, fd: FormData): Promise<Actio
   const supabase = await createClient();
   const { error } = await supabase.from("recurring_rules").insert({ household_id: ctx.householdId, ...ruleRow(parsed) });
   if (error) return failure(dbErrorMessage(error));
+  await bookPassedOccurrences(ctx);
   refresh();
   return success("Ricorrenza aggiunta.", prev);
 }
 
 export async function updateRule(id: string, prev: ActionState, fd: FormData): Promise<ActionState> {
   if (!isUUID(id)) return failure("Ricorrenza non trovata.");
-  await getContext();
+  const ctx = await getContext();
   const parsed = parseRuleForm(fd);
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
   const supabase = await createClient();
   const { error } = await supabase.from("recurring_rules").update(ruleRow(parsed)).eq("id", id);
   if (error) return failure(dbErrorMessage(error));
+  await bookPassedOccurrences(ctx);
   refresh();
   return success("Ricorrenza aggiornata.", prev);
 }

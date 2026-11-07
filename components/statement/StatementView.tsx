@@ -7,7 +7,7 @@ import { PendingTransfersNote } from "@/components/accounts/PendingTransfersNote
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
 import { TransactionList } from "@/components/transactions/TransactionList";
-import { ensureSynced, loadPendingTransfers } from "@/lib/data/agenda";
+import { loadPendingTransfers } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { withQuery } from "@/lib/data/params";
 import { listAccounts, listCategories, listHiddenAccounts, listMonthlyBalances, listTransactions } from "@/lib/data/queries";
@@ -22,7 +22,7 @@ import { StatementMonths } from "./StatementMonths";
 const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 
 export async function StatementView({ id, searchParams }: { id: string; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const ctx = await ensureSynced();
+  const ctx = await getContext();
   const sp = await searchParams;
   const today = todayISO();
   const accounts = await listAccounts();

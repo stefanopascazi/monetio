@@ -1,7 +1,6 @@
 import { Amount, Card, PageHeader } from "@monetio/ui";
 import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
-import { ensureSynced } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { monthParam, stringParam, withQuery } from "@/lib/data/params";
 import { listAccounts, listCategories, listTransactions } from "@/lib/data/queries";
@@ -15,7 +14,6 @@ import { TransactionList } from "./TransactionList";
 type SP = Record<string, string | string[] | undefined>;
 
 export async function TransactionsView({ searchParams }: { searchParams: Promise<SP> }) {
-  await ensureSynced();
   const sp = await searchParams;
   const today = todayISO();
   const month = monthParam(sp.mese, monthKey(today));
