@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { cache } from "react";
 import { type Membership, pickActiveHousehold } from "../domain/household";
 import type { Member } from "../domain/types";
+import { sessionUser } from "../supabase/claims";
 import { createClient } from "../supabase/server";
 import { readActiveHouseholdId } from "./active-household";
 import { mapMember } from "./mappers";
@@ -25,23 +26,31 @@ export const getUser = cache(async () => {
   // Session data is per request: never prerender past this point (dates are read later).
   await connection();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Local JWT verification: the proxy already refreshed the session on this request.
+  const { data } = await supabase.auth.getClaims();
+  const user = sessionUser(data?.claims);
   if (!user) redirect("/login");
   return user;
 });
 
 /**
- * Member rows of the current user (one per household), oldest first.
- * Links pending members invited by email first, so new invitations show up on the next request.
+ * Links pending members invited by email to the current user (one per household).
+ * Blocking only on /benvenuto; elsewhere it runs alongside the read and shows up on the next request.
  */
-export const listMemberships = cache(async () => {
-  const user = await getUser();
+export async function claimMemberships() {
   const supabase = await createClient();
   const { error } = await supabase.rpc("claim_membership");
   if (error) console.error("claim_membership failed", error.message);
-  const { data } = await supabase.from("household_members").select("*").eq("user_id", user.id).order("created_at");
+}
+
+/** Member rows of the current user (one per household), oldest first. */
+export const listMemberships = cache(async () => {
+  const user = await getUser();
+  const supabase = await createClient();
+  const [{ data }] = await Promise.all([
+    supabase.from("household_members").select("*").eq("user_id", user.id).order("created_at"),
+    claimMemberships(),
+  ]);
   return data ?? [];
 });
 
