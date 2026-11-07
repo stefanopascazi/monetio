@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateParam, monthParam, stringParam, withQuery, yearParam } from "./params";
+import { dateParam, monthParam, pageSizeParam, searchTerm, stringParam, withQuery, yearParam } from "./params";
 
 describe("params", () => {
   it("parses months and years with fallbacks", () => {
@@ -23,5 +23,26 @@ describe("params", () => {
     expect(dateParam("2026-02-30")).toBeUndefined();
     expect(dateParam("2026-2-1")).toBeUndefined();
     expect(dateParam(undefined)).toBeUndefined();
+  });
+});
+
+describe("pageSizeParam", () => {
+  it("rounds up to the step and caps at the max", () => {
+    expect(pageSizeParam(undefined)).toBe(50);
+    expect(pageSizeParam("abc")).toBe(50);
+    expect(pageSizeParam("-10")).toBe(50);
+    expect(pageSizeParam("100")).toBe(100);
+    expect(pageSizeParam("120")).toBe(150);
+    expect(pageSizeParam(["200"])).toBe(200);
+    expect(pageSizeParam("99999")).toBe(1000);
+  });
+});
+
+describe("searchTerm", () => {
+  it("drops LIKE wildcards and blanks", () => {
+    expect(searchTerm(" luce ")).toBe("luce");
+    expect(searchTerm("50%_off")).toBe("50off");
+    expect(searchTerm("%_")).toBeUndefined();
+    expect(searchTerm(undefined)).toBeUndefined();
   });
 });

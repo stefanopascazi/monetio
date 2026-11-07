@@ -4,7 +4,8 @@ import type { Account, Category, ContributionRule, ISODate, OccurrenceOverride, 
 import { createClient } from "../supabase/server";
 import { activeHouseholdId } from "./context";
 import { type MonthlyFlow, mapFlow } from "./flows";
-import { attachFees, mapAccount, mapCategory, mapContribution, mapRule, mapTransaction } from "./mappers";
+import { attachFees, type ListTotals, mapAccount, mapCategory, mapContribution, mapRule, mapTotals, mapTransaction } from "./mappers";
+import { searchTerm } from "./params";
 import type { HiddenAccount } from "./transfer-targets";
 import { hiddenAccountName } from "./views";
 
@@ -76,10 +77,29 @@ export async function listTransactions(f: TransactionFilter = {}): Promise<Trans
   if (f.from) q = q.gte("booked_on", f.from);
   if (f.to) q = q.lte("booked_on", f.to);
   if (f.status) q = q.eq("status", f.status);
-  if (f.search) q = q.ilike("description", `%${f.search.replace(/[%_]/g, "")}%`);
+  const search = searchTerm(f.search);
+  if (search) q = q.ilike("description", `%${search}%`);
   const { data, error } = await q.limit(f.limit ?? 500);
   if (error) throw error;
   return withFees(supabase, data ?? []);
+}
+
+/** Count and income/expense of the whole filtered list, independent of the rows shown. */
+export async function transactionTotals(f: Omit<TransactionFilter, "limit"> = {}): Promise<ListTotals> {
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase
+    .rpc("transaction_totals", {
+      p_household: hh,
+      p_from: f.from ?? null,
+      p_to: f.to ?? null,
+      p_account: f.accountId ?? null,
+      p_category: f.categoryId ?? null,
+      p_search: searchTerm(f.search) ?? null,
+      p_status: f.status ?? null,
+    })
+    .maybeSingle();
+  if (error) throw error;
+  return mapTotals(data as Record<string, unknown> | null);
 }
 
 export async function getTransaction(id: string): Promise<Transaction | null> {

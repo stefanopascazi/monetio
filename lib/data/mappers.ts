@@ -122,3 +122,14 @@ export function mapContribution(r: Row): ContributionRule {
     active: Boolean(r.active),
   };
 }
+
+export interface ListTotals {
+  count: number;
+  incomeCents: number;
+  expenseCents: number;
+}
+
+/** Row of the `transaction_totals` RPC (bigints arrive as strings or numbers). */
+export function mapTotals(r: Row | null | undefined): ListTotals {
+  return { count: Number(r?.count ?? 0), incomeCents: Number(r?.income_cents ?? 0), expenseCents: Number(r?.expense_cents ?? 0) };
+}

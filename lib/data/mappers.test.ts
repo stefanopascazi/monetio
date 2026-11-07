@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachFees, mapAccount, mapCategory, mapContribution, mapMember, mapRule, mapTransaction } from "./mappers";
+import { attachFees, mapAccount, mapCategory, mapContribution, mapMember, mapRule, mapTotals, mapTransaction } from "./mappers";
 
 describe("mappers", () => {
   it("maps accounts with bigint strings", () => {
@@ -41,5 +41,12 @@ describe("mappers", () => {
     expect(mapCategory({ id: "c", name: "Spesa", kind: "expense", icon: "cart", color_index: 9 }).colorIndex).toBe(6);
     expect(mapMember({ id: "m", display_name: "Ste", email: null, user_id: "u", role: "admin" })).toEqual({ id: "m", displayName: "Ste", email: null, userId: "u", role: "admin" });
     expect(mapMember({ id: "m", display_name: "Ste", email: null, user_id: "u", role: "owner" }).role).toBe("admin");
+  });
+});
+
+describe("mapTotals", () => {
+  it("parses bigint strings and defaults to zero", () => {
+    expect(mapTotals({ count: "12", income_cents: "150000", expense_cents: 9000 })).toEqual({ count: 12, incomeCents: 150000, expenseCents: 9000 });
+    expect(mapTotals(null)).toEqual({ count: 0, incomeCents: 0, expenseCents: 0 });
   });
 });

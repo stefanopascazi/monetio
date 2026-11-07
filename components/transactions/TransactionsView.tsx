@@ -1,12 +1,12 @@
+import Link from "next/link";
 import { Amount, Card, PageHeader } from "@monetio/ui";
 import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { getContext } from "@/lib/data/context";
-import { monthParam, stringParam, withQuery } from "@/lib/data/params";
-import { listAccounts, listCategories, listTransactions } from "@/lib/data/queries";
+import { monthParam, PAGE_STEP, pageSizeParam, stringParam, withQuery } from "@/lib/data/params";
+import { listAccounts, listCategories, listTransactions, transactionTotals } from "@/lib/data/queries";
 import { toTxnView } from "@/lib/data/views";
 import { addMonthsToKey, endOfMonth, monthKey, monthLabel, startOfMonth, todayISO } from "@/lib/domain/dates";
-import { monthlyTotals } from "@/lib/domain/statement";
 import { TransactionFilters } from "./TransactionFilters";
 import { TransactionForm } from "./TransactionForm";
 import { TransactionList } from "./TransactionList";
@@ -20,16 +20,21 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
   const accountId = stringParam(sp.conto);
   const categoryId = stringParam(sp.categoria);
   const q = stringParam(sp.q);
+  const limit = pageSizeParam(sp.n);
+  const filter = { from: startOfMonth(month), to: endOfMonth(month), accountId, categoryId, search: q };
 
-  const [{ members }, accounts, categories, txns] = await Promise.all([
+  // One extra row tells whether there is more to show; totals cover the whole month.
+  const [{ members }, accounts, categories, rows, totals] = await Promise.all([
     getContext(),
     listAccounts(),
     listCategories(),
-    listTransactions({ from: startOfMonth(month), to: endOfMonth(month), accountId, categoryId, search: q, limit: 1000 }),
+    listTransactions({ ...filter, limit: limit + 1 }),
+    transactionTotals(filter),
   ]);
+  const txns = rows.slice(0, limit);
+  const hasMore = rows.length > limit;
   const refs = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
   const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
-  const totals = monthlyTotals(txns, new Set(accounts.map((a) => a.id)))[0] ?? { incomeCents: 0, expenseCents: 0 };
   const nav = (m: string) => withQuery("/movimenti", { mese: m, conto: accountId, categoria: categoryId, q });
 
   return (
@@ -53,12 +58,23 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
         <div className="flex flex-col gap-4">
           <TransactionFilters month={month} accountId={accountId} categoryId={categoryId} q={q} accounts={refs} categories={catRefs} />
           <Card
-            title={`${txns.length} movimenti`}
+            title={`${totals.count} movimenti`}
             subtitle="Giroconti e rettifiche esclusi dai totali"
             action={<PeriodNav label={monthLabel(month, true)} prevHref={nav(addMonthsToKey(month, -1))} nextHref={nav(addMonthsToKey(month, 1))} />}
             padding="none"
           >
             <TransactionList items={txns.map((t) => toTxnView(t, accounts, categories, members))} accounts={refs} categories={catRefs} emptyTitle={`Nessun movimento a ${monthLabel(month, true)}`} />
+            {hasMore && (
+              <div className="flex justify-center border-t border-border p-4">
+                <Link
+                  href={withQuery("/movimenti", { mese: month, conto: accountId, categoria: categoryId, q, n: limit + PAGE_STEP })}
+                  scroll={false}
+                  className="rounded-full bg-surface-sunken px-5 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-soft"
+                >
+                  Mostra altri ({totals.count - txns.length})
+                </Link>
+              </div>
+            )}
           </Card>
         </div>
       </section>

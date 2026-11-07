@@ -32,3 +32,19 @@ export function dateParam(v: string | string[] | undefined): string | undefined 
   const d = new Date(`${s}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : undefined;
 }
+
+/** Rows added by each "Mostra altri" on paged lists. */
+export const PAGE_STEP = 50;
+
+/** Rows to show from a `n` param: a positive multiple of `step`, capped at `max`. */
+export function pageSizeParam(v: string | string[] | undefined, step = PAGE_STEP, max = 1000): number {
+  const n = Number(Array.isArray(v) ? v[0] : v);
+  if (!Number.isFinite(n) || n < step) return step;
+  return Math.min(Math.ceil(n / step) * step, max);
+}
+
+/** Free-text search without LIKE wildcards; undefined when nothing is left. */
+export function searchTerm(v: string | undefined): string | undefined {
+  const s = v?.replace(/[%_]/g, "").trim();
+  return s || undefined;
+}
