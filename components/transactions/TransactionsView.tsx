@@ -14,7 +14,8 @@ import { TransactionList } from "./TransactionList";
 type SP = Record<string, string | string[] | undefined>;
 
 export async function TransactionsView({ searchParams }: { searchParams: Promise<SP> }) {
-  const sp = await searchParams;
+  // Session first: makes the render request-time before reading today's date.
+  const [sp, { members }] = await Promise.all([searchParams, getContext()]);
   const today = todayISO();
   const month = monthParam(sp.mese, monthKey(today));
   const accountId = stringParam(sp.conto);
@@ -24,8 +25,7 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
   const filter = { from: startOfMonth(month), to: endOfMonth(month), accountId, categoryId, search: q };
 
   // One extra row tells whether there is more to show; totals cover the whole month.
-  const [{ members }, accounts, categories, rows, totals] = await Promise.all([
-    getContext(),
+  const [accounts, categories, rows, totals] = await Promise.all([
     listAccounts(),
     listCategories(),
     listTransactions({ ...filter, limit: limit + 1 }),
