@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Onboarding } from "@/components/auth/Onboarding";
-import { claimMemberships, findMembership } from "@/lib/data/context";
+import { findMembership } from "@/lib/data/context";
 
 export const metadata: Metadata = { title: "Benvenuto" };
 
@@ -19,7 +19,6 @@ export default function WelcomePage() {
 
 // Members (including those just linked by email) go straight to the app.
 async function OnboardingOrHome() {
-  await claimMemberships();
   if (await findMembership()) redirect("/");
   return <Onboarding />;
 }
