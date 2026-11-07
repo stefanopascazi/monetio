@@ -1,14 +1,14 @@
 import { Amount, PageHeader } from "@monetio/ui";
 import { createAccount } from "@/app/actions/accounts";
-import { ensureSynced, loadPendingTransfers } from "@/lib/data/agenda";
+import { loadPendingTransfers } from "@/lib/data/agenda";
+import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
 import { todayISO } from "@/lib/domain/dates";
 import { AccountForm } from "./AccountForm";
 import { AccountGrid } from "./AccountGrid";
 
 export async function AccountsView() {
-  const ctx = await ensureSynced();
-  const [accounts, pending] = await Promise.all([listAccounts(), loadPendingTransfers()]);
+  const [ctx, accounts, pending] = await Promise.all([getContext(), listAccounts(), loadPendingTransfers()]);
   const active = accounts.filter((a) => !a.archived);
   const archived = accounts.filter((a) => a.archived);
   const shared = active.filter((a) => a.visibility === "shared").reduce((s, a) => s + a.balanceCents, 0);

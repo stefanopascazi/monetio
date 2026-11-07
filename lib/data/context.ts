@@ -1,12 +1,12 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
 import { cache } from "react";
-import { type Membership, pickActiveHousehold } from "../domain/household";
+import type { Membership } from "../domain/household";
 import type { Member } from "../domain/types";
+import { sessionUser } from "../supabase/claims";
 import { createClient } from "../supabase/server";
 import { readActiveHouseholdId } from "./active-household";
-import { mapMember } from "./mappers";
+import { activeMembership, activeSession, sessionPayload } from "./session-context";
 
 export interface AppContext {
   userId: string;
@@ -22,61 +22,42 @@ export interface AppContext {
 
 /** Signed-in user, without household checks. Redirects guests to /login. */
 export const getUser = cache(async () => {
-  // Session data is per request: never prerender past this point (dates are read later).
-  await connection();
+  // createClient() marks the render as request-time before any date is read.
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Local JWT verification: the proxy already refreshed the session on this request.
+  const { data } = await supabase.auth.getClaims();
+  const user = sessionUser(data?.claims);
   if (!user) redirect("/login");
   return user;
 });
 
 /**
- * Member rows of the current user (one per household), oldest first.
- * Links pending members invited by email first, so new invitations show up on the next request.
+ * Member rows, households and members of the user in one round trip.
+ * The RPC links pending invitations first, so new members land in the right household at once.
  */
-export const listMemberships = cache(async () => {
-  const user = await getUser();
+const loadSession = cache(async () => {
+  await getUser();
   const supabase = await createClient();
-  const { error } = await supabase.rpc("claim_membership");
-  if (error) console.error("claim_membership failed", error.message);
-  const { data } = await supabase.from("household_members").select("*").eq("user_id", user.id).order("created_at");
-  return data ?? [];
+  const [{ data, error }, preferred] = await Promise.all([supabase.rpc("session_context"), readActiveHouseholdId()]);
+  if (error) throw error;
+  return { payload: sessionPayload(data), preferred };
 });
+
+/** Member rows of the current user (one per household), oldest first. */
+export const listMemberships = cache(async () => (await loadSession()).payload.memberships);
 
 /** Member row of the current user in the active household. Null when the user has none. */
 export const findMembership = cache(async () => {
-  const rows = await listMemberships();
-  const preferred = await readActiveHouseholdId();
-  return pickActiveHousehold(rows.map((r) => ({ ...r, householdId: String(r.household_id) })), preferred);
+  const { payload, preferred } = await loadSession();
+  return activeMembership(payload, preferred);
 });
 
 /** Current user with the active household and its members (one request-scoped read). */
 export const getContext = cache(async (): Promise<AppContext> => {
-  const user = await getUser();
-  const supabase = await createClient();
-  const [rows, mine] = await Promise.all([listMemberships(), findMembership()]);
-  if (!mine) redirect("/benvenuto");
-
-  const [{ data: households }, { data: members }] = await Promise.all([
-    supabase.from("households").select("id, name, invite_code").in("id", rows.map((r) => r.household_id)),
-    supabase.from("household_members").select("*").eq("household_id", mine.householdId).order("created_at"),
-  ]);
-  const household = households?.find((h) => h.id === mine.householdId);
-  if (!household) redirect("/benvenuto");
-
-  const names = new Map((households ?? []).map((h) => [String(h.id), String(h.name)]));
-  return {
-    userId: user.id,
-    email: user.email ?? null,
-    householdId: household.id,
-    householdName: household.name,
-    inviteCode: household.invite_code,
-    me: mapMember(mine),
-    members: (members ?? []).map(mapMember),
-    memberships: rows.map((r) => ({ householdId: String(r.household_id), householdName: names.get(String(r.household_id)) ?? "", role: mapMember(r).role })),
-  };
+  const [user, { payload, preferred }] = await Promise.all([getUser(), loadSession()]);
+  const session = activeSession(payload, preferred);
+  if (!session) redirect("/benvenuto");
+  return { userId: user.id, email: user.email, ...session };
 });
 
 /** Active household id, for scoping reads (RLS alone shows every household of the user). */

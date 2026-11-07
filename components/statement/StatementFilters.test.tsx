@@ -18,7 +18,7 @@ describe("StatementFilters", () => {
   });
 
   it("prefills the active range and offers a reset", () => {
-    render(<StatementFilters basePath="/conti/a1" period={{ kind: "range", from: "2026-01-10", to: "2026-01-20" }} />);
+    render(<StatementFilters basePath="/conti/a1" period={{ kind: "range", from: "2026-01-10", to: "2026-01-20", limit: 30 }} />);
     expect(screen.getByLabelText("Da")).toHaveValue("2026-01-10");
     expect(screen.getByLabelText("A")).toHaveValue("2026-01-20");
     expect(screen.getByRole("link", { name: "Mostra gli ultimi movimenti" })).toHaveAttribute("href", "/conti/a1");

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { supabaseEnv } from "@/lib/supabase/env";
+import { sessionUser } from "@/lib/supabase/claims";
 import { isPublicPath } from "@/lib/supabase/routes";
 
 // Refreshes the Supabase session cookie on every request and sends guests to /login.
@@ -18,9 +19,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Verifies the JWT locally with the project's signing keys (no Auth round trip) and refreshes it when expired.
+  const { data } = await supabase.auth.getClaims();
+  const user = sessionUser(data?.claims);
 
   if (!user && !isPublicPath(request.nextUrl.pathname)) {
     const login = request.nextUrl.clone();

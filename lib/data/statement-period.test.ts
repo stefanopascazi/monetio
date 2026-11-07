@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adjacentMonths, periodLabel, RECENT_LIMIT, statementPeriod } from "./statement-period";
+import { adjacentMonths, periodLabel, periodQuery, RECENT_LIMIT, statementPeriod } from "./statement-period";
 
 const today = "2026-11-06";
 const first = "2024-03-01";
@@ -11,22 +11,27 @@ describe("statementPeriod", () => {
   });
 
   it("parses a month", () => {
-    expect(statementPeriod({ mese: "2026-02" }, today, first)).toEqual({ kind: "month", month: "2026-02", from: "2026-02-01", to: "2026-02-28" });
+    expect(statementPeriod({ mese: "2026-02" }, today, first)).toEqual({ kind: "month", month: "2026-02", from: "2026-02-01", to: "2026-02-28", limit: 30 });
   });
 
   it("prefers exact dates, closes open bounds and swaps reversed ones", () => {
-    expect(statementPeriod({ mese: "2026-02", da: "2026-01-10", a: "2026-01-20" }, today, first)).toEqual({ kind: "range", from: "2026-01-10", to: "2026-01-20" });
-    expect(statementPeriod({ da: "2026-10-01" }, today, first)).toEqual({ kind: "range", from: "2026-10-01", to: today });
-    expect(statementPeriod({ a: "2025-01-31" }, today, first)).toEqual({ kind: "range", from: first, to: "2025-01-31" });
-    expect(statementPeriod({ da: "2026-05-01", a: "2026-04-01" }, today, first)).toEqual({ kind: "range", from: "2026-04-01", to: "2026-05-01" });
+    expect(statementPeriod({ mese: "2026-02", da: "2026-01-10", a: "2026-01-20" }, today, first)).toEqual({ kind: "range", from: "2026-01-10", to: "2026-01-20", limit: 30 });
+    expect(statementPeriod({ da: "2026-10-01" }, today, first)).toEqual({ kind: "range", from: "2026-10-01", to: today, limit: 30 });
+    expect(statementPeriod({ a: "2025-01-31" }, today, first)).toEqual({ kind: "range", from: first, to: "2025-01-31", limit: 30 });
+    expect(statementPeriod({ da: "2026-05-01", a: "2026-04-01" }, today, first)).toEqual({ kind: "range", from: "2026-04-01", to: "2026-05-01", limit: 30 });
+  });
+
+  it("reads the page size in steps of the recent limit", () => {
+    expect(statementPeriod({ n: "60" }, today, first)).toEqual({ kind: "recent", limit: 60 });
+    expect(statementPeriod({ mese: "2026-02", n: "45" }, today, first)).toMatchObject({ kind: "month", limit: 60 });
   });
 });
 
 describe("periodLabel", () => {
   it("labels each kind", () => {
     expect(periodLabel({ kind: "recent", limit: 30 })).toBe("Ultimi 30 movimenti");
-    expect(periodLabel({ kind: "month", month: "2026-02", from: "2026-02-01", to: "2026-02-28" })).toBe("febbraio 2026");
-    expect(periodLabel({ kind: "range", from: "2026-01-10", to: "2026-01-20" })).toBe("Dal 10 gen 2026 al 20 gen 2026");
+    expect(periodLabel({ kind: "month", month: "2026-02", from: "2026-02-01", to: "2026-02-28", limit: 30 })).toBe("febbraio 2026");
+    expect(periodLabel({ kind: "range", from: "2026-01-10", to: "2026-01-20", limit: 30 })).toBe("Dal 10 gen 2026 al 20 gen 2026");
   });
 });
 
@@ -35,5 +40,13 @@ describe("adjacentMonths", () => {
     expect(adjacentMonths("2026-01", "2024-03", "2026-11")).toEqual({ prev: "2025-12", next: "2026-02" });
     expect(adjacentMonths("2024-03", "2024-03", "2026-11")).toEqual({ prev: null, next: "2024-04" });
     expect(adjacentMonths("2026-11", "2024-03", "2026-11")).toEqual({ prev: "2026-10", next: null });
+  });
+});
+
+describe("periodQuery", () => {
+  it("reproduces month and range filters", () => {
+    expect(periodQuery({ kind: "recent", limit: 30 })).toEqual({});
+    expect(periodQuery({ kind: "month", month: "2026-02", from: "2026-02-01", to: "2026-02-28", limit: 60 })).toEqual({ mese: "2026-02" });
+    expect(periodQuery({ kind: "range", from: "2026-01-10", to: "2026-01-20", limit: 30 })).toEqual({ da: "2026-01-10", a: "2026-01-20" });
   });
 });

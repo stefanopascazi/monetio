@@ -40,3 +40,26 @@ export function projectionPoints(history: { month: string; valueCents: number }[
     ...projection.map((p) => ({ label: label(p.month), valueCents: pick(p), projected: true })),
   ];
 }
+
+/**
+ * Balance of each account before `firstMonth`: the last month-end before it, else the opening
+ * balance when the account was already open.
+ */
+export function openingBalancesBefore(
+  rows: MonthlyBalance[],
+  accounts: { id: string; openingDate: string; openingBalanceCents: number }[],
+  firstMonth: string,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  // Rows are ordered by month, so the last one before `firstMonth` wins.
+  for (const r of rows) if (r.month < firstMonth) out[r.accountId] = r.balanceCents;
+  for (const a of accounts) if (out[a.id] === undefined && a.openingDate < `${firstMonth}-01`) out[a.id] = a.openingBalanceCents;
+  return out;
+}
+
+/** Month-end balances of one account within a year, for the statement chart. */
+export function yearBalancePoints(rows: MonthlyBalance[], accountId: string, year: number): { label: string; valueCents: number }[] {
+  return rows
+    .filter((m) => m.accountId === accountId && m.month >= `${year}-01` && m.month <= `${year}-12`)
+    .map((m) => ({ label: monthLabel(m.month).split(" ")[0], valueCents: m.balanceCents }));
+}
