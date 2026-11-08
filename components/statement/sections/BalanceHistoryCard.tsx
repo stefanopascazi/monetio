@@ -1,4 +1,5 @@
-import { Card, ProjectionChart } from "@monetio/ui";
+import { ProjectionChart } from "@monetio/ui";
+import { MobileFoldCard } from "@/components/common/MobileFoldCard";
 import { yearBalancePoints } from "@/lib/data/history";
 import { listMonthlyBalances } from "@/lib/data/queries";
 
@@ -7,8 +8,8 @@ export async function BalanceHistoryCard({ accountId, accountName, year }: { acc
   const history = yearBalancePoints(await listMonthlyBalances(`${year}-01-01`), accountId, year);
   if (history.length < 2) return null;
   return (
-    <Card title="Andamento saldo" subtitle={`Fine mese, ${year}`} collapsible>
+    <MobileFoldCard title="Andamento saldo" subtitle={`Fine mese, ${year}`}>
       <ProjectionChart data={history} title={`Saldo ${accountName}`} />
-    </Card>
+    </MobileFoldCard>
   );
 }

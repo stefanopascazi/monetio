@@ -14,3 +14,11 @@ body {
   background: var(--mio-bg);
   color: var(--mio-ink);
 }
+
+/* MobileFoldCard: folded on phones until the first toggle, open on wider layouts. */
+@media (max-width: 1023px) {
+  .mio-fold-mobile > div[id] { display: none; }
+  .mio-fold-mobile .mio-card__toggle svg { transform: none; }
+  .mio-fold-mobile .mio-card__header { margin-bottom: 0; }
+  .mio-fold-mobile.mio-card--pad-none { padding-bottom: var(--mio-space-4); }
+}

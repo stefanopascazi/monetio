@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Amount, Badge, type BadgeTone, Card } from "@monetio/ui";
+import { Amount, Badge, type BadgeTone } from "@monetio/ui";
+import { MobileFoldCard } from "@/components/common/MobileFoldCard";
 import { addMonthsToKey, dateLabel, monthLabel } from "@/lib/domain/dates";
 import type { MonthRecap, RecapItem, RecapTotals } from "@/lib/domain/month-recap";
 
@@ -22,7 +23,7 @@ function Totals({ totals }: { totals: RecapTotals }) {
 
 function Group({ title, period, items, totals, empty }: { title: string; period: string; items: RecapItem[]; totals: RecapTotals; empty: string }) {
   return (
-    <Card aria-label={title} title={title} subtitle={`${items.length} ${items.length === 1 ? "movimento" : "movimenti"} · ${period}`} action={<Totals totals={totals} />} padding="none" collapsible>
+    <MobileFoldCard aria-label={title} title={title} subtitle={`${items.length} ${items.length === 1 ? "movimento" : "movimenti"} · ${period}`} action={<Totals totals={totals} />} padding="none">
       {items.length === 0 ? (
         <p className="px-5 pb-4 text-sm text-ink-muted">{empty}</p>
       ) : (
@@ -53,7 +54,7 @@ function Group({ title, period, items, totals, empty }: { title: string; period:
           })}
         </ul>
       )}
-    </Card>
+    </MobileFoldCard>
   );
 }
 
