@@ -80,6 +80,7 @@ export function mapTransaction(r: Row): Transaction {
     occurrenceDate: str(r.occurrence_date),
     source: r.source as Transaction["source"],
     createdBy: str(r.created_by),
+    skipEstimates: Boolean(r.skip_estimates),
   };
 }
 
@@ -100,6 +101,7 @@ export function mapRule(r: Row): RecurringRule {
     active: Boolean(r.active),
     paymentMethod: (str(r.payment_method) as RecurringRule["paymentMethod"]) ?? null,
     feeCents: feeSource(String(r.kind), str(r.payment_method) as RecurringRule["paymentMethod"]) ? num(r.fee_cents) : 0,
+    decrementCategoryIds: Array.isArray(r.decrement_category_ids) ? r.decrement_category_ids.map(String) : [],
   };
 }
 

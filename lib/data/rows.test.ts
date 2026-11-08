@@ -17,7 +17,12 @@ describe("transactionRows", () => {
   it("creates a single row for income/expense", () => {
     const rows = transactionRows({ householdId: "h", accountId: "a", kind: "expense", amountCents: -500, bookedOn: "2026-11-05", description: "Bar" });
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ account_id: "a", amount_cents: -500, transfer_group_id: null, status: "booked", source: "manual" });
+    expect(rows[0]).toMatchObject({ account_id: "a", amount_cents: -500, transfer_group_id: null, status: "booked", source: "manual", skip_estimates: false });
+  });
+
+  it("keeps the flag that leaves a movement out of decreasing estimates", () => {
+    const [row] = transactionRows({ householdId: "h", accountId: "a", kind: "expense", amountCents: -1700, bookedOn: "2026-11-04", description: "Farmacia", skipEstimates: true });
+    expect(row.skip_estimates).toBe(true);
   });
 
   it("creates two mirrored rows for a transfer", () => {

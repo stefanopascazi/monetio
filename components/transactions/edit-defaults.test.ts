@@ -26,6 +26,7 @@ const view = (p: Partial<TxnView>): TxnView =>
     isFee: false,
     feeCents: null,
     createdByName: null,
+    skipEstimates: false,
     ...p,
   }) as TxnView;
 
@@ -42,5 +43,9 @@ describe("editDefaults", () => {
   it("maps plain movements by sign and payment method", () => {
     expect(editDefaults(view({ isTransfer: false, kind: "income", amountCents: 500, counterpartAccountId: null })).kind).toBe("income");
     expect(editDefaults(view({ isTransfer: false, kind: "expense", paymentMethod: "cbill", counterpartAccountId: null })).kind).toBe("cbill");
+  });
+
+  it("carries the flag that leaves a movement out of decreasing estimates", () => {
+    expect(editDefaults(view({ kind: "expense", isTransfer: false, counterpartAccountId: null, skipEstimates: true })).skipEstimates).toBe(true);
   });
 });

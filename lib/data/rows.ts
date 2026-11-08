@@ -24,9 +24,11 @@ export interface NewTransaction {
   createdBy?: string | null;
   paymentMethod?: PaymentMethod | null;
   parentTransactionId?: string | null;
+  /** Kept out of decreasing estimates. */
+  skipEstimates?: boolean;
 }
 
-export type TransactionInsert = Record<string, string | number | null>;
+export type TransactionInsert = Record<string, string | number | boolean | null>;
 
 export function transactionRows(t: NewTransaction, newId: () => string = () => crypto.randomUUID()): TransactionInsert[] {
   const isTransfer = t.kind === "transfer" && !!t.counterpartAccountId;
@@ -47,6 +49,7 @@ export function transactionRows(t: NewTransaction, newId: () => string = () => c
     created_by: t.createdBy ?? null,
     payment_method: t.paymentMethod ?? null,
     parent_transaction_id: t.parentTransactionId ?? null,
+    skip_estimates: t.skipEstimates ?? false,
   };
   const rows: TransactionInsert[] = [
     { ...(t.id ? { id: t.id } : {}), ...base, account_id: t.accountId, counterpart_account_id: t.counterpartAccountId ?? null, amount_cents: t.amountCents },

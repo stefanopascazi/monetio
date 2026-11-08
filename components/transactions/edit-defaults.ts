@@ -20,5 +20,6 @@ export function editDefaults(t: TxnView): TransactionDefaults {
     description: t.description,
     notes: t.notes,
     planned: t.status === "planned",
+    skipEstimates: t.skipEstimates,
   };
 }

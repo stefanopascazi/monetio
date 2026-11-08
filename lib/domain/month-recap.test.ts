@@ -74,6 +74,11 @@ describe("accountMonthRecap", () => {
     expect(dec.due.map((x) => x.label)).toEqual(["Netflix"]);
   });
 
+  it("keeps the occurrence key of estimates so they can be closed or booked", () => {
+    const r = accountMonthRecap([mv("2026-11-15", -4800, "Psicologa", "a", { source: "estimate", ref: "r:p|2026-11" }), mv("2026-11-20", -100, "Luce")], [], "a", 0, today);
+    expect(r.due.map((x) => x.ref)).toEqual(["r:p|2026-11", undefined]);
+  });
+
   it("returns the balance unchanged when nothing happens", () => {
     expect(accountMonthRecap([], [], "a", 500, today)).toMatchObject({ paid: [], due: [], closingCents: 500 });
   });

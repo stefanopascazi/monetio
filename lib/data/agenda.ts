@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth, todayISO } from "../domain/dates";
+import { isDecreasing } from "../domain/estimates";
 import { accountMonthRecap } from "../domain/month-recap";
 import { monthlySummary } from "../domain/monthly-summary";
 import { type ProjectionInput, projectBalances, projectedMovements } from "../domain/projection";
@@ -8,7 +9,7 @@ import { projectionDetails } from "../domain/projection-details";
 import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
 import { getContext } from "./context";
 import { contributionSpendingFrom, estimateUsedFrom } from "./flows";
-import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
+import { listAccounts, listBookedOccurrences, listContributions, listEstimateMovements, listFlows, listOverrides, listRules, listTransactions } from "./queries";
 import { RECAP_MONTHS } from "./recap-month";
 import { touchesVisible } from "./rule-visibility";
 
@@ -55,11 +56,14 @@ export const loadAgenda = cache(async () => {
 const loadProjectionInput = cache(async (months: number) => {
   const agenda = await loadAgenda();
   const current = monthKey(agenda.today);
-  const [accounts, planned, monthFlows] = await Promise.all([
+  // Categories of decreasing estimates: their booked movements this month reduce them.
+  const decrementCategories = [...new Set(agenda.rules.filter(isDecreasing).flatMap((r) => r.decrementCategoryIds))];
+  const [accounts, planned, monthFlows, estimateMovements] = await Promise.all([
     listAccounts(),
     listTransactions({ status: "planned", limit: 1000 }),
     // Current and previous month: spending so far for estimates and quotas.
     listFlows(startOfMonth(addMonthsToKey(current, -1))),
+    listEstimateMovements(startOfMonth(current), endOfMonth(current), decrementCategories),
   ]);
   const active = accounts.filter((a) => !a.archived);
   const ids = new Set(active.map((a) => a.id));
@@ -79,6 +83,7 @@ const loadProjectionInput = cache(async (months: number) => {
     lookbackDays: LOOKBACK_DAYS,
     overrides: agenda.overrides,
     cardAccountIds: new Set(active.filter((a) => a.type === "card").map((a) => a.id)),
+    estimateMovements,
   };
   return { agenda, active, ids, rules, contributions, input };
 });

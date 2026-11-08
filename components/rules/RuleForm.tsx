@@ -12,6 +12,7 @@ import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS, takesFee } from "@/co
 import { useFormAction } from "@/hooks/useFormAction";
 import type { RecurringRule, RuleSchedule } from "@/lib/domain/types";
 import { formKindOf, type MovementFormKind } from "@/lib/forms/payment";
+import { DecreasingEstimateFields } from "./DecreasingEstimateFields";
 import { RuleScheduleFields } from "./RuleScheduleFields";
 
 type Kind = MovementFormKind;
@@ -121,6 +122,9 @@ export function RuleForm({ action, accounts, categories, transferTargets, rule, 
         />
       )}
       <Select name="categoryId" label="Categoria" optional defaultValue={rule?.categoryId ?? ""} options={[{ value: "", label: "Nessuna" }, ...toOptions(categories)]} />
+      {schedule === "estimate" && (kind === "expense" || kind === "income") && (
+        <DecreasingEstimateFields categories={categories} initial={rule?.decrementCategoryIds} error={error("decrementCategoryIds")} />
+      )}
       <RuleScheduleFields rule={rule} today={today} error={error} />
       <TextField name="endDate" label="Fino al" type="date" optional defaultValue={rule?.endDate ?? ""} error={error("endDate")} />
       {embedded && <Switch label="Attiva" description="Se disattivata non genera movimenti né proiezioni" checked={active} onCheckedChange={setActive} className="mio-span-full" />}

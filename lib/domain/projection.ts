@@ -1,6 +1,7 @@
 import { feeDescription, feeSource } from "./fees";
 import { contributionAmount, contributionBase } from "./contribution";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
+import { type EstimateMovement, estimatePool } from "./estimates";
 import { occurrences } from "./recurrence";
 import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
 import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
@@ -29,6 +30,8 @@ export interface ProjectionInput {
    * in the previous month already covers the current month's estimate.
    */
   cardAccountIds?: Set<string>;
+  /** Current month's booked movements that reduce decreasing estimates. */
+  estimateMovements?: EstimateMovement[];
 }
 
 export interface ProjectionMonth {
@@ -48,6 +51,8 @@ export interface Movement {
   source: MovementSource;
   /** Due before today and still unpaid: counted as if it happened today. */
   overdue?: boolean;
+  /** Estimates: occurrence key (`r:<rule>|<period>`), to close or book it. */
+  ref?: string;
 }
 
 
@@ -62,22 +67,31 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
   const from = addDays(today, -lookbackDays);
   const out: Movement[] = [];
   // Overdue items still count, as if they happened today.
-  const push = (date: ISODate, accountId: string, amountCents: number, counterpart: string | null, label: string, source: MovementSource) => {
+  const push = (date: ISODate, accountId: string, amountCents: number, counterpart: string | null, label: string, source: MovementSource, ref?: string) => {
     const overdue = date < today;
     const d = overdue ? today : date;
-    out.push({ date: d, accountId, amountCents, label, source, overdue });
-    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue });
+    out.push({ date: d, accountId, amountCents, label, source, overdue, ref });
+    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref });
   };
+  const draw = estimatePool(input.estimateMovements ?? []);
 
   for (const r of rules) {
     if (!r.active) continue;
     const counterpart = r.kind === "transfer" ? r.counterpartAccountId : null;
     if (r.schedule === "estimate") {
-      // Estimates always count in full: booked spending in the category does not reduce them.
+      // Past months are never carried over: an unused remainder ends with its month.
       for (const d of occurrences(r, startOfMonth(currentMonth), end)) {
-        const covered = monthKey(d) === currentMonth && input.cardAccountIds?.has(r.accountId) && input.estimateUsed(r, addMonthsToKey(currentMonth, -1)) > 0;
-        const amount = covered ? 0 : r.amountCents;
-        if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate");
+        const key = ruleKey(r.id, d, r.frequency);
+        // Booked as a movement, or closed from the month recap (zero amount).
+        if (booked.has(key) || input.overrides?.get(key)?.amountCents === 0) continue;
+        let amount = r.amountCents;
+        if (monthKey(d) === currentMonth) {
+          const covered = input.cardAccountIds?.has(r.accountId) && input.estimateUsed(r, addMonthsToKey(currentMonth, -1)) > 0;
+          // Fixed estimates count in full; decreasing ones lose what was booked in their categories.
+          const full = Math.abs(r.amountCents);
+          amount = covered ? 0 : Math.sign(r.amountCents) * (full - draw(r, full));
+        }
+        if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate", key);
       }
       continue;
     }

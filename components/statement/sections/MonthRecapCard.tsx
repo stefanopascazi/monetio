@@ -22,6 +22,7 @@ export async function MonthRecapCard({ accountId, balanceCents, today, month, sp
     <MonthRecapList
       recap={recap}
       current={month === current}
+      today={today}
       nav={<RecapMonthNav label={monthLabel(month, true)} prevHref={href(nav.prev)} nextHref={href(nav.next)} resetHref={month === current ? null : href(current)} />}
     />
   );

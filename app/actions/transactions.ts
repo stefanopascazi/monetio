@@ -76,6 +76,7 @@ export async function updateTransaction(id: string, prev: ActionState, fd: FormD
         account_id: v.accountId,
         amount_cents: v.amountCents,
         payment_method: v.paymentMethod,
+        skip_estimates: v.skipEstimates,
       })
       .eq("id", id);
     if (error) return failure(dbErrorMessage(error));

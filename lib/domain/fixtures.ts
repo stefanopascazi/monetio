@@ -20,6 +20,7 @@ export function txn(p: Partial<Transaction> & Pick<Transaction, "amountCents" | 
     occurrenceDate: null,
     source: "manual",
     createdBy: null,
+    skipEstimates: false,
     ...p,
   };
 }
@@ -40,6 +41,7 @@ export function rule(p: Partial<RecurringRule> & Pick<RecurringRule, "amountCent
     active: true,
     paymentMethod: null,
     feeCents: 0,
+    decrementCategoryIds: [],
     ...p,
   };
 }

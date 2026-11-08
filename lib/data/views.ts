@@ -27,6 +27,8 @@ export interface TxnView {
   feeCents: number | null;
   /** Display name of whoever entered it; null when unknown (imports, automatic bookings). */
   createdByName: string | null;
+  /** Kept out of decreasing estimates. */
+  skipEstimates: boolean;
   balanceAfterCents?: number;
 }
 
@@ -73,6 +75,7 @@ export function toTxnView(
     isFee: !!t.parentTransactionId,
     feeCents: t.feeCents,
     createdByName: creatorName(t.createdBy, members),
+    skipEstimates: t.skipEstimates,
     balanceAfterCents: t.balanceAfterCents,
   };
 }

@@ -57,3 +57,35 @@ describe("parseRuleForm non-monthly anchor", () => {
     expect(res.ok && res.value).toMatchObject({ dayOfMonth: 27 });
   });
 });
+
+describe("parseRuleForm decreasing estimates", () => {
+  const C = "22222222-2222-4222-8222-222222222222";
+  const estimate = { ...valid, schedule: "estimate", decreasing: "true" };
+  const withCats = (data: Record<string, string>, cats: string[]) => {
+    const fd = form(data);
+    for (const c of cats) fd.append("decrementCategoryIds", c);
+    return fd;
+  };
+
+  it("keeps estimates fixed by default", () => {
+    const res = parseRuleForm(withCats({ ...valid, schedule: "estimate" }, [C]));
+    expect(res.ok && res.value.decrementCategoryIds).toEqual([]);
+  });
+
+  it("saves the chosen categories of a decreasing estimate", () => {
+    const res = parseRuleForm(withCats(estimate, [C, C]));
+    expect(res.ok && res.value.decrementCategoryIds).toEqual([C]);
+  });
+
+  it("requires at least one valid category", () => {
+    expect(parseRuleForm(withCats(estimate, []))).toMatchObject({ ok: false, errors: { decrementCategoryIds: "Scegli almeno una categoria da scalare" } });
+    expect(parseRuleForm(withCats(estimate, ["x"]))).toMatchObject({ ok: false, errors: { decrementCategoryIds: "Categoria non valida" } });
+  });
+
+  it("ignores the categories outside income/expense estimates", () => {
+    const due = parseRuleForm(withCats({ ...estimate, schedule: "due" }, [C]));
+    expect(due.ok && due.value.decrementCategoryIds).toEqual([]);
+    const transfer = parseRuleForm(withCats({ ...estimate, kind: "transfer", counterpartAccountId: C }, [C]));
+    expect(transfer.ok && transfer.value.decrementCategoryIds).toEqual([]);
+  });
+});

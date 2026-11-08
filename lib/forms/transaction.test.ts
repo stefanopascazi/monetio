@@ -15,8 +15,16 @@ describe("parseTransactionForm", () => {
     const res = parseTransactionForm(form({ kind: "expense", accountId: A, amountCents: "1250", bookedOn: "2026-11-04", description: "Bar" }), "2026-11-05");
     expect(res).toEqual({
       ok: true,
-      value: { kind: "expense", accountId: A, counterpartAccountId: null, categoryId: null, amountCents: -1250, bookedOn: "2026-11-04", description: "Bar", notes: null, status: "booked", paymentMethod: null, feeCents: null },
+      value: { kind: "expense", accountId: A, counterpartAccountId: null, categoryId: null, amountCents: -1250, bookedOn: "2026-11-04", description: "Bar", notes: null, status: "booked", paymentMethod: null, feeCents: null, skipEstimates: false },
     });
+  });
+
+  it("keeps a movement out of decreasing estimates on request, never a transfer", () => {
+    const base = { accountId: A, amountCents: "1700", bookedOn: "2026-11-04", description: "Farmacia", skipEstimates: "true" };
+    const res = parseTransactionForm(form({ ...base, kind: "expense" }), "2026-11-05");
+    expect(res.ok && res.value.skipEstimates).toBe(true);
+    const giro = parseTransactionForm(form({ ...base, kind: "transfer", counterpartAccountId: B }), "2026-11-05");
+    expect(giro.ok && giro.value.skipEstimates).toBe(false);
   });
 
   it("marks future dates as planned and keeps income positive", () => {

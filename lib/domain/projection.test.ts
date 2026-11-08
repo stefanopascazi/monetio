@@ -68,6 +68,21 @@ describe("projectBalances", () => {
     expect(res.map((p) => p.byAccount.joint)).toEqual([93500, 87000]);
   });
 
+  it("reduces a decreasing estimate by its categories this month only", () => {
+    const psicologa = rule({ id: "p", accountId: "joint", categoryId: "salute", amountCents: -6500, schedule: "estimate", dayOfMonth: 15, decrementCategoryIds: ["salute"] });
+    const estimateMovements = [{ accountId: "joint", categoryId: "salute", amountCents: -1700 }];
+    const res = projectBalances({ ...base, months: 2, rules: [psicologa], estimateMovements });
+    // November: 65 - 17; December starts again from the full 65, nothing carried over.
+    expect(res.map((p) => p.byAccount.joint)).toEqual([95200, 88700]);
+  });
+
+  it("drops estimate occurrences booked or closed from the recap", () => {
+    const spesa = rule({ id: "s", accountId: "joint", amountCents: -10000, schedule: "estimate", dayOfMonth: 28 });
+    const closed = overrideMap([{ ruleId: "s", period: "2026-12", amountCents: 0, dueDate: "2026-12-28", note: null }]);
+    const res = projectBalances({ ...base, months: 3, rules: [spesa], booked: new Set([ruleKey("s", "2026-11-28")]), overrides: closed });
+    expect(res.map((p) => p.byAccount.joint)).toEqual([100000, 100000, 90000]);
+  });
+
   it("treats last month's statement as covering a card's current estimate", () => {
     const spesa = rule({ id: "s", accountId: "card", categoryId: "spesa", amountCents: -45000, schedule: "estimate", dayOfMonth: 28 });
     const spent = (_: unknown, month: string) => (month === "2026-10" ? 34200 : 0);

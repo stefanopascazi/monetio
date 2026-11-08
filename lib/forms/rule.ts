@@ -19,6 +19,8 @@ export interface RuleInput {
   paymentMethod: PaymentMethod | null;
   /** Fee booked with each occurrence (positive, 0 = none). */
   feeCents: number;
+  /** Decreasing estimate: categories whose movements reduce it (empty = fixed). */
+  decrementCategoryIds: string[];
 }
 
 const FREQUENCIES: RuleFrequency[] = ["weekly", "monthly", "bimonthly", "quarterly", "semiannual", "yearly"];
@@ -36,6 +38,9 @@ export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
   const startDate = text(fd, "startDate");
   const endDate = text(fd, "endDate");
   const description = text(fd, "description");
+  // Only income/expense estimates can decrease: transfers carry no spending categories.
+  const decreasing = text(fd, "decreasing") === "true" && schedule === "estimate" && kind !== "transfer";
+  const decrementCategoryIds = decreasing ? [...new Set(fd.getAll("decrementCategoryIds").map(String).filter(Boolean))] : [];
 
   const c = new Checker()
     .check(kindValid, "kind", "Scegli il tipo")
@@ -49,7 +54,9 @@ export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
     .check(isISODate(startDate), "startDate", "Inserisci la data di inizio")
     .check(!endDate || (isISODate(endDate) && endDate >= startDate), "endDate", "La fine deve essere dopo l'inizio")
     .check(description.length > 0 && description.length <= 120, "description", "Scrivi una descrizione")
-    .check(!categoryId || isUUID(categoryId), "categoryId", "Categoria non valida");
+    .check(!categoryId || isUUID(categoryId), "categoryId", "Categoria non valida")
+    .check(!decreasing || decrementCategoryIds.length > 0, "decrementCategoryIds", "Scegli almeno una categoria da scalare")
+    .check(decrementCategoryIds.every(isUUID), "decrementCategoryIds", "Categoria non valida");
   if (kind === "transfer") {
     c.check(isUUID(counterpart) && counterpart !== accountId, "counterpartAccountId", "Scegli un conto di destinazione diverso");
   }
@@ -71,5 +78,6 @@ export function parseRuleForm(fd: FormData): ParseResult<RuleInput> {
     paymentMethod,
     // Estimates never create movements, so they carry no fee.
     feeCents: schedule === "estimate" ? 0 : (feeCents ?? 0),
+    decrementCategoryIds,
   });
 }

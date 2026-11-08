@@ -16,6 +16,8 @@ export interface TransactionInput {
   paymentMethod: PaymentMethod | null;
   /** Optional fee of a bonifico/CBill/transfer, positive; booked as a separate expense row. */
   feeCents: number | null;
+  /** Kept out of decreasing estimates (never set on transfers). */
+  skipEstimates: boolean;
 }
 
 /** Validates the transaction form; future dates become planned unless booked is forced. */
@@ -57,5 +59,6 @@ export function parseTransactionForm(fd: FormData, today: ISODate): ParseResult<
     status,
     paymentMethod,
     feeCents,
+    skipEstimates: kind !== "transfer" && text(fd, "skipEstimates") === "true",
   });
 }

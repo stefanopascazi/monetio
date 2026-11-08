@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import type { EstimateMovement } from "../domain/estimates";
 import type { Account, Category, ContributionRule, ISODate, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
 import { createClient } from "../supabase/server";
 import { activeHouseholdId } from "./context";
@@ -163,6 +164,25 @@ export const listMonthlyBalances = cache(async (since: ISODate): Promise<Monthly
 });
 
 /** Rule/contribution occurrences already booked since a date. */
+/** Booked income/expense rows of a period in some categories that reduce decreasing estimates. */
+export const listEstimateMovements = cache(async (from: ISODate, to: ISODate, categoryIds: string[]): Promise<EstimateMovement[]> => {
+  if (!categoryIds.length) return [];
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("account_id, category_id, amount_cents")
+    .eq("household_id", hh)
+    .eq("status", "booked")
+    .eq("skip_estimates", false)
+    .in("kind", ["income", "expense"])
+    .in("category_id", categoryIds)
+    .gte("booked_on", from)
+    .lte("booked_on", to)
+    .limit(5000);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ accountId: String(r.account_id), categoryId: String(r.category_id), amountCents: Number(r.amount_cents) }));
+});
+
 export const listBookedOccurrences = cache(async (since: ISODate) => {
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const { data, error } = await supabase

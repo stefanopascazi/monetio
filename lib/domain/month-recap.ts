@@ -12,6 +12,8 @@ export interface RecapItem {
   /** Signed (positive = money in). */
   amountCents: number;
   overdue: boolean;
+  /** Estimates: occurrence key, to close the remainder or book it as a movement. */
+  ref?: string;
 }
 
 export interface RecapTotals {
@@ -65,7 +67,7 @@ export function accountMonthRecap(
     .sort((a, b) => b.date.localeCompare(a.date));
   const due = own
     .filter((m) => m.date >= first && m.date <= last)
-    .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false }))
+    .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false, ...(m.ref ? { ref: m.ref } : {}) }))
     .sort((a, b) => a.date.localeCompare(b.date) || Number(b.overdue) - Number(a.overdue) || a.amountCents - b.amountCents);
   const dueTotals = totals(due);
   return { month, openingCents, paid, due, paidTotals: totals(paid), dueTotals, closingCents: openingCents - dueTotals.outCents + dueTotals.inCents };

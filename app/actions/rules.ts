@@ -32,6 +32,7 @@ function ruleRow(v: ReturnType<typeof parseRuleForm> & { ok: true }) {
     active: r.active,
     payment_method: r.paymentMethod,
     fee_cents: feeSource(r.kind, r.paymentMethod) ? r.feeCents : 0,
+    decrement_category_ids: r.decrementCategoryIds,
   };
 }
 

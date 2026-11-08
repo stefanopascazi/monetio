@@ -66,6 +66,8 @@ export interface Transaction {
   source: "manual" | "import" | "rule" | "contribution";
   /** Auth user id of whoever entered it; null for imports and automatic bookings. */
   createdBy: string | null;
+  /** Kept out of decreasing estimates even when its category matches. */
+  skipEstimates: boolean;
 }
 
 export interface RecurringRule {
@@ -86,6 +88,8 @@ export interface RecurringRule {
   paymentMethod: PaymentMethod | null;
   /** Fee booked with each occurrence of a bonifico/CBill rule (positive, 0 = none). */
   feeCents: number;
+  /** Estimate rules: categories whose booked movements reduce it in the month (empty = fixed estimate). */
+  decrementCategoryIds: string[];
 }
 
 /** Actual amount/due date of one occurrence of a rule, entered before paying (e.g. a bill). */

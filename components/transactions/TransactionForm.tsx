@@ -30,6 +30,7 @@ export interface TransactionDefaults {
   description?: string;
   notes?: string | null;
   planned?: boolean;
+  skipEstimates?: boolean;
 }
 
 export interface TransactionFormProps {
@@ -54,6 +55,8 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
   const [amount, setAmount] = useState<number | null>(defaults.amountCents ?? null);
   const [fee, setFee] = useState<number | null>(defaults.feeCents ?? null);
   const [planned, setPlanned] = useState(defaults.planned ?? false);
+  const [categoryId, setCategoryId] = useState(defaults.categoryId ?? "");
+  const [skipEstimates, setSkipEstimates] = useState(defaults.skipEstimates ?? false);
   const [formKey, setFormKey] = useState(0);
   const [open, setOpen] = useState(!!embedded);
   // After saving: close the panel so the outcome is visible, and clear the create form.
@@ -63,9 +66,11 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
     setAmount(null);
     setFee(null);
     setPlanned(false);
+    setCategoryId(defaults.categoryId ?? "");
+    setSkipEstimates(false);
     setKind(defaults.kind);
     setFormKey((k) => k + 1);
-  }, [embedded, onSaved, defaults.kind]);
+  }, [embedded, onSaved, defaults.kind, defaults.categoryId]);
   const { state, pending, onSubmit, error } = useFormAction(action, reset);
 
   return (
@@ -139,8 +144,28 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
           {lockKind && <input type="hidden" name="counterpartAccountId" value={defaults.counterpartAccountId ?? ""} />}
         </>
       ) : null}
-      <Select name="categoryId" label="Categoria" optional defaultValue={defaults.categoryId ?? ""} options={[{ value: "", label: "Nessuna" }, ...toOptions(categories)]} />
+      <Select
+        name="categoryId"
+        label="Categoria"
+        optional
+        value={categoryId}
+        onChange={(e) => setCategoryId(e.target.value)}
+        options={[{ value: "", label: "Nessuna" }, ...toOptions(categories)]}
+      />
       <TextField name="notes" label="Note" optional defaultValue={defaults.notes ?? ""} className="mio-span-full" />
+      {/* Only categorised income/expenses can reduce a decreasing estimate. */}
+      {kind !== "transfer" && categoryId && (
+        <>
+          <input type="hidden" name="skipEstimates" value={String(skipEstimates)} />
+          <Switch
+            label="Non scalare dalle stime"
+            description="Le stime a scalare della categoria restano invariate"
+            checked={skipEstimates}
+            onCheckedChange={setSkipEstimates}
+            className="mio-span-full"
+          />
+        </>
+      )}
       <Switch
         label="Pianificato"
         description="Non ancora avvenuto: conta solo nelle proiezioni finché non lo registri"
