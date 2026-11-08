@@ -28,8 +28,6 @@ export interface MonthRecap {
   due: RecapItem[];
   paidTotals: RecapTotals;
   dueTotals: RecapTotals;
-  /** Balance once every remaining outflow is paid, ignoring income. */
-  afterOutCents: number;
   /** Balance at month end, income included. */
   closingCents: number;
 }
@@ -58,6 +56,5 @@ export function accountMonthRecap(
     .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false }))
     .sort((a, b) => a.date.localeCompare(b.date) || Number(b.overdue) - Number(a.overdue) || a.amountCents - b.amountCents);
   const dueTotals = totals(due);
-  const afterOutCents = balanceCents - dueTotals.outCents;
-  return { paid, due, paidTotals: totals(paid), dueTotals, afterOutCents, closingCents: afterOutCents + dueTotals.inCents };
+  return { paid, due, paidTotals: totals(paid), dueTotals, closingCents: balanceCents - dueTotals.outCents + dueTotals.inCents };
 }

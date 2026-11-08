@@ -46,15 +46,15 @@ describe("accountMonthRecap", () => {
     expect(r.paidTotals).toEqual({ outCents: 3000, inCents: 1000 });
   });
 
-  it("computes balances from the due movements only (paid ones are in the balance)", () => {
+  it("computes balances from the due movements only , estimates included (paid ones are in the balance)", () => {
     const r = accountMonthRecap(
-      [mv("2026-11-20", -5000, "Luce"), mv("2026-11-25", -1000, "Giroconto"), mv("2026-11-27", 3000, "Rimborso")],
+      [mv("2026-11-20", -5000, "Luce"), mv("2026-11-25", -1000, "Giroconto"), mv("2026-11-28", -2000, "Spesa", "a", { source: "estimate" }), mv("2026-11-27", 3000, "Rimborso")],
       [tx("Spesa", "2026-11-02", -3000)],
       "a",
       10000,
       today,
     );
-    expect(r).toMatchObject({ dueTotals: { outCents: 6000, inCents: 3000 }, afterOutCents: 4000, closingCents: 7000 });
+    expect(r).toMatchObject({ dueTotals: { outCents: 8000, inCents: 3000 }, closingCents: 5000 });
   });
 
   it("puts overdue items first on the same day and drops zero amounts", () => {
@@ -66,6 +66,6 @@ describe("accountMonthRecap", () => {
   });
 
   it("returns the balance unchanged when nothing happens", () => {
-    expect(accountMonthRecap([], [], "a", 500, today)).toMatchObject({ paid: [], due: [], afterOutCents: 500, closingCents: 500 });
+    expect(accountMonthRecap([], [], "a", 500, today)).toMatchObject({ paid: [], due: [], closingCents: 500 });
   });
 });
