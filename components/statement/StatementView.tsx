@@ -13,7 +13,6 @@ import { MonthRecapCard } from "./sections/MonthRecapCard";
 import { PlannedCard } from "./sections/PlannedCard";
 import { StatementCard } from "./sections/StatementCard";
 import { StatementEntry } from "./sections/StatementEntry";
-import { StatementPendingNote } from "./sections/StatementPendingNote";
 
 /**
  * Header (balance, settings) shows as soon as the account is known; the statement, form,
@@ -39,14 +38,9 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
         balanceCents={account.balanceCents}
         settings={<AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />}
         note={
-          <>
-            <Suspense fallback={null}>
-              <MonthNetNote accountId={id} balanceCents={account.balanceCents} />
-            </Suspense>
-            <Suspense fallback={null}>
-              <StatementPendingNote accountId={id} />
-            </Suspense>
-          </>
+          <Suspense fallback={null}>
+            <MonthNetNote accountId={id} balanceCents={account.balanceCents} />
+          </Suspense>
         }
       />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">

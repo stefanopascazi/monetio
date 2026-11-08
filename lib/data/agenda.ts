@@ -8,7 +8,6 @@ import { projectionDetails } from "../domain/projection-details";
 import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
 import { getContext } from "./context";
 import { categorySpentFrom, contributionSpendingFrom } from "./flows";
-import { pendingTransfersByAccount } from "./pending-transfers";
 import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
 import { touchesVisible } from "./rule-visibility";
 
@@ -78,6 +77,7 @@ const loadProjectionInput = cache(async (months: number) => {
     planned: planned.filter((t) => ids.has(t.accountId)),
     lookbackDays: LOOKBACK_DAYS,
     overrides: agenda.overrides,
+    cardAccountIds: new Set(active.filter((a) => a.type === "card").map((a) => a.id)),
   };
   return { agenda, active, ids, rules, contributions, input };
 });
@@ -101,14 +101,16 @@ export const loadProjection = cache(async (months: number) => {
   return { today: agenda.today, accounts: active, projection, details, summary };
 });
 
-/** Movements still expected on an account before month end, with the resulting balances. */
+/** This month's paid and still due movements of an account, with the resulting balances. */
 export const loadAccountMonthRecap = cache(async (accountId: string, balanceCents: number) => {
   const { input } = await loadProjectionInput(1);
-  return accountMonthRecap(projectedMovements(input), accountId, balanceCents, input.today);
+  const month = monthKey(input.today);
+  const booked = await listTransactions({ accountId, status: "booked", from: startOfMonth(month), to: endOfMonth(month), limit: 1000 });
+  return accountMonthRecap(projectedMovements(input), booked, accountId, balanceCents, input.today);
 });
 
-/** Pending transfers per account up to the end of the current month. */
-export const loadPendingTransfers = cache(async () => {
-  const agenda = await loadAgenda();
-  return pendingTransfersByAccount(agenda.due, endOfMonth(monthKey(agenda.today)));
+/** Expected month-end balance ("rimanenza") per visible account. */
+export const loadMonthEndBalances = cache(async () => {
+  const { input } = await loadProjectionInput(1);
+  return projectBalances(input)[0]?.byAccount ?? {};
 });

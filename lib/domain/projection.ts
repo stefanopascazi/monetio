@@ -24,6 +24,11 @@ export interface ProjectionInput {
   lookbackDays?: number;
   /** Actual amounts/dates entered for single occurrences. */
   overrides?: OverrideMap;
+  /**
+   * Card accounts: spending is entered as last month's statement, so a statement booked
+   * in the previous month already covers the current month's estimate.
+   */
+  cardAccountIds?: Set<string>;
 }
 
 export interface ProjectionMonth {
@@ -71,7 +76,8 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       for (const d of occurrences(r, startOfMonth(currentMonth), end)) {
         let amount = r.amountCents;
         if (monthKey(d) === currentMonth) {
-          const remaining = Math.max(0, Math.abs(r.amountCents) - input.categorySpent(r.accountId, r.categoryId, currentMonth));
+          const covered = input.cardAccountIds?.has(r.accountId) && input.categorySpent(r.accountId, r.categoryId, addMonthsToKey(currentMonth, -1)) > 0;
+          const remaining = covered ? 0 : Math.max(0, Math.abs(r.amountCents) - input.categorySpent(r.accountId, r.categoryId, currentMonth));
           amount = Math.sign(r.amountCents) * remaining;
         }
         if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate");

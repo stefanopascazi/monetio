@@ -1,6 +1,6 @@
 import { Amount, PageHeader } from "@monetio/ui";
 import { createAccount } from "@/app/actions/accounts";
-import { loadPendingTransfers } from "@/lib/data/agenda";
+import { loadMonthEndBalances } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
 import { todayISO } from "@/lib/domain/dates";
@@ -8,7 +8,7 @@ import { AccountForm } from "./AccountForm";
 import { AccountGrid } from "./AccountGrid";
 
 export async function AccountsView() {
-  const [ctx, accounts, pending] = await Promise.all([getContext(), listAccounts(), loadPendingTransfers()]);
+  const [ctx, accounts, monthEnd] = await Promise.all([getContext(), listAccounts(), loadMonthEndBalances()]);
   const active = accounts.filter((a) => !a.archived);
   const archived = accounts.filter((a) => a.archived);
   const shared = active.filter((a) => a.visibility === "shared").reduce((s, a) => s + a.balanceCents, 0);
@@ -27,7 +27,7 @@ export async function AccountsView() {
           <Amount cents={mine} tone="neutral" size="lg" />
         </div>
       </section>
-      <AccountGrid accounts={active} members={ctx.members} pending={pending} />
+      <AccountGrid accounts={active} members={ctx.members} monthEnd={monthEnd} />
       <AccountForm action={createAccount} defaults={{ openingDate: todayISO() }} />
       {archived.length > 0 && (
         <section className="flex flex-col gap-3">

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { AccountCard } from "@monetio/ui";
-import type { PendingTransfers } from "@/lib/data/pending-transfers";
 import type { AccountWithBalance } from "@/lib/data/queries";
-import { PendingTransfersNote } from "./PendingTransfersNote";
+import { MonthEndNote } from "./MonthEndNote";
 import type { Member } from "@/lib/domain/types";
 
 /** Names shown on an account card: everyone for shared accounts, the owner for private ones. */
@@ -19,11 +18,12 @@ export function accountMembers(
 export function AccountGrid({
   accounts,
   members,
-  pending = {},
+  monthEnd,
 }: {
   accounts: AccountWithBalance[];
   members: Member[];
-  pending?: Record<string, PendingTransfers>;
+  /** Expected month-end balance per account; omitted for archived ones. */
+  monthEnd?: Record<string, number>;
 }) {
   return (
     <section
@@ -42,12 +42,7 @@ export function AccountGrid({
             type={a.type}
             balanceCents={a.balanceCents}
             members={accountMembers(a, members)}
-            footer={
-              pending[a.id] &&
-              (pending[a.id].outCents || pending[a.id].inCents) ? (
-                <PendingTransfersNote pending={pending[a.id]} />
-              ) : undefined
-            }
+            footer={monthEnd?.[a.id] !== undefined ? <MonthEndNote cents={monthEnd[a.id]} /> : undefined}
           />
         </Link>
       ))}

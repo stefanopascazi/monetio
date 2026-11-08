@@ -68,6 +68,15 @@ describe("projectBalances", () => {
     expect(res.map((p) => p.byAccount.joint)).toEqual([85000, 40000]);
   });
 
+  it("treats last month's statement as covering a card's current estimate", () => {
+    const spesa = rule({ id: "s", accountId: "card", categoryId: "spesa", amountCents: -45000, schedule: "estimate", dayOfMonth: 28 });
+    const spent = (_: string, __: string | null, month: string) => (month === "2026-10" ? 34200 : 0);
+    const input = { ...base, months: 2, balances: { card: 0 }, rules: [spesa], categorySpent: spent };
+    expect(projectBalances({ ...input, cardAccountIds: new Set(["card"]) }).map((p) => p.byAccount.card)).toEqual([0, -45000]);
+    // Not a card: last month's spending does not cover this month.
+    expect(projectBalances(input).map((p) => p.byAccount.card)).toEqual([-45000, -90000]);
+  });
+
   it("adds contributions with the larger of actual and estimated spending", () => {
     const c = contribution({ fromAccountId: "ste", toAccountId: "joint", estimatedSpendingCents: 45000, startDate: "2026-11-01" });
     const res = projectBalances({ ...base, months: 2, contributions: [c], contributionSpending: () => 50000 });
