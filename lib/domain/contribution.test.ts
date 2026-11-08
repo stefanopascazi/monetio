@@ -28,9 +28,20 @@ describe("categorySpending", () => {
 
 describe("contributionAmount", () => {
   it("adds the fixed part to half the spending rounded up to 10 euro", () => {
-    // Spreadsheet: -800 + CEILING(280.57 / 2, 10) = 950
-    expect(contributionAmount(contribution(), 28057)).toBe(95000);
+    // 800 + CEILING(280.57, 10) / 2 = 945
+    expect(contributionAmount(contribution(), 28057)).toBe(94500);
     expect(contributionAmount(contribution({ sharePercent: 0 }), 28057)).toBe(80000);
+  });
+
+  it("rounds the total spending before splitting it", () => {
+    const share = contribution({ fixedCents: 0, sharePercent: 50, roundingCents: 100 });
+    expect(contributionAmount(share, 34188)).toBe(17100);
+    expect(contributionAmount(share, 34250)).toBe(17150);
+    expect(contributionAmount(share, 34200)).toBe(17100);
+  });
+
+  it("keeps the exact amount for the card settlement without rounding", () => {
+    expect(contributionAmount(contribution({ fixedCents: 0, sharePercent: 100, roundingCents: 1 }), 34188)).toBe(34188);
   });
 });
 

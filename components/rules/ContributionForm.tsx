@@ -96,8 +96,9 @@ export function ContributionForm({ action, accounts, categories, contribution: c
       />
       <Select
         name="roundingCents"
-        label="Arrotonda per eccesso a"
+        label="Arrotonda la spesa per eccesso a"
         defaultValue={String(c?.roundingCents ?? 1)}
+        hint="La spesa totale viene arrotondata prima di applicare la percentuale"
         options={[
           { value: "1", label: "Centesimo (importo esatto)" },
           { value: "100", label: "1 €" },

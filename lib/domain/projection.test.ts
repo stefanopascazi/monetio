@@ -80,8 +80,8 @@ describe("projectBalances", () => {
   it("adds contributions with the larger of actual and estimated spending", () => {
     const c = contribution({ fromAccountId: "ste", toAccountId: "joint", estimatedSpendingCents: 45000, startDate: "2026-11-01" });
     const res = projectBalances({ ...base, months: 2, contributions: [c], contributionSpending: () => 50000 });
-    // Nov: 800 + 250 = 1050; Dec: 800 + 230 (225 rounded up) = 1030.
-    expect(res.map((p) => p.byAccount.ste)).toEqual([50000 - 105000, 50000 - 105000 - 103000]);
+    // Nov: 800 + 250 = 1050; Dec: 800 + 450 / 2 = 1025.
+    expect(res.map((p) => p.byAccount.ste)).toEqual([50000 - 105000, 50000 - 105000 - 102500]);
     expect(res[1].totalCents).toBe(150000);
   });
 

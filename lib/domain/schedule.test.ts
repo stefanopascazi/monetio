@@ -69,13 +69,13 @@ describe("dueEntries", () => {
       [ruleKey("luce", "2026-10-20"), -10000, true, false],
       [ruleKey("luce", "2026-11-20"), -10000, false, false],
       // Open month: max(actual 280.57, estimate 450) / 2 = 225 -> 230 (rounded up to 10), + 800.
-      [contributionKey("c1", "2026-11-28"), -103000, false, true],
+      [contributionKey("c1", "2026-11-28"), -102500, false, true],
     ]);
   });
 
   it("uses the estimate for future months", () => {
     const entries = dueEntries([], [contribution({ dayOfMonth: 2 })], new Set(), today, spending, { lookbackDays: 0, horizonDays: 30 });
-    expect(entries.map((e) => [e.date, e.amountCents])).toEqual([["2026-12-02", -(80000 + 23000)]]);
+    expect(entries.map((e) => [e.date, e.amountCents])).toEqual([["2026-12-02", -(80000 + 22500)]]);
   });
 });
 

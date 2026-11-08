@@ -19,12 +19,15 @@ export function categorySpending(txns: Transaction[], accountId: string, categor
   return Math.max(0, -net);
 }
 
-/** Amount to transfer: fixed part + share of the spending, rounded up. */
+/**
+ * Amount to transfer: fixed part + share of the spending. The total spending is rounded up
+ * before splitting, so shares of the same base add up to the rounded total (341,88 -> 342 -> 171 + 171).
+ */
 export function contributionAmount(
   rule: Pick<ContributionRule, "fixedCents" | "sharePercent" | "roundingCents">,
   spendingCents: number,
 ): number {
-  return rule.fixedCents + ceilToStep(Math.round((spendingCents * rule.sharePercent) / 100), rule.roundingCents);
+  return rule.fixedCents + Math.round((ceilToStep(spendingCents, rule.roundingCents) * rule.sharePercent) / 100);
 }
 
 /**
