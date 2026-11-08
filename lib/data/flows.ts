@@ -1,7 +1,7 @@
 // Pure helpers over the `monthly_flows` aggregate.
 import type { CashflowPoint, CategorySlice } from "@monetio/ui";
 import { monthLabel } from "../domain/dates";
-import type { Category, ContributionRule } from "../domain/types";
+import type { Category, ContributionRule, RecurringRule } from "../domain/types";
 
 export interface MonthlyFlow {
   accountId: string;
@@ -36,8 +36,22 @@ export function spentIn(flows: MonthlyFlow[], accountId: string, categoryIds: st
 export const contributionSpendingFrom = (flows: MonthlyFlow[]) => (rule: ContributionRule, month: string) =>
   spentIn(flows, rule.spendingAccountId ?? rule.toAccountId, rule.categoryIds, month);
 
-export const categorySpentFrom = (flows: MonthlyFlow[]) => (accountId: string, categoryId: string | null, month: string) =>
-  spentIn(flows, accountId, categoryId ? [categoryId] : null, month);
+/**
+ * Amount already booked in a month towards an estimate rule (positive cents): spending for an expense,
+ * money received for an income, transfers to the same counterpart for a transfer.
+ */
+export const estimateUsedFrom =
+  (flows: MonthlyFlow[]) =>
+  (rule: Pick<RecurringRule, "accountId" | "categoryId" | "kind" | "counterpartAccountId" | "amountCents">, month: string): number => {
+    const net = flows
+      .filter((f) => f.accountId === rule.accountId && f.month === month)
+      .filter((f) =>
+        rule.kind === "transfer" ? f.kind === "transfer" && f.counterpartAccountId === rule.counterpartAccountId : f.kind === "expense" || f.kind === "income",
+      )
+      .filter((f) => rule.categoryId === null || f.categoryId === rule.categoryId)
+      .reduce((s, f) => s + f.totalCents, 0);
+    return Math.max(0, Math.sign(rule.amountCents) * net);
+  };
 
 /**
  * Household cash flow per month: income and expenses on the visible accounts,

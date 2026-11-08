@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contribution } from "../domain/fixtures";
-import { cashflowSeries, categorySlices, categorySpentFrom, contributionSpendingFrom, mapFlow, type MonthlyFlow } from "./flows";
+import { cashflowSeries, categorySlices, contributionSpendingFrom, estimateUsedFrom, mapFlow, type MonthlyFlow } from "./flows";
 
 const f = (p: Partial<MonthlyFlow> & Pick<MonthlyFlow, "totalCents">): MonthlyFlow => ({
   accountId: "joint",
@@ -37,8 +37,18 @@ describe("flows", () => {
     // Spending read from another account (e.g. the card) instead of the receiving one.
     expect(contributionSpendingFrom(flows)(contribution({ categoryIds: ["stip"], spendingAccountId: "ste" }), "2026-10")).toBe(0);
     expect(contributionSpendingFrom(flows)(contribution({ categoryIds: ["spesa"], spendingAccountId: "ste" }), "2026-10")).toBe(0);
-    expect(categorySpentFrom(flows)("joint", "luce", "2026-10")).toBe(9000);
-    expect(categorySpentFrom(flows)("joint", null, "2026-10")).toBe(37057);
+  });
+
+  it("measures what is already booked towards an estimate", () => {
+    const used = estimateUsedFrom([...flows, f({ totalCents: -12000, kind: "transfer", categoryId: "figli", counterpartAccountId: "asha" }), f({ totalCents: -700, categoryId: "figli" })]);
+    const est = { accountId: "joint", kind: "expense" as const, counterpartAccountId: null, amountCents: -1 };
+    expect(used({ ...est, categoryId: "luce" }, "2026-10")).toBe(9000);
+    expect(used({ ...est, categoryId: null }, "2026-10")).toBe(37757);
+    // Income estimates are reduced by money received.
+    expect(used({ ...est, accountId: "ste", kind: "income", categoryId: "stip", amountCents: 1 }, "2026-10")).toBe(200000);
+    // Transfer estimates only by transfers to the same counterpart, not by expenses of the category.
+    expect(used({ ...est, kind: "transfer", counterpartAccountId: "asha", categoryId: "figli" }, "2026-10")).toBe(12000);
+    expect(used({ ...est, kind: "transfer", counterpartAccountId: "ste", categoryId: "figli" }, "2026-10")).toBe(0);
   });
 
   it("builds cash flow ignoring transfers and adjustments", () => {

@@ -12,7 +12,7 @@ const base: ProjectionInput = {
   contributions: [],
   booked: new Set(),
   contributionSpending: () => 0,
-  categorySpent: () => 0,
+  estimateUsed: () => 0,
   planned: [],
   lookbackDays: 30,
 };

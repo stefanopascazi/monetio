@@ -7,7 +7,7 @@ import { type ProjectionInput, projectBalances, projectedMovements } from "../do
 import { projectionDetails } from "../domain/projection-details";
 import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
 import { getContext } from "./context";
-import { categorySpentFrom, contributionSpendingFrom } from "./flows";
+import { contributionSpendingFrom, estimateUsedFrom } from "./flows";
 import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
 import { RECAP_MONTHS } from "./recap-month";
 import { touchesVisible } from "./rule-visibility";
@@ -74,7 +74,7 @@ const loadProjectionInput = cache(async (months: number) => {
     contributions,
     booked: agenda.booked,
     contributionSpending: contributionSpendingFrom(monthFlows),
-    categorySpent: categorySpentFrom(monthFlows),
+    estimateUsed: estimateUsedFrom(monthFlows),
     planned: planned.filter((t) => ids.has(t.accountId)),
     lookbackDays: LOOKBACK_DAYS,
     overrides: agenda.overrides,
