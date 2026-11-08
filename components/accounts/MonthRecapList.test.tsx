@@ -3,18 +3,30 @@ import { describe, expect, it } from "vitest";
 import { MonthRecapList } from "./MonthRecapList";
 
 const none = { outCents: 0, inCents: 0 };
+const empty = { month: "2026-11", openingCents: 1000, closingCents: 1000, paid: [], due: [], paidTotals: none, dueTotals: none };
 
 describe("MonthRecapList", () => {
-  it("shows both groups with their empty messages", () => {
-    render(<MonthRecapList recap={{ paid: [], due: [], paidTotals: none, dueTotals: none }} period="novembre 2026" />);
-    expect(screen.getByText("Nessun movimento da contabilizzare questo mese.")).toBeInTheDocument();
-    expect(screen.getByText("Nessun movimento contabilizzato questo mese.")).toBeInTheDocument();
+  it("shows the current balance and both groups with their empty messages", () => {
+    render(<MonthRecapList recap={empty} current />);
+    expect(screen.getByText("Saldo attuale")).toBeInTheDocument();
+    expect(screen.getByText("Rimanenza a fine mese")).toBeInTheDocument();
+    expect(screen.getByText("Nessun movimento da contabilizzare: novembre 2026.")).toBeInTheDocument();
+    expect(screen.getByText("Nessun movimento contabilizzato: novembre 2026.")).toBeInTheDocument();
+  });
+
+  it("starts a future month from the previous month's rimanenza and hides an empty booked card", () => {
+    render(<MonthRecapList recap={{ ...empty, month: "2026-12" }} current={false} nav={<nav>Mesi</nav>} />);
+    expect(screen.getByText("Rimanenza di novembre 2026")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Contabilizzato" })).not.toBeInTheDocument();
+    expect(screen.getByText("Mesi")).toBeInTheDocument();
   });
 
   it("splits items to book and booked ones into separate cards, with source and overdue badges", () => {
     render(
       <MonthRecapList
+        current
         recap={{
+          ...empty,
           due: [
             { key: "1", date: "2026-11-08", label: "Affitto", source: "rule", amountCents: -80000, overdue: true },
             { key: "2", date: "2026-11-20", label: "Spesa", source: "estimate", amountCents: -15000, overdue: false },
@@ -23,7 +35,6 @@ describe("MonthRecapList", () => {
           dueTotals: { outCents: 95000, inCents: 0 },
           paidTotals: { outCents: 0, inCents: 200000 },
         }}
-        period="novembre 2026"
       />,
     );
     const due = screen.getByRole("region", { name: "Da contabilizzare" });

@@ -65,6 +65,15 @@ describe("accountMonthRecap", () => {
     ]);
   });
 
+  it("starts a future month from the previous month's closing balance", () => {
+    const movements = [mv("2026-11-20", -5000, "Luce"), mv("2026-11-27", 3000, "Rimborso"), mv("2026-12-10", -1000, "Netflix"), mv("2027-01-05", -700, "Gennaio")];
+    const nov = accountMonthRecap(movements, [], "a", 10000, today);
+    const dec = accountMonthRecap(movements, [], "a", 10000, today, "2026-12");
+    expect(nov).toMatchObject({ month: "2026-11", openingCents: 10000, closingCents: 8000 });
+    expect(dec).toMatchObject({ month: "2026-12", openingCents: nov.closingCents, closingCents: 7000, paid: [] });
+    expect(dec.due.map((x) => x.label)).toEqual(["Netflix"]);
+  });
+
   it("returns the balance unchanged when nothing happens", () => {
     expect(accountMonthRecap([], [], "a", 500, today)).toMatchObject({ paid: [], due: [], closingCents: 500 });
   });

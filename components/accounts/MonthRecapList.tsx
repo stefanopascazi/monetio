@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import { Amount, Badge, type BadgeTone, Card } from "@monetio/ui";
-import { dateLabel } from "@/lib/domain/dates";
+import { addMonthsToKey, dateLabel, monthLabel } from "@/lib/domain/dates";
 import type { MonthRecap, RecapItem, RecapTotals } from "@/lib/domain/month-recap";
 
 const SOURCE: Record<RecapItem["source"], { label: string; tone: BadgeTone } | null> = {
@@ -56,12 +57,41 @@ function Group({ title, period, items, totals, empty }: { title: string; period:
   );
 }
 
-/** Whole month of one account as two separate cards: still to book first, then booked. */
-export function MonthRecapList({ recap, period }: { recap: Pick<MonthRecap, "paid" | "due" | "paidTotals" | "dueTotals">; period: string }) {
+export interface MonthRecapListProps {
+  recap: Pick<MonthRecap, "month" | "openingCents" | "closingCents" | "paid" | "due" | "paidTotals" | "dueTotals">;
+  /** Today's month: the opening is the current balance and booked rows are always listed. */
+  current: boolean;
+  /** Month navigation (PeriodNav). */
+  nav?: ReactNode;
+}
+
+const balanceTone = (cents: number) => (cents < 0 ? "expense" : "neutral");
+
+/** Month of one account: balances and navigation, then still to book and booked as separate cards. */
+export function MonthRecapList({ recap, current, nav }: MonthRecapListProps) {
+  const period = monthLabel(recap.month, true);
+  const showPaid = current || recap.paid.length > 0;
   return (
     <div className="flex flex-col gap-4">
-      <Group title="Da contabilizzare" period={period} items={recap.due} totals={recap.dueTotals} empty="Nessun movimento da contabilizzare questo mese." />
-      <Group title="Contabilizzato" period={period} items={recap.paid} totals={recap.paidTotals} empty="Nessun movimento contabilizzato questo mese." />
+      <section aria-label="Riepilogo del mese" className="flex flex-col gap-3 rounded-[22px] bg-surface px-5 py-4">
+        {nav}
+        <dl className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-ink-muted">{current ? "Saldo attuale" : `Rimanenza di ${monthLabel(addMonthsToKey(recap.month, -1), true)}`}</dt>
+            <dd>
+              <Amount cents={recap.openingCents} tone={balanceTone(recap.openingCents)} size="md" />
+            </dd>
+          </div>
+          <div className="flex flex-col items-end gap-0.5">
+            <dt className="text-ink-muted">Rimanenza a fine mese</dt>
+            <dd>
+              <Amount cents={recap.closingCents} tone={balanceTone(recap.closingCents)} size="md" />
+            </dd>
+          </div>
+        </dl>
+      </section>
+      <Group title="Da contabilizzare" period={period} items={recap.due} totals={recap.dueTotals} empty={`Nessun movimento da contabilizzare: ${period}.`} />
+      {showPaid && <Group title="Contabilizzato" period={period} items={recap.paid} totals={recap.paidTotals} empty={`Nessun movimento contabilizzato: ${period}.`} />}
     </div>
   );
 }

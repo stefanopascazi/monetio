@@ -5,6 +5,7 @@ import { AccountSettings } from "@/components/accounts/AccountSettings";
 import { StreamBlock } from "@/components/common/StreamBlock";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
+import { recapMonth } from "@/lib/data/recap-month";
 import { statementPeriod } from "@/lib/data/statement-period";
 import { todayISO } from "@/lib/domain/dates";
 import { BalanceHistoryCard } from "./sections/BalanceHistoryCard";
@@ -49,7 +50,7 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
             <StatementEntry accountId={id} today={today} />
           </StreamBlock>
           <StreamBlock height={160}>
-            <MonthRecapCard accountId={id} balanceCents={account.balanceCents} today={today} />
+            <MonthRecapCard accountId={id} balanceCents={account.balanceCents} today={today} month={recapMonth(sp.proiezione, today)} sp={sp} />
           </StreamBlock>
           <Suspense fallback={null}>
             <BalanceHistoryCard accountId={id} accountName={account.name} year={year} />

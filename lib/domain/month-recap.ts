@@ -1,5 +1,5 @@
-// Everything happening on one account in the current month: what is paid and what is still due.
-import { endOfMonth, monthKey } from "./dates";
+// Everything happening on one account in a month: what is booked and what is still expected.
+import { endOfMonth, monthKey, startOfMonth } from "./dates";
 import type { Movement, MovementSource } from "./projection";
 import type { ISODate, Transaction } from "./types";
 
@@ -22,7 +22,11 @@ export interface RecapTotals {
 }
 
 export interface MonthRecap {
-  /** Booked this month, newest first. */
+  /** `YYYY-MM` of the recap. */
+  month: string;
+  /** Current balance for this month, previous month's closing for later ones. */
+  openingCents: number;
+  /** Booked in the month, newest first. */
   paid: RecapItem[];
   /** Still expected until month end, in date order (overdue first, dated today). */
   due: RecapItem[];
@@ -37,24 +41,32 @@ const totals = (items: RecapItem[]): RecapTotals => ({
   inCents: items.reduce((s, x) => s + (x.amountCents > 0 ? x.amountCents : 0), 0),
 });
 
-/** Month recap of `accountId`: booked rows of today's month plus projected movements until its end. */
+/**
+ * Month recap of `accountId` for `month` (today's month by default): booked rows of that month
+ * plus projected movements in it. A future month starts from the previous month's closing balance,
+ * i.e. the current balance plus every projected movement before it.
+ */
 export function accountMonthRecap(
   movements: Movement[],
   booked: Pick<Transaction, "id" | "accountId" | "status" | "bookedOn" | "description" | "amountCents">[],
   accountId: string,
   balanceCents: number,
   today: ISODate,
+  month: string = monthKey(today),
 ): MonthRecap {
-  const month = monthKey(today);
+  const first = startOfMonth(month);
   const last = endOfMonth(month);
+  const own = movements.filter((m) => m.accountId === accountId && m.amountCents !== 0);
+  // Booked rows are already in the balance: only earlier projected movements move the opening.
+  const openingCents = balanceCents + own.filter((m) => m.date < first).reduce((s, m) => s + m.amountCents, 0);
   const paid = booked
     .filter((t) => t.accountId === accountId && t.status === "booked" && monthKey(t.bookedOn) === month && t.amountCents !== 0)
     .map((t) => ({ key: t.id, date: t.bookedOn, label: t.description, source: "booked" as const, amountCents: t.amountCents, overdue: false }))
     .sort((a, b) => b.date.localeCompare(a.date));
-  const due = movements
-    .filter((m) => m.accountId === accountId && m.date <= last && m.amountCents !== 0)
+  const due = own
+    .filter((m) => m.date >= first && m.date <= last)
     .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false }))
     .sort((a, b) => a.date.localeCompare(b.date) || Number(b.overdue) - Number(a.overdue) || a.amountCents - b.amountCents);
   const dueTotals = totals(due);
-  return { paid, due, paidTotals: totals(paid), dueTotals, closingCents: balanceCents - dueTotals.outCents + dueTotals.inCents };
+  return { month, openingCents, paid, due, paidTotals: totals(paid), dueTotals, closingCents: openingCents - dueTotals.outCents + dueTotals.inCents };
 }

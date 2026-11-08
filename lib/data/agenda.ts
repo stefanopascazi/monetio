@@ -9,6 +9,7 @@ import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from 
 import { getContext } from "./context";
 import { categorySpentFrom, contributionSpendingFrom } from "./flows";
 import { listAccounts, listBookedOccurrences, listContributions, listFlows, listOverrides, listRules, listTransactions } from "./queries";
+import { RECAP_MONTHS } from "./recap-month";
 import { touchesVisible } from "./rule-visibility";
 
 const LOOKBACK_DAYS = 90;
@@ -101,12 +102,12 @@ export const loadProjection = cache(async (months: number) => {
   return { today: agenda.today, accounts: active, projection, details, summary };
 });
 
-/** This month's paid and still due movements of an account, with the resulting balances. */
-export const loadAccountMonthRecap = cache(async (accountId: string, balanceCents: number) => {
-  const { input } = await loadProjectionInput(1);
-  const month = monthKey(input.today);
-  const booked = await listTransactions({ accountId, status: "booked", from: startOfMonth(month), to: endOfMonth(month), limit: 1000 });
-  return accountMonthRecap(projectedMovements(input), booked, accountId, balanceCents, input.today);
+/** Booked and still expected movements of an account in a month (current by default), with its balances. */
+export const loadAccountMonthRecap = cache(async (accountId: string, balanceCents: number, month?: string) => {
+  const { input } = await loadProjectionInput(RECAP_MONTHS);
+  const m = month ?? monthKey(input.today);
+  const booked = await listTransactions({ accountId, status: "booked", from: startOfMonth(m), to: endOfMonth(m), limit: 1000 });
+  return accountMonthRecap(projectedMovements(input), booked, accountId, balanceCents, input.today, m);
 });
 
 /** Expected month-end balance ("rimanenza") per visible account. */
