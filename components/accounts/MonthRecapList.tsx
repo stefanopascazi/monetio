@@ -1,4 +1,4 @@
-import { Amount, Badge, type BadgeTone } from "@monetio/ui";
+import { Amount, Badge, type BadgeTone, Card } from "@monetio/ui";
 import { dateLabel } from "@/lib/domain/dates";
 import type { MonthRecap, RecapItem, RecapTotals } from "@/lib/domain/month-recap";
 
@@ -19,17 +19,11 @@ function Totals({ totals }: { totals: RecapTotals }) {
   );
 }
 
-function Group({ title, items, totals, empty }: { title: string; items: RecapItem[]; totals: RecapTotals; empty: string }) {
+function Group({ title, period, items, totals, empty }: { title: string; period: string; items: RecapItem[]; totals: RecapTotals; empty: string }) {
   return (
-    <section aria-label={title}>
-      <h3 className="flex items-center justify-between gap-3 bg-surface px-5 py-2 text-sm font-semibold text-ink">
-        <span>
-          {title} <span className="font-normal text-ink-muted">· {items.length}</span>
-        </span>
-        <Totals totals={totals} />
-      </h3>
+    <Card aria-label={title} title={title} subtitle={`${items.length} ${items.length === 1 ? "movimento" : "movimenti"} · ${period}`} action={<Totals totals={totals} />} padding="none" collapsible>
       {items.length === 0 ? (
-        <p className="px-5 py-3 text-sm text-ink-muted">{empty}</p>
+        <p className="px-5 pb-4 text-sm text-ink-muted">{empty}</p>
       ) : (
         <ul className="divide-y divide-[var(--mio-border)]">
           {items.map((x) => {
@@ -58,16 +52,16 @@ function Group({ title, items, totals, empty }: { title: string; items: RecapIte
           })}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }
 
-/** Whole month of one account: still due first, then already paid. */
-export function MonthRecapList({ recap }: { recap: Pick<MonthRecap, "paid" | "due" | "paidTotals" | "dueTotals"> }) {
+/** Whole month of one account as two separate cards: still to book first, then booked. */
+export function MonthRecapList({ recap, period }: { recap: Pick<MonthRecap, "paid" | "due" | "paidTotals" | "dueTotals">; period: string }) {
   return (
-    <div className="flex flex-col">
-      <Group title="Da pagare" items={recap.due} totals={recap.dueTotals} empty="Nessun movimento ancora previsto questo mese." />
-      <Group title="Pagato" items={recap.paid} totals={recap.paidTotals} empty="Nessun movimento registrato questo mese." />
+    <div className="flex flex-col gap-4">
+      <Group title="Da contabilizzare" period={period} items={recap.due} totals={recap.dueTotals} empty="Nessun movimento da contabilizzare questo mese." />
+      <Group title="Contabilizzato" period={period} items={recap.paid} totals={recap.paidTotals} empty="Nessun movimento contabilizzato questo mese." />
     </div>
   );
 }
