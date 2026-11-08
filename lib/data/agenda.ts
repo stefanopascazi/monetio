@@ -1,8 +1,9 @@
 import "server-only";
 import { cache } from "react";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth, todayISO } from "../domain/dates";
+import { accountMonthRecap } from "../domain/month-recap";
 import { monthlySummary } from "../domain/monthly-summary";
-import { type ProjectionInput, projectBalances } from "../domain/projection";
+import { type ProjectionInput, projectBalances, projectedMovements } from "../domain/projection";
 import { projectionDetails } from "../domain/projection-details";
 import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
 import { getContext } from "./context";
@@ -50,8 +51,8 @@ export const loadAgenda = cache(async () => {
   };
 });
 
-/** Month-end balance projection for the visible, non-archived accounts. */
-export const loadProjection = cache(async (months: number) => {
+/** Projection input for the visible, non-archived accounts over `months` month ends. */
+const loadProjectionInput = cache(async (months: number) => {
   const agenda = await loadAgenda();
   const current = monthKey(agenda.today);
   const [accounts, planned, monthFlows] = await Promise.all([
@@ -78,6 +79,12 @@ export const loadProjection = cache(async (months: number) => {
     lookbackDays: LOOKBACK_DAYS,
     overrides: agenda.overrides,
   };
+  return { agenda, active, ids, rules, contributions, input };
+});
+
+/** Month-end balance projection for the visible, non-archived accounts. */
+export const loadProjection = cache(async (months: number) => {
+  const { agenda, active, ids, rules, contributions, input } = await loadProjectionInput(months);
   const projection = projectBalances(input);
   const details = projectionDetails(input, [...ids], DETAIL_MONTHS);
   // Movements towards accounts the viewer cannot see (e.g. a private one) are dropped.
@@ -92,6 +99,12 @@ export const loadProjection = cache(async (months: number) => {
     agenda.today,
   );
   return { today: agenda.today, accounts: active, projection, details, summary };
+});
+
+/** Movements still expected on an account before month end, with the resulting balances. */
+export const loadAccountMonthRecap = cache(async (accountId: string, balanceCents: number) => {
+  const { input } = await loadProjectionInput(1);
+  return accountMonthRecap(projectedMovements(input), accountId, balanceCents, input.today);
 });
 
 /** Pending transfers per account up to the end of the current month. */

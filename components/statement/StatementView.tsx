@@ -8,6 +8,8 @@ import { listAccounts } from "@/lib/data/queries";
 import { statementPeriod } from "@/lib/data/statement-period";
 import { todayISO } from "@/lib/domain/dates";
 import { BalanceHistoryCard } from "./sections/BalanceHistoryCard";
+import { MonthNetNote } from "./sections/MonthNetNote";
+import { MonthRecapCard } from "./sections/MonthRecapCard";
 import { PlannedCard } from "./sections/PlannedCard";
 import { StatementCard } from "./sections/StatementCard";
 import { StatementEntry } from "./sections/StatementEntry";
@@ -37,15 +39,23 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
         balanceCents={account.balanceCents}
         settings={<AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />}
         note={
-          <Suspense fallback={null}>
-            <StatementPendingNote accountId={id} />
-          </Suspense>
+          <>
+            <Suspense fallback={null}>
+              <MonthNetNote accountId={id} balanceCents={account.balanceCents} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <StatementPendingNote accountId={id} />
+            </Suspense>
+          </>
         }
       />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-4">
           <StreamBlock height={120}>
             <StatementEntry accountId={id} today={today} />
+          </StreamBlock>
+          <StreamBlock height={160}>
+            <MonthRecapCard accountId={id} balanceCents={account.balanceCents} today={today} />
           </StreamBlock>
           <Suspense fallback={null}>
             <BalanceHistoryCard accountId={id} accountName={account.name} year={year} />
