@@ -62,25 +62,10 @@ describe("projectBalances", () => {
     expect(res[0].byAccount.joint).toBe(180000);
   });
 
-  it("uses only the remaining part of an estimate in the current month", () => {
-    const spesa = rule({ id: "s", accountId: "joint", categoryId: "spesa", amountCents: -45000, schedule: "estimate", dayOfMonth: 15 });
-    const res = projectBalances({ ...base, months: 2, rules: [spesa], estimateUsed: () => 30000 });
-    expect(res.map((p) => p.byAccount.joint)).toEqual([85000, 40000]);
-  });
-
-  it("never lets the same spending reduce two estimates of one category", () => {
-    const asilo = rule({ id: "a", accountId: "joint", categoryId: "figli", amountCents: -20000, schedule: "estimate", dayOfMonth: 28 });
-    const sitter = rule({ id: "b", accountId: "joint", categoryId: "figli", amountCents: -24000, schedule: "estimate", dayOfMonth: 28 });
-    const [p] = projectBalances({ ...base, months: 1, rules: [asilo, sitter], estimateUsed: () => 25000 });
-    // 250 spent: asilo fully used, 50 taken from the baby-sitter.
-    expect(p.byAccount.joint).toBe(100000 - 19000);
-  });
-
-  it("spreads the month's spending over the occurrences of a weekly estimate", () => {
-    const bar = rule({ id: "w", accountId: "joint", categoryId: "bar", amountCents: -2000, frequency: "weekly", schedule: "estimate", startDate: "2026-11-02" });
-    const [p] = projectBalances({ ...base, months: 1, rules: [bar], estimateUsed: () => 3000 });
-    // Five Mondays in November 2026: 100 budget, 30 already spent.
-    expect(p.byAccount.joint).toBe(100000 - 7000);
+  it("counts estimates in full even with spending already booked in their category", () => {
+    const psicologa = rule({ id: "p", accountId: "joint", categoryId: "salute", amountCents: -6500, schedule: "estimate", dayOfMonth: 15 });
+    const res = projectBalances({ ...base, months: 2, rules: [psicologa], estimateUsed: () => 1700 });
+    expect(res.map((p) => p.byAccount.joint)).toEqual([93500, 87000]);
   });
 
   it("treats last month's statement as covering a card's current estimate", () => {

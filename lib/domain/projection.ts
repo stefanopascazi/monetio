@@ -16,7 +16,7 @@ export interface ProjectionInput {
   booked: Set<string>;
   /** Shared spending booked so far for a contribution in a month (positive cents). */
   contributionSpending: (rule: ContributionRule, month: string) => number;
-  /** Amount booked so far in a month towards an estimate rule (positive cents), see `estimateUsedFrom`. */
+  /** Amount booked in a month towards an estimate rule (positive cents): only for the card statement check. */
   estimateUsed: (rule: RecurringRule, month: string) => number;
   /** Planned one-off transactions. */
   planned: Transaction[];
@@ -69,25 +69,14 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue });
   };
 
-  // Booked amounts still to absorb per estimate group: estimates sharing account, category and
-  // direction draw from one pool, so the same spending never reduces two of them.
-  const usedPool = new Map<string, number>();
-  const estimateKey = (r: RecurringRule) => [r.accountId, r.categoryId, r.kind, r.counterpartAccountId, Math.sign(r.amountCents)].join("|");
-
   for (const r of rules) {
     if (!r.active) continue;
     const counterpart = r.kind === "transfer" ? r.counterpartAccountId : null;
     if (r.schedule === "estimate") {
-      const key = estimateKey(r);
+      // Estimates always count in full: booked spending in the category does not reduce them.
       for (const d of occurrences(r, startOfMonth(currentMonth), end)) {
-        let amount = r.amountCents;
-        if (monthKey(d) === currentMonth) {
-          const covered = input.cardAccountIds?.has(r.accountId) && input.estimateUsed(r, addMonthsToKey(currentMonth, -1)) > 0;
-          const pool = usedPool.get(key) ?? input.estimateUsed(r, currentMonth);
-          const taken = Math.min(pool, Math.abs(r.amountCents));
-          usedPool.set(key, pool - taken);
-          amount = covered ? 0 : Math.sign(r.amountCents) * (Math.abs(r.amountCents) - taken);
-        }
+        const covered = monthKey(d) === currentMonth && input.cardAccountIds?.has(r.accountId) && input.estimateUsed(r, addMonthsToKey(currentMonth, -1)) > 0;
+        const amount = covered ? 0 : r.amountCents;
         if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate");
       }
       continue;
