@@ -7,6 +7,7 @@ import { RuleList } from "@/components/rules/RuleList";
 import { loadAgenda } from "@/lib/data/agenda";
 import { contributionSpendingFrom } from "@/lib/data/flows";
 import { contributionViews, dueViews, ruleViews } from "@/lib/data/page-views";
+import { categoryRefs } from "@/components/common/options";
 import { listAccounts, listCategories, listHiddenAccounts } from "@/lib/data/queries";
 import { transferTargets } from "@/lib/data/transfer-targets";
 import { DueList } from "./DueList";
@@ -17,7 +18,7 @@ export async function AgendaView() {
   const [accounts, categories, hidden] = await Promise.all([listAccounts(), listCategories(), listHiddenAccounts()]);
   const active = accounts.filter((a) => !a.archived);
   const refs = active.map((a) => ({ id: a.id, name: a.name }));
-  const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
+  const catRefs = categoryRefs(categories);
   const targets = transferTargets(hidden);
   const due = dueViews(agenda.due, agenda.rules, active, hidden);
   const overdue = due.filter((d) => d.date < agenda.today);

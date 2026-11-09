@@ -28,9 +28,10 @@ export const listAccounts = cache(async (): Promise<AccountWithBalance[]> => {
   });
 });
 
+/** Every category, archived included: history keeps their name and look; pickers filter them out. */
 export const listCategories = cache(async (): Promise<Category[]> => {
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
-  const { data, error } = await supabase.from("categories").select("*").eq("household_id", hh).is("archived_at", null).order("name");
+  const { data, error } = await supabase.from("categories").select("*").eq("household_id", hh).order("name");
   if (error) throw error;
   return (data ?? []).map(mapCategory);
 });
