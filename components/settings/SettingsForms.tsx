@@ -4,7 +4,8 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button, FormPanel, InlineConfirm, Select, TextField } from "@monetio/ui";
 import { archiveCategory, createCategory, updateProfile } from "@/app/actions/settings";
-import { CATEGORY_ICON_NAMES, CategoryIcon } from "@/components/common/CategoryIcon";
+import { CategoryIcon, categoryTint } from "@/components/common/CategoryIcon";
+import { CategoryAppearancePicker } from "@/components/settings/CategoryAppearancePicker";
 import { FormMessage } from "@/components/common/FormMessage";
 import { useFormAction } from "@/hooks/useFormAction";
 import { useToastAction } from "@/hooks/useToastAction";
@@ -40,8 +41,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
         <FormMessage state={state} />
         <TextField name="name" label="Nome" placeholder="Es. Vacanze" error={error("name")} required />
         <Select name="kind" label="Usata per" defaultValue="expense" options={Object.entries(KIND_LABEL).map(([value, label]) => ({ value, label }))} />
-        <Select name="icon" label="Icona" defaultValue="sparkles" options={CATEGORY_ICON_NAMES.map((n) => ({ value: n, label: n }))} />
-        <Select name="colorIndex" label="Colore" defaultValue="1" options={[1, 2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: `Colore ${n}` }))} />
+        <CategoryAppearancePicker />
       </FormPanel>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((c) => (
@@ -49,7 +49,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
             <span className="flex items-center gap-3">
               <span
                 className="inline-flex size-8 items-center justify-center rounded-full [&>svg]:size-4"
-                style={{ background: `color-mix(in srgb, var(--mio-chart-${c.colorIndex}) 18%, transparent)`, color: `var(--mio-chart-${c.colorIndex})` }}
+                style={categoryTint(c.colorIndex)}
               >
                 <CategoryIcon name={c.icon} />
               </span>
