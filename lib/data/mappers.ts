@@ -40,6 +40,7 @@ export function mapCategory(r: Row): Category {
     kind: r.kind as Category["kind"],
     icon: str(r.icon),
     colorIndex: Math.min(6, Math.max(1, num(r.color_index))) as Category["colorIndex"],
+    archived: r.archived_at != null,
   };
 }
 

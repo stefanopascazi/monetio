@@ -39,6 +39,8 @@ describe("mappers", () => {
     expect(mapRule({ id: "r", account_id: "a", counterpart_account_id: "b", kind: "transfer", description: "G", amount_cents: -1, fee_cents: 100, active: true })).toMatchObject({ paymentMethod: null, feeCents: 100 });
     expect(mapContribution({ id: "c", from_account_id: "a", to_account_id: "b", description: "Q", fixed_cents: "80000", share_percent: "50.00", category_ids: ["x"], rounding_cents: 1000, day_of_month: 28, estimated_spending_cents: 45000, start_date: "2026-11-01", active: true })).toMatchObject({ fixedCents: 80000, sharePercent: 50, categoryIds: ["x"] });
     expect(mapCategory({ id: "c", name: "Spesa", kind: "expense", icon: "cart", color_index: 9 }).colorIndex).toBe(6);
+    expect(mapCategory({ id: "c", name: "Spesa", kind: "expense", color_index: 1, archived_at: null }).archived).toBe(false);
+    expect(mapCategory({ id: "c", name: "Spesa", kind: "expense", color_index: 1, archived_at: "2026-11-09T10:00:00Z" }).archived).toBe(true);
     expect(mapMember({ id: "m", display_name: "Ste", email: null, user_id: "u", role: "admin" })).toEqual({ id: "m", displayName: "Ste", email: null, userId: "u", role: "admin" });
     expect(mapMember({ id: "m", display_name: "Ste", email: null, user_id: "u", role: "owner" }).role).toBe("admin");
   });

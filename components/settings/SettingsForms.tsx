@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button, FormPanel, TextField } from "@monetio/ui";
 import { createCategory, updateProfile } from "@/app/actions/settings";
+import { ArchivedCategories } from "@/components/settings/ArchivedCategories";
 import { CategoryFields } from "@/components/settings/CategoryFields";
 import { CategoryItem } from "@/components/settings/CategoryItem";
 import { FormMessage } from "@/components/common/FormMessage";
@@ -25,6 +26,7 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
   const [formKey, setFormKey] = useState(0);
   const reset = useCallback(() => setFormKey((k) => k + 1), []);
   const { state, pending, onSubmit, error } = useFormAction(createCategory, reset);
+  const active = categories.filter((c) => !c.archived);
   return (
     <div className="flex flex-col gap-4">
       <FormPanel
@@ -39,10 +41,11 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
         <CategoryFields error={error} />
       </FormPanel>
       <ul className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {categories.map((c) => (
+        {active.map((c) => (
           <CategoryItem key={c.id} category={c} />
         ))}
       </ul>
+      <ArchivedCategories categories={categories.filter((c) => c.archived)} />
     </div>
   );
 }

@@ -45,6 +45,16 @@ export async function archiveCategory(id: string): Promise<ActionState> {
   return success("Categoria archiviata.");
 }
 
+export async function restoreCategory(id: string): Promise<ActionState> {
+  if (!isUUID(id)) return failure("Categoria non trovata.");
+  await getContext();
+  const supabase = await createClient();
+  const { error } = await supabase.from("categories").update({ archived_at: null }).eq("id", id);
+  if (error) return failure(dbErrorMessage(error));
+  refresh();
+  return success("Categoria ripristinata.");
+}
+
 /** Own display name in the active household (household name is renamed by admins). */
 export async function updateProfile(prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await getContext();

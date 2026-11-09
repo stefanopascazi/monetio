@@ -4,8 +4,9 @@ import { FORMER_MEMBER, HIDDEN_ACCOUNT, creatorName, hiddenAccountName, toTxnVie
 
 describe("toTxnView", () => {
   const accounts = [{ id: "a1", name: "Cointestato" }];
-  const categories = [{ id: "c", name: "Spesa", kind: "expense" as const, icon: "shopping-cart", colorIndex: 4 as const }];
+  const categories = [{ id: "c", name: "Spesa", kind: "expense" as const, icon: "shopping-cart", colorIndex: 4 as const, archived: true }];
 
+  // Archived categories still label their past transactions.
   it("resolves names and flags", () => {
     const v = toTxnView(txn({ amountCents: -100, bookedOn: "2026-11-01", categoryId: "c", recurringRuleId: "r" }), accounts, categories);
     expect(v).toMatchObject({ accountName: "Cointestato", categoryName: "Spesa", categoryIcon: "shopping-cart", colorIndex: 4, recurring: true, isTransfer: false });

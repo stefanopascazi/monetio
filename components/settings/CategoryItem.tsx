@@ -41,7 +41,7 @@ export function CategoryItem({ category: c }: { category: Category }) {
           <InlineConfirm
             triggerLabel="Archivia"
             triggerIcon={<Trash2 />}
-            message="Archivio la categoria? Sparisce dalle scelte; i movimenti già registrati restano."
+            message="Archivio la categoria? Non si potrà scegliere nei nuovi movimenti; quelli registrati la mantengono e puoi ripristinarla quando vuoi."
             confirmLabel="Archivia"
             onConfirm={() => run(() => archiveCategory(c.id))}
           />

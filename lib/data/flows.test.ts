@@ -60,8 +60,8 @@ describe("flows", () => {
 
   it("builds category slices", () => {
     const cats = [
-      { id: "spesa", name: "Spesa", kind: "expense" as const, icon: null, colorIndex: 1 as const },
-      { id: "luce", name: "Luce", kind: "expense" as const, icon: null, colorIndex: 2 as const },
+      { id: "spesa", name: "Spesa", kind: "expense" as const, icon: null, colorIndex: 1 as const, archived: false },
+      { id: "luce", name: "Luce", kind: "expense" as const, icon: null, colorIndex: 2 as const, archived: false },
     ];
     expect(categorySlices(flows, "2026-10", cats)).toEqual([
       { label: "Spesa", valueCents: 28057 },

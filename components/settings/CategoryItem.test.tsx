@@ -11,7 +11,7 @@ vi.mock("@/app/actions/settings", () => ({
   archiveCategory: vi.fn(async () => ({ ok: true, message: "ok" })),
 }));
 
-const food: Category = { id: "c1", name: "Spesa", kind: "expense", icon: "shopping-cart", colorIndex: 2 };
+const food: Category = { id: "c1", name: "Spesa", kind: "expense", icon: "shopping-cart", colorIndex: 2, archived: false };
 
 const renderItem = () =>
   render(

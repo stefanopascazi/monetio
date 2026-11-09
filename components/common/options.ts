@@ -5,6 +5,16 @@ import type { AccountType, RuleFrequency, RuleSchedule } from "@/lib/domain/type
 export interface NamedRef {
   id: string;
   name: string;
+  archived?: boolean;
+}
+
+export const categoryRefs = (categories: NamedRef[]): NamedRef[] => categories.map(({ id, name, archived }) => ({ id, name, archived }));
+
+/** Drops archived refs unless listed in `keep` (values already saved on the item); kept ones are labelled. */
+export function selectableRefs(items: NamedRef[], keep: readonly (string | null | undefined)[] = []): NamedRef[] {
+  return items
+    .filter((i) => !i.archived || keep.includes(i.id))
+    .map((i) => (i.archived ? { ...i, name: `${i.name} (archiviata)` } : i));
 }
 
 export const toOptions = (items: NamedRef[]): SelectOption[] => items.map((i) => ({ value: i.id, label: i.name }));
