@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Amount, Card, ProjectionChart, type ProjectionPoint, SegmentedControl, Select } from "@monetio/ui";
+import { Amount, Card, ProjectionChart, type ProjectionPoint, SegmentedControl } from "@monetio/ui";
+import { useProjectionAccount } from "./account/ProjectionAccountContext";
 import { HORIZONS } from "./horizons";
 
 export interface ProjectionSeries {
@@ -11,9 +11,9 @@ export interface ProjectionSeries {
   points: ProjectionPoint[];
 }
 
-/** Projection chart with an account picker; series are computed on the server. */
+/** Projection chart for the page-wide account selection; series are computed on the server. */
 export function ProjectionPanel({ series, title, subtitle }: { series: ProjectionSeries[]; title: string; subtitle?: string }) {
-  const [selected, setSelected] = useState(series[0]?.id ?? "");
+  const { selected } = useProjectionAccount();
   const current = series.find((s) => s.id === selected) ?? series[0];
   if (!current) return null;
   const projected = current.points.filter((p) => p.projected);
@@ -23,9 +23,6 @@ export function ProjectionPanel({ series, title, subtitle }: { series: Projectio
   return (
     <Card title={title} subtitle={subtitle}>
       <div className="flex flex-col gap-4">
-        {series.length > 1 && (
-          <Select label="Conto" value={selected} onChange={(e) => setSelected(e.target.value)} options={series.map((s) => ({ value: s.id, label: s.name }))} className="max-w-xs" />
-        )}
         <ProjectionChart data={current.points} title={`Proiezione ${current.name}`} />
         <div className="grid grid-cols-2 gap-4">
           {last && (

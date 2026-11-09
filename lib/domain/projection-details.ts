@@ -4,13 +4,16 @@ import { type MovementSource, type ProjectionInput, projectedMovements } from ".
 
 export interface DetailItem {
   label: string;
-  source: MovementSource;
+  /** "booked" for movements already in the balance (current month only). */
+  source: MovementSource | "booked";
   /** Signed sum for the month (positive = money in). */
   amountCents: number;
   /** Occurrences merged into this line (e.g. a weekly rule). */
   count: number;
   /** Past due and unpaid, carried into the current month. */
   overdue: boolean;
+  /** Booked transfers: the other account, to drop transfers inside a merged view. */
+  counterpartId?: string;
 }
 
 export interface AccountMonthDetail {
