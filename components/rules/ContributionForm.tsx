@@ -14,18 +14,20 @@ export interface ContributionFormProps {
   accounts: NamedRef[];
   categories: NamedRef[];
   contribution?: ContributionRule;
-  /** Edit mode: called after a successful save (e.g. to close the parent accordion). */
+  /** Called after a successful save (edit: close the accordion; plain create: close the modal). */
   onSaved?: () => void;
+  /** Create form without panel chrome, for hosts that already show a title (modal). */
+  plain?: boolean;
 }
 
 /** Monthly quota towards a shared account: fixed part + share of the shared spending. */
-export function ContributionForm({ action, accounts, categories, contribution: c, onSaved }: ContributionFormProps) {
+export function ContributionForm({ action, accounts, categories, contribution: c, onSaved, plain }: ContributionFormProps) {
   const embedded = !!c;
   const [fixed, setFixed] = useState<number | null>(c?.fixedCents ?? null);
   const [estimate, setEstimate] = useState<number | null>(c?.estimatedSpendingCents ?? null);
   const [cats, setCats] = useState<string[]>(c?.categoryIds ?? []);
   const [active, setActive] = useState(c?.active ?? true);
-  const [open, setOpen] = useState(embedded);
+  const [open, setOpen] = useState(embedded || !!plain);
   const [formKey, setFormKey] = useState(0);
   // After saving: close the panel so the outcome is visible, and clear the create form.
   const reset = useCallback(() => {
@@ -35,6 +37,7 @@ export function ContributionForm({ action, accounts, categories, contribution: c
     setEstimate(null);
     setCats([]);
     setFormKey((k) => k + 1);
+    onSaved?.();
   }, [embedded, onSaved]);
   const { state, pending, onSubmit, error } = useFormAction(action, reset);
   const toggle = (id: string) => setCats((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -45,7 +48,8 @@ export function ContributionForm({ action, accounts, categories, contribution: c
       title={embedded ? "Modifica quota" : "Nuova quota automatica"}
       description={embedded ? undefined : "Es. metà della spesa del mese scorso sulla carta"}
       icon={embedded ? undefined : <Plus />}
-      collapsible={!embedded}
+      collapsible={!embedded && !plain}
+      plain={plain}
       open={open}
       onOpenChange={setOpen}
       onSubmit={onSubmit}

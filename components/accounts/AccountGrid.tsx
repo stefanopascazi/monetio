@@ -1,9 +1,6 @@
-import Link from "next/link";
-import { AccountCard } from "@monetio/ui";
 import type { AccountWithBalance } from "@/lib/data/queries";
-import { BALANCES_CLASS } from "@/lib/privacy/balance-privacy";
-import { MonthEndNote } from "./MonthEndNote";
 import type { Member } from "@/lib/domain/types";
+import { AccountLinkCard } from "./AccountLinkCard";
 
 /** Names shown on an account card: everyone for shared accounts, the owner for private ones. */
 export function accountMembers(
@@ -32,21 +29,16 @@ export function AccountGrid({
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
     >
       {accounts.map((a) => (
-        <Link
+        <AccountLinkCard
           key={a.id}
           href={`/conti/${a.id}`}
-          className="rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          <AccountCard
-            name={a.name}
-            institution={a.institution ?? undefined}
-            type={a.type}
-            balanceCents={a.balanceCents}
-            members={accountMembers(a, members)}
-            className={BALANCES_CLASS}
-            footer={monthEnd?.[a.id] !== undefined ? <MonthEndNote cents={monthEnd[a.id]} /> : undefined}
-          />
-        </Link>
+          name={a.name}
+          institution={a.institution}
+          type={a.type}
+          balanceCents={a.balanceCents}
+          members={accountMembers(a, members)}
+          monthEndCents={monthEnd?.[a.id]}
+        />
       ))}
     </section>
   );

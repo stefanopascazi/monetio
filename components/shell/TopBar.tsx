@@ -1,13 +1,14 @@
 import { CircleUserRound } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { BalancePrivacyToggle } from "./BalancePrivacyToggle";
 import { TOPBAR_ID, TOPBAR_SLOT_ID } from "./topbar-ids";
 
 /**
- * Sticky wordmark bar: page actions slot (filled via HeaderAction), balance privacy toggle and
- * personal area link. Static: no session reads. Theme lives in settings.
+ * Sticky wordmark bar: page actions slot (filled via TopBarAction), quick-create "+", balance privacy
+ * toggle and personal area link. Static itself: session data arrives through the `create` slot.
  */
-export function TopBar() {
+export function TopBar({ create }: { create?: ReactNode }) {
   return (
     <header
       id={TOPBAR_ID}
@@ -18,6 +19,7 @@ export function TopBar() {
       </Link>
       <div className="flex items-center gap-2">
         <div id={TOPBAR_SLOT_ID} className="flex items-center gap-2 empty:hidden" />
+        {create}
         <BalancePrivacyToggle />
         <Link
           href="/impostazioni"

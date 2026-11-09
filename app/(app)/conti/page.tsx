@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AccountsView } from "@/components/accounts/AccountsView";
+import { AccountsLanding } from "@/components/accounts/AccountsLanding";
 import { PageSkeleton } from "@/components/common/PageSkeleton";
 
 export const metadata: Metadata = { title: "Conti" };
@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Conti" };
 export default function AccountsPage() {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <AccountsView />
+      <AccountsLanding />
     </Suspense>
   );
 }

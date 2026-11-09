@@ -16,4 +16,9 @@ describe("TopBar", () => {
     expect(container.querySelector(`#${TOPBAR_SLOT_ID}`)).not.toBeNull();
     expect(screen.queryByRole("radiogroup")).toBeNull();
   });
+
+  it("renders the quick-create slot", () => {
+    render(<TopBar create={<button>Aggiungi</button>} />);
+    expect(screen.getByRole("banner")).toContainElement(screen.getByRole("button", { name: "Aggiungi" }));
+  });
 });
