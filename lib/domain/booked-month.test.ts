@@ -4,6 +4,7 @@ import type { ProjectionDetailMonth } from "./projection-details";
 
 const row = (amountCents: number, p: Partial<BookedRow> = {}): BookedRow => ({
   accountId: "a",
+  counterpartAccountId: null,
   categoryId: "food",
   kind: amountCents < 0 ? "expense" : "income",
   amountCents,
@@ -19,6 +20,16 @@ describe("bookedItems", () => {
       { label: "Stipendio", source: "booked", amountCents: 150000, count: 1, overdue: false },
       { label: "Spesa", source: "booked", amountCents: -5000, count: 2, overdue: false },
       { label: "Spesa", source: "booked", amountCents: 500, count: 1, overdue: false },
+    ]);
+  });
+
+  it("names the other account of booked transfers, one line per counterpart", () => {
+    const t = (cents: number, to: string | null) => row(cents, { kind: "transfer", categoryId: null, counterpartAccountId: to });
+    const items = bookedItems([t(-100, "b"), t(-50, "b"), t(300, "b"), t(-20, "secret")], names, { b: "Conto B" });
+    expect(items.map((x) => [x.label, x.amountCents, x.counterpartId])).toEqual([
+      ["Giroconto da Conto B", 300, "b"],
+      ["Giroconto verso Conto B", -150, "b"],
+      [TRANSFERS_LABEL, -20, "secret"],
     ]);
   });
 

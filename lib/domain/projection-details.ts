@@ -12,6 +12,8 @@ export interface DetailItem {
   count: number;
   /** Past due and unpaid, carried into the current month. */
   overdue: boolean;
+  /** Booked transfers: the other account, to drop transfers inside a merged view. */
+  counterpartId?: string;
 }
 
 export interface AccountMonthDetail {

@@ -22,23 +22,33 @@ describe("detailMonthViews", () => {
     expect(v.expense.map((x) => x.label)).toEqual(["Mutuo"]);
   });
 
-  it("keeps booked lines apart and nets booked transfers of merged accounts", () => {
+  it("keeps booked income and expense apart and drops transfers inside the merged view", () => {
+    const b = (label: string, cents: number, p: Partial<DetailItem> = {}) => item(label, cents, { source: "booked", ...p });
     const withBooked: ProjectionDetailMonth[] = [
       {
         month: "2026-11",
         byAccount: {
-          joint: { openingCents: 0, closingCents: 0, items: [item("Spesa", -500, { source: "booked" }), item("Giroconti", 300, { source: "booked" })] },
-          ste: { openingCents: 0, closingCents: 0, items: [item("Giroconti", -300, { source: "booked" }), item("Mutuo", -100)] },
+          joint: { openingCents: 0, closingCents: 0, items: [b("Spesa", -500), b("Spesa", 200), b("Giroconto da Ste", 300, { counterpartId: "ste" })] },
+          ste: {
+            openingCents: 0,
+            closingCents: 0,
+            items: [b("Spesa", -100), b("Giroconto verso Joint", -300, { counterpartId: "joint" }), b("Giroconti", 700, { counterpartId: "hidden" }), item("Mutuo", -100)],
+          },
         },
       },
     ];
     const [one] = detailMonthViews(withBooked, ["joint"]);
-    expect(one.bookedExpense.map((x) => x.label)).toEqual(["Spesa"]);
-    expect(one.bookedIncome.map((x) => x.label)).toEqual(["Giroconti"]);
-    expect(one.expense).toEqual([]);
+    expect(one.bookedExpense.map((x) => [x.label, x.amountCents])).toEqual([["Spesa", -500]]);
+    expect(one.bookedIncome.map((x) => [x.label, x.amountCents])).toEqual([
+      ["Giroconto da Ste", 300],
+      ["Spesa", 200],
+    ]);
     const [all] = detailMonthViews(withBooked, ["joint", "ste"]);
-    expect(all.bookedExpense.map((x) => x.label)).toEqual(["Spesa"]);
-    expect(all.bookedIncome).toEqual([]);
+    expect(all.bookedExpense.map((x) => [x.label, x.amountCents, x.count])).toEqual([["Spesa", -600, 2]]);
+    expect(all.bookedIncome.map((x) => [x.label, x.amountCents])).toEqual([
+      ["Giroconti", 700],
+      ["Spesa", 200],
+    ]);
     expect(all.expense.map((x) => x.label)).toEqual(["Mutuo"]);
   });
 

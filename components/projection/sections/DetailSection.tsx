@@ -14,7 +14,7 @@ export async function DetailSection({ horizon }: { horizon: Horizon }) {
       subtitle={`Mese corrente con i movimenti già registrati, poi solo quelli previsti${projection.length > DETAIL_MONTHS ? `; oltre ${DETAIL_MONTHS} mesi restano solo i saldi` : ""}`}
       padding="none"
     >
-      <ProjectionDetail details={withBookedMonth(details, booked.month, booked.rows, booked.categoryNames)} accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
+      <ProjectionDetail details={withBookedMonth(details, booked.month, booked.rows, booked.categoryNames, Object.fromEntries(accounts.map((a) => [a.id, a.name])))} accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
     </Card>
   );
 }

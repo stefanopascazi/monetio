@@ -170,7 +170,7 @@ export const listBookedRows = cache(async (from: ISODate, to: ISODate): Promise<
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const { data, error } = await supabase
     .from("transactions")
-    .select("account_id, category_id, kind, amount_cents, booked_on")
+    .select("account_id, counterpart_account_id, category_id, kind, amount_cents, booked_on")
     .eq("household_id", hh)
     .eq("status", "booked")
     .gte("booked_on", from)
@@ -179,6 +179,7 @@ export const listBookedRows = cache(async (from: ISODate, to: ISODate): Promise<
   if (error) throw error;
   return (data ?? []).map((r) => ({
     accountId: String(r.account_id),
+    counterpartAccountId: r.counterpart_account_id ? String(r.counterpart_account_id) : null,
     categoryId: r.category_id ? String(r.category_id) : null,
     kind: r.kind as BookedRow["kind"],
     amountCents: Number(r.amount_cents),
