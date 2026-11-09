@@ -108,6 +108,12 @@ export const loadProjection = cache(async (months: number) => {
   return { today: agenda.today, accounts: active, projection, details, summary };
 });
 
+/** Movement detail over the whole horizon, for the yearly grid of horizons beyond DETAIL_MONTHS. */
+export const loadFullDetails = cache(async (months: number) => {
+  const { ids, input } = await loadProjectionInput(months);
+  return projectionDetails(input, [...ids]);
+});
+
 /** Booked rows of the current month and category names, for the projection detail. */
 export const loadCurrentMonthBooked = cache(async (): Promise<{ month: string; rows: BookedRow[]; categoryNames: Record<string, string> }> => {
   const { today } = await loadAgenda();
