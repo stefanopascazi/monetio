@@ -47,10 +47,12 @@ export interface TransactionFormProps {
   lockKind?: boolean;
   /** Embedded mode: called after a successful save (e.g. to close the parent accordion). */
   onSaved?: () => void;
+  /** Embedded mode without panel chrome, for hosts that already show a title (modal). */
+  plain?: boolean;
 }
 
 /** Add or edit a transaction inline (modal-free). */
-export function TransactionForm({ action, accounts, categories, transferTargets, defaults, title = "Nuovo movimento", submitLabel = "Salva movimento", embedded, lockKind, onSaved }: TransactionFormProps) {
+export function TransactionForm({ action, accounts, categories, transferTargets, defaults, title = "Nuovo movimento", submitLabel = "Salva movimento", embedded, lockKind, onSaved, plain }: TransactionFormProps) {
   const [kind, setKind] = useState<Kind>(defaults.kind);
   const [amount, setAmount] = useState<number | null>(defaults.amountCents ?? null);
   const [fee, setFee] = useState<number | null>(defaults.feeCents ?? null);
@@ -80,6 +82,7 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
       description={embedded ? undefined : "Uscita, entrata, giroconto, bonifico o CBill"}
       icon={embedded ? undefined : <Plus />}
       collapsible={!embedded}
+      plain={plain}
       open={open}
       onOpenChange={setOpen}
       onSubmit={onSubmit}

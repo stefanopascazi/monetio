@@ -22,24 +22,36 @@ export function ProfileForm({ displayName }: { displayName: string }) {
   );
 }
 
-export function CategoryManager({ categories }: { categories: Category[] }) {
+/** New category: collapsible panel in settings, or `plain` inside a host that shows the title (modal). */
+export function CategoryCreateForm({ plain, onSaved }: { plain?: boolean; onSaved?: () => void }) {
   const [formKey, setFormKey] = useState(0);
-  const reset = useCallback(() => setFormKey((k) => k + 1), []);
+  const reset = useCallback(() => {
+    setFormKey((k) => k + 1);
+    onSaved?.();
+  }, [onSaved]);
   const { state, pending, onSubmit, error } = useFormAction(createCategory, reset);
+  return (
+    <FormPanel
+      key={formKey}
+      title="Nuova categoria"
+      icon={<Plus />}
+      defaultOpen={false}
+      collapsible={!plain}
+      plain={plain}
+      onSubmit={onSubmit}
+      actions={<Button type="submit" loading={pending}>Aggiungi categoria</Button>}
+    >
+      <FormMessage state={state} />
+      <CategoryFields error={error} />
+    </FormPanel>
+  );
+}
+
+export function CategoryManager({ categories }: { categories: Category[] }) {
   const active = categories.filter((c) => !c.archived);
   return (
     <div className="flex flex-col gap-4">
-      <FormPanel
-        key={formKey}
-        title="Nuova categoria"
-        icon={<Plus />}
-        defaultOpen={false}
-        onSubmit={onSubmit}
-        actions={<Button type="submit" loading={pending}>Aggiungi categoria</Button>}
-      >
-        <FormMessage state={state} />
-        <CategoryFields error={error} />
-      </FormPanel>
+      <CategoryCreateForm />
       <ul className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {active.map((c) => (
           <CategoryItem key={c.id} category={c} />

@@ -25,19 +25,21 @@ export interface RuleFormProps {
   transferTargets?: NamedRef[];
   rule?: RecurringRule;
   today: string;
-  /** Edit mode: called after a successful save (e.g. to close the parent accordion). */
+  /** Called after a successful save (edit: close the accordion; plain create: close the modal). */
   onSaved?: () => void;
+  /** Create form without panel chrome, for hosts that already show a title (modal). */
+  plain?: boolean;
 }
 
 /** Create (collapsible panel) or edit (embedded) a recurring rule. */
-export function RuleForm({ action, accounts, categories, transferTargets, rule, today, onSaved }: RuleFormProps) {
+export function RuleForm({ action, accounts, categories, transferTargets, rule, today, onSaved, plain }: RuleFormProps) {
   const embedded = !!rule;
   const [kind, setKind] = useState<Kind>(rule ? formKindOf(rule.kind, rule.paymentMethod) : "expense");
   const [fee, setFee] = useState<number | null>(rule?.feeCents || null);
   const [schedule, setSchedule] = useState<RuleSchedule>(rule?.schedule ?? "auto");
   const [amount, setAmount] = useState<number | null>(rule ? Math.abs(rule.amountCents) : null);
   const [active, setActive] = useState(rule?.active ?? true);
-  const [open, setOpen] = useState(embedded);
+  const [open, setOpen] = useState(embedded || !!plain);
   const [formKey, setFormKey] = useState(0);
   // After saving: close the panel so the outcome is visible, and clear the create form.
   const reset = useCallback(() => {
@@ -48,6 +50,7 @@ export function RuleForm({ action, accounts, categories, transferTargets, rule, 
     setKind("expense");
     setSchedule("auto");
     setFormKey((k) => k + 1);
+    onSaved?.();
   }, [embedded, onSaved]);
   const { state, pending, onSubmit, error } = useFormAction(action, reset);
 
@@ -57,7 +60,8 @@ export function RuleForm({ action, accounts, categories, transferTargets, rule, 
       title={embedded ? "Modifica ricorrenza" : "Nuova ricorrenza"}
       description={embedded ? undefined : "Entrate e uscite che si ripetono"}
       icon={embedded ? undefined : <Plus />}
-      collapsible={!embedded}
+      collapsible={!embedded && !plain}
+      plain={plain}
       open={open}
       onOpenChange={setOpen}
       onSubmit={onSubmit}

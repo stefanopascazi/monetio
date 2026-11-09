@@ -30,13 +30,15 @@ export interface AccountFormProps {
   initiallyOpen?: boolean;
   /** Create mode: called when the panel closes, after saving or by the user. */
   onClosed?: () => void;
+  /** Create form without panel chrome, for hosts that already show a title (modal). */
+  plain?: boolean;
 }
 
-export function AccountForm({ action, defaults, embedded, canMakePrivate = true, onSaved, initiallyOpen, onClosed }: AccountFormProps) {
+export function AccountForm({ action, defaults, embedded, canMakePrivate = true, onSaved, initiallyOpen, onClosed, plain }: AccountFormProps) {
   const [visibility, setVisibility] = useState<Visibility>(defaults.visibility ?? "shared");
   const [opening, setOpening] = useState<number | null>(defaults.openingBalanceCents ? Math.abs(defaults.openingBalanceCents) : null);
   const [negative, setNegative] = useState((defaults.openingBalanceCents ?? 0) < 0);
-  const [open, setOpen] = useState(!!embedded || !!initiallyOpen);
+  const [open, setOpen] = useState(!!embedded || !!initiallyOpen || !!plain);
   const [formKey, setFormKey] = useState(0);
   // After saving: close the panel so the outcome is visible, and clear the create form.
   const reset = useCallback(() => {
@@ -60,8 +62,8 @@ export function AccountForm({ action, defaults, embedded, canMakePrivate = true,
       title={embedded ? "Impostazioni conto" : "Nuovo conto"}
       description={embedded ? undefined : "Conto corrente, risparmio, investimenti o contanti"}
       icon={embedded ? undefined : <Plus />}
-      collapsible={!embedded}
-      plain={embedded}
+      collapsible={!embedded && !plain}
+      plain={embedded || plain}
       open={open}
       onOpenChange={onOpenChange}
       onSubmit={onSubmit}
