@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AccountHeader } from "@/components/accounts/AccountHeader";
 import { AccountSettings } from "@/components/accounts/AccountSettings";
-import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 import { RememberAccount } from "@/components/accounts/RememberAccount";
 import { SwipeArea } from "@/components/accounts/SwipeArea";
 import { StreamBlock } from "@/components/common/StreamBlock";
@@ -33,15 +32,15 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
   // Chart year follows the selected period; the latest rows show the current year.
   const year = Number((period.kind === "recent" ? today : period.to).slice(0, 4));
   const owner = ctx.members.find((m) => m.id === account.ownerMemberId);
-  // Switching account keeps the selected period.
-  const switcher = switcherAccounts(accounts, id).map((a) => ({ id: a.id, name: a.name, balanceCents: a.balanceCents, archived: a.archived, href: accountHref(a.id, sp) }));
-  const { prev, next } = adjacentAccounts(switcher, id);
+  // Swipe targets follow the carousel order and keep the selected period.
+  const { prev, next } = adjacentAccounts(switcherAccounts(accounts, id), id);
+  const prevHref = prev && accountHref(prev.id, sp);
+  const nextHref = next && accountHref(next.id, sp);
 
   return (
     <>
       <RememberAccount id={id} />
-      <AccountSwitcher items={switcher} currentId={id} prevHref={prev?.href} nextHref={next?.href} today={today} />
-      <SwipeArea prevHref={prev?.href} nextHref={next?.href} className="flex flex-col gap-6">
+      <SwipeArea prevHref={prevHref} nextHref={nextHref} className="flex flex-col gap-6">
         <AccountHeader
           name={account.name}
           context={account.visibility === "shared" ? "Conto condiviso" : `Conto privato di ${owner?.displayName ?? "un membro"}`}
