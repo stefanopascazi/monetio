@@ -1,9 +1,14 @@
+"use client";
+
 import { Amount } from "@monetio/ui";
 import type { NamedRef } from "@/components/common/options";
 import type { AccountMonthlySummary } from "@/lib/domain/monthly-summary";
+import { visibleAccounts } from "./account/account-filter";
+import { useProjectionAccount } from "./account/ProjectionAccountContext";
 
-/** How a typical projected month is built, per account. */
-export function ProjectionBreakdown({ accounts, summary }: { accounts: NamedRef[]; summary: Record<string, AccountMonthlySummary> }) {
+/** How a typical projected month is built, per selected account. */
+export function ProjectionBreakdown({ accounts: all, summary }: { accounts: NamedRef[]; summary: Record<string, AccountMonthlySummary> }) {
+  const accounts = visibleAccounts(all, useProjectionAccount().selected);
   const cols: { key: keyof AccountMonthlySummary; label: string; sign: 1 | -1 }[] = [
     { key: "rulesIncomeCents", label: "Entrate ricorrenti", sign: 1 },
     { key: "rulesExpenseCents", label: "Uscite fisse", sign: -1 },

@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Accordion, Amount, Badge, type BadgeTone, Select } from "@monetio/ui";
+import { Accordion, Amount, Badge, type BadgeTone } from "@monetio/ui";
 import type { NamedRef } from "@/components/common/options";
 import { type DetailMonthView, detailMonthViews } from "@/lib/data/projection-detail-view";
 import { monthLabel } from "@/lib/domain/dates";
 import type { DetailItem, ProjectionDetailMonth } from "@/lib/domain/projection-details";
+import { visibleAccounts } from "./account/account-filter";
+import { useProjectionAccount } from "./account/ProjectionAccountContext";
 
 const SOURCE: Record<DetailItem["source"], { label: string; tone: BadgeTone } | null> = {
   rule: null,
@@ -71,24 +73,14 @@ function MonthBody({ m }: { m: DetailMonthView }) {
   );
 }
 
-/** Month-by-month list of what makes each projected balance, per account or for all of them. */
+/** Month-by-month list of what makes each projected balance, for the page-wide account selection. */
 export function ProjectionDetail({ details, accounts }: { details: ProjectionDetailMonth[]; accounts: NamedRef[] }) {
-  const [selected, setSelected] = useState("all");
+  const { selected } = useProjectionAccount();
   const [open, setOpen] = useState<string[]>(details[0] ? [details[0].month] : []);
-  const ids = selected === "all" ? accounts.map((a) => a.id) : [selected];
+  const ids = visibleAccounts(accounts, selected).map((a) => a.id);
   const months = detailMonthViews(details, ids);
   return (
-    <div className="flex flex-col gap-3">
-      <div className="px-5 pt-1">
-        <Select
-          label="Conto"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          options={[{ value: "all", label: "Tutti i conti" }, ...accounts.map((a) => ({ value: a.id, label: a.name }))]}
-          className="max-w-xs"
-        />
-      </div>
-      <Accordion
+    <Accordion
         type="multiple"
         value={open}
         onValueChange={setOpen}
@@ -105,7 +97,6 @@ export function ProjectionDetail({ details, accounts }: { details: ProjectionDet
           meta: <Amount cents={m.netCents} size="sm" showSign />,
           content: open.includes(m.month) ? <MonthBody m={m} /> : null,
         }))}
-      />
-    </div>
+    />
   );
 }
