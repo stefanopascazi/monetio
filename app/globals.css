@@ -22,3 +22,9 @@ body {
   .mio-fold-mobile .mio-card__header { margin-bottom: 0; }
   .mio-fold-mobile.mio-card--pad-none { padding-bottom: var(--mio-space-4); }
 }
+
+/* Balance privacy mode (eye toggle): masks amounts inside .mio-balances while <html> has data-hide-balances. */
+:root[data-hide-balances] .mio-balances.mio-amount > *,
+:root[data-hide-balances] .mio-balances .mio-amount > * { display: none; }
+:root[data-hide-balances] .mio-balances.mio-amount::after,
+:root[data-hide-balances] .mio-balances .mio-amount::after { content: "••••••"; color: var(--mio-ink-subtle); letter-spacing: 0.1em; }

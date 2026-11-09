@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AccountCard } from "@monetio/ui";
 import type { AccountWithBalance } from "@/lib/data/queries";
+import { BALANCES_CLASS } from "@/lib/privacy/balance-privacy";
 import { MonthEndNote } from "./MonthEndNote";
 import type { Member } from "@/lib/domain/types";
 
@@ -42,6 +43,7 @@ export function AccountGrid({
             type={a.type}
             balanceCents={a.balanceCents}
             members={accountMembers(a, members)}
+            className={BALANCES_CLASS}
             footer={monthEnd?.[a.id] !== undefined ? <MonthEndNote cents={monthEnd[a.id]} /> : undefined}
           />
         </Link>
