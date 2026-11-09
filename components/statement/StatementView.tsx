@@ -2,12 +2,16 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AccountHeader } from "@/components/accounts/AccountHeader";
 import { AccountSettings } from "@/components/accounts/AccountSettings";
+import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
+import { RememberAccount } from "@/components/accounts/RememberAccount";
+import { SwipeArea } from "@/components/accounts/SwipeArea";
 import { StreamBlock } from "@/components/common/StreamBlock";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
 import { recapMonth } from "@/lib/data/recap-month";
 import { statementPeriod } from "@/lib/data/statement-period";
 import { todayISO } from "@/lib/domain/dates";
+import { accountHref, adjacentAccounts, switcherAccounts } from "@/lib/navigation/account-nav";
 import { BalanceHistoryCard } from "./sections/BalanceHistoryCard";
 import { MonthNetNote } from "./sections/MonthNetNote";
 import { MonthRecapCard } from "./sections/MonthRecapCard";
@@ -29,21 +33,28 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
   // Chart year follows the selected period; the latest rows show the current year.
   const year = Number((period.kind === "recent" ? today : period.to).slice(0, 4));
   const owner = ctx.members.find((m) => m.id === account.ownerMemberId);
+  // Switching account keeps the selected period.
+  const switcher = switcherAccounts(accounts, id).map((a) => ({ id: a.id, name: a.name, balanceCents: a.balanceCents, archived: a.archived, href: accountHref(a.id, sp) }));
+  const { prev, next } = adjacentAccounts(switcher, id);
 
   return (
     <>
-      <AccountHeader
-        name={account.name}
-        context={account.visibility === "shared" ? "Conto condiviso" : `Conto privato di ${owner?.displayName ?? "un membro"}`}
-        institution={account.institution}
-        balanceCents={account.balanceCents}
-        settings={<AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />}
-        note={
-          <Suspense fallback={null}>
-            <MonthNetNote accountId={id} balanceCents={account.balanceCents} />
-          </Suspense>
-        }
-      />
+      <RememberAccount id={id} />
+      <AccountSwitcher items={switcher} currentId={id} prevHref={prev?.href} nextHref={next?.href} today={today} />
+      <SwipeArea prevHref={prev?.href} nextHref={next?.href} className="flex flex-col gap-6">
+        <AccountHeader
+          name={account.name}
+          context={account.visibility === "shared" ? "Conto condiviso" : `Conto privato di ${owner?.displayName ?? "un membro"}`}
+          institution={account.institution}
+          balanceCents={account.balanceCents}
+          settings={<AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />}
+          note={
+            <Suspense fallback={null}>
+              <MonthNetNote accountId={id} balanceCents={account.balanceCents} />
+            </Suspense>
+          }
+        />
+      </SwipeArea>
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className="flex flex-col gap-4">
           <StreamBlock height={120}>

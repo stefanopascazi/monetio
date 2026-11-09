@@ -3,8 +3,9 @@ import { Button, Card, PageHeader, ThemeSwitcher } from "@monetio/ui";
 import { signOut } from "@/app/actions/auth";
 import { Onboarding } from "@/components/auth/Onboarding";
 import { getContext } from "@/lib/data/context";
-import { listCategories } from "@/lib/data/queries";
+import { listAccounts, listCategories } from "@/lib/data/queries";
 import { isAdmin, isLastAdmin } from "@/lib/domain/household";
+import { ArchivedAccounts } from "./ArchivedAccounts";
 import { HouseholdExit, RenameHouseholdForm } from "./HouseholdActions";
 import { HouseholdSwitcher } from "./HouseholdSwitcher";
 import { InviteForm } from "./InviteForm";
@@ -13,7 +14,8 @@ import { CategoryManager, ProfileForm } from "./SettingsForms";
 
 export async function SettingsView() {
   const ctx = await getContext();
-  const categories = await listCategories();
+  const [categories, accounts] = await Promise.all([listCategories(), listAccounts()]);
+  const archived = accounts.filter((a) => a.archived).map(({ id, name, institution, balanceCents }) => ({ id, name, institution, balanceCents }));
   const admin = isAdmin(ctx.me);
   return (
     <>
@@ -60,6 +62,12 @@ export async function SettingsView() {
           </form>
         </Card>
       </section>
+      {archived.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-lg font-bold">Conti</h2>
+          <ArchivedAccounts accounts={archived} />
+        </section>
+      )}
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-bold">Categorie</h2>
         <CategoryManager categories={categories} />

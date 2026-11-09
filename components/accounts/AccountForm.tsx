@@ -26,13 +26,17 @@ export interface AccountFormProps {
   canMakePrivate?: boolean;
   /** Embedded mode: called after a successful save (e.g. to close the parent accordion). */
   onSaved?: () => void;
+  /** Create mode: start expanded (e.g. opened from the account switcher). */
+  initiallyOpen?: boolean;
+  /** Create mode: called when the panel closes, after saving or by the user. */
+  onClosed?: () => void;
 }
 
-export function AccountForm({ action, defaults, embedded, canMakePrivate = true, onSaved }: AccountFormProps) {
+export function AccountForm({ action, defaults, embedded, canMakePrivate = true, onSaved, initiallyOpen, onClosed }: AccountFormProps) {
   const [visibility, setVisibility] = useState<Visibility>(defaults.visibility ?? "shared");
   const [opening, setOpening] = useState<number | null>(defaults.openingBalanceCents ? Math.abs(defaults.openingBalanceCents) : null);
   const [negative, setNegative] = useState((defaults.openingBalanceCents ?? 0) < 0);
-  const [open, setOpen] = useState(!!embedded);
+  const [open, setOpen] = useState(!!embedded || !!initiallyOpen);
   const [formKey, setFormKey] = useState(0);
   // After saving: close the panel so the outcome is visible, and clear the create form.
   const reset = useCallback(() => {
@@ -42,7 +46,12 @@ export function AccountForm({ action, defaults, embedded, canMakePrivate = true,
     setNegative(false);
     setVisibility("shared");
     setFormKey((k) => k + 1);
-  }, [embedded, onSaved]);
+    onClosed?.();
+  }, [embedded, onSaved, onClosed]);
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) onClosed?.();
+  };
   const { state, pending, onSubmit, error } = useFormAction(action, reset);
 
   return (
@@ -54,7 +63,7 @@ export function AccountForm({ action, defaults, embedded, canMakePrivate = true,
       collapsible={!embedded}
       plain={embedded}
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       onSubmit={onSubmit}
       actions={
         <Button type="submit" loading={pending}>
