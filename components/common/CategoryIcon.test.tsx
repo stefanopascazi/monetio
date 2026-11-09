@@ -1,4 +1,4 @@
-import { Tag, Zap } from "lucide-react";
+import { Pizza, PiggyBank, Plane, Sailboat, Tag, Zap } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import { CATEGORY_ICON_NAMES, categoryIcon, categoryIconLabel, categoryTint } from "./CategoryIcon";
 
@@ -7,6 +7,15 @@ describe("categoryIcon", () => {
     expect(categoryIcon("zap")).toBe(Zap);
     expect(categoryIcon("unknown")).toBe(Tag);
     expect(categoryIcon(null)).toBe(Tag);
+  });
+
+  it("includes the extended set (food, savings, travel)", () => {
+    expect(CATEGORY_ICON_NAMES.length).toBeGreaterThanOrEqual(45);
+    expect(categoryIcon("pizza")).toBe(Pizza);
+    expect(categoryIcon("piggy-bank")).toBe(PiggyBank);
+    expect(categoryIcon("plane")).toBe(Plane);
+    expect(categoryIcon("sailboat")).toBe(Sailboat);
+    expect(categoryIconLabel("pizza")).toBe("Pizzeria");
   });
 });
 
