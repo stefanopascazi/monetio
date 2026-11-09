@@ -12,8 +12,11 @@ export interface DetailItem {
   count: number;
   /** Past due and unpaid, carried into the current month. */
   overdue: boolean;
-  /** Booked transfers: the other account, to drop transfers inside a merged view. */
+  /** Transfers: the other account, to drop transfers inside a merged view. */
   counterpartId?: string;
+  categoryId?: string | null;
+  /** Money moved between accounts (quota, giroconto). */
+  transfer?: boolean;
 }
 
 export interface AccountMonthDetail {
@@ -48,9 +51,19 @@ export function projectionDetails(input: ProjectionInput, accountIds: string[], 
       const m = movements[i];
       running[m.accountId] += m.amountCents;
       const overdue = m.overdue ?? false;
-      const key = `${m.source}|${m.label}|${Math.sign(m.amountCents)}|${overdue}`;
+      const key = `${m.source}|${m.label}|${Math.sign(m.amountCents)}|${overdue}|${m.counterpartId ?? ""}`;
       const acc = lines.get(m.accountId)!;
-      const item = acc.get(key) ?? { label: m.label, source: m.source, amountCents: 0, count: 0, overdue };
+      const transfer = m.source === "contribution" || Boolean(m.counterpartId);
+      const item: DetailItem = acc.get(key) ?? {
+        label: m.label,
+        source: m.source,
+        amountCents: 0,
+        count: 0,
+        overdue,
+        categoryId: m.categoryId ?? null,
+        ...(transfer ? { transfer } : {}),
+        ...(m.counterpartId ? { counterpartId: m.counterpartId } : {}),
+      };
       item.amountCents += m.amountCents;
       item.count++;
       acc.set(key, item);

@@ -17,9 +17,9 @@ describe("bookedItems", () => {
   it("groups rows by category and sign, largest first", () => {
     const items = bookedItems([row(-3000), row(-2000), row(150000, { categoryId: "salary" }), row(500)], names);
     expect(items).toEqual([
-      { label: "Stipendio", source: "booked", amountCents: 150000, count: 1, overdue: false },
-      { label: "Spesa", source: "booked", amountCents: -5000, count: 2, overdue: false },
-      { label: "Spesa", source: "booked", amountCents: 500, count: 1, overdue: false },
+      { label: "Stipendio", source: "booked", amountCents: 150000, count: 1, overdue: false, categoryId: "salary" },
+      { label: "Spesa", source: "booked", amountCents: -5000, count: 2, overdue: false, categoryId: "food" },
+      { label: "Spesa", source: "booked", amountCents: 500, count: 1, overdue: false, categoryId: "food" },
     ]);
   });
 
@@ -31,6 +31,7 @@ describe("bookedItems", () => {
       ["Giroconto verso Conto B", -150, "b"],
       [TRANSFERS_LABEL, -20, "secret"],
     ]);
+    expect(items.every((x) => x.transfer && x.categoryId === null)).toBe(true);
   });
 
   it("labels transfers and uncategorized rows, skipping zero amounts", () => {
