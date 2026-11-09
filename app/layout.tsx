@@ -3,6 +3,7 @@ import { Gabarito, JetBrains_Mono, Onest } from "next/font/google";
 import { ToastProvider, themeInitScript } from "@monetio/ui";
 import { Analytics } from "@vercel/analytics/next";
 import { ServiceWorker } from "@/components/shell/ServiceWorker";
+import { balancePrivacyInitScript } from "@/lib/privacy/balance-privacy";
 import "./globals.css";
 
 const display = Gabarito({ variable: "--font-gabarito", subsets: ["latin"], weight: ["500", "600", "700", "800"] });
@@ -30,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // No default data-theme: the OS decides unless the user picked Light or Dark (applied by the init script).
     <html lang="it" className={`${display.variable} ${sans.variable} ${mono.variable} h-full`} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript + balancePrivacyInitScript }} />
       </head>
       <body className="mio-root min-h-full">
         <ToastProvider>{children}</ToastProvider>

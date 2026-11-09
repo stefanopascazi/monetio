@@ -3,6 +3,7 @@ import { createAccount } from "@/app/actions/accounts";
 import { loadMonthEndBalances } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
+import { BALANCES_CLASS } from "@/lib/privacy/balance-privacy";
 import { todayISO } from "@/lib/domain/dates";
 import { AccountForm } from "./AccountForm";
 import { AccountGrid } from "./AccountGrid";
@@ -17,7 +18,7 @@ export async function AccountsView() {
   return (
     <>
       <PageHeader title="Conti" description="Tocca un conto per vedere l'estratto conto e le impostazioni." />
-      <section className="grid grid-cols-2 gap-4 sm:max-w-xl">
+      <section className={`grid grid-cols-2 gap-4 sm:max-w-xl ${BALANCES_CLASS}`}>
         <div className="flex flex-col gap-1 rounded-[22px] bg-brand-soft p-4">
           <span className="text-sm text-ink-muted">Conti condivisi</span>
           <Amount cents={shared} tone="neutral" size="lg" />

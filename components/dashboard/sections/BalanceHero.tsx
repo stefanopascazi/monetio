@@ -1,5 +1,6 @@
 import { Amount } from "@monetio/ui";
 import { getContext } from "@/lib/data/context";
+import { BALANCES_CLASS } from "@/lib/privacy/balance-privacy";
 import { monthLabel } from "@/lib/domain/dates";
 import { loadActiveAccounts, loadDashboardFlows } from "../data";
 
@@ -14,7 +15,7 @@ export async function BalanceHero() {
       </p>
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-ink-muted">Saldo dei conti che vedi</span>
-        <Amount cents={total} tone="neutral" size="xl" />
+        <Amount cents={total} tone="neutral" size="xl" className={BALANCES_CLASS} />
       </div>
     </div>
   );
