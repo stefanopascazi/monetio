@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth, todayISO } from "../domain/dates";
+import type { BookedRow } from "../domain/booked-month";
 import { isDecreasing } from "../domain/estimates";
 import { accountMonthRecap } from "../domain/month-recap";
 import { monthlySummary } from "../domain/monthly-summary";
@@ -9,7 +10,7 @@ import { projectionDetails } from "../domain/projection-details";
 import { bookedOccurrences, dueEntries, overrideMap, upcomingOccurrences } from "../domain/schedule";
 import { getContext } from "./context";
 import { contributionSpendingFrom, estimateUsedFrom } from "./flows";
-import { listAccounts, listBookedOccurrences, listContributions, listEstimateMovements, listFlows, listOverrides, listRules, listTransactions } from "./queries";
+import { listAccounts, listBookedOccurrences, listBookedRows, listCategories, listContributions, listEstimateMovements, listFlows, listOverrides, listRules, listTransactions } from "./queries";
 import { RECAP_MONTHS } from "./recap-month";
 import { touchesVisible } from "./rule-visibility";
 
@@ -105,6 +106,14 @@ export const loadProjection = cache(async (months: number) => {
     agenda.today,
   );
   return { today: agenda.today, accounts: active, projection, details, summary };
+});
+
+/** Booked rows of the current month and category names, for the projection detail. */
+export const loadCurrentMonthBooked = cache(async (): Promise<{ month: string; rows: BookedRow[]; categoryNames: Record<string, string> }> => {
+  const { today } = await loadAgenda();
+  const month = monthKey(today);
+  const [rows, categories] = await Promise.all([listBookedRows(startOfMonth(month), endOfMonth(month)), listCategories()]);
+  return { month, rows, categoryNames: Object.fromEntries(categories.map((c) => [c.id, c.name])) };
 });
 
 /** Booked and still expected movements of an account in a month (current by default), with its balances. */

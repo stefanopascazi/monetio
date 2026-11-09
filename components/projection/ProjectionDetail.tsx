@@ -12,6 +12,7 @@ import { MonthBalances, MonthClosing, MonthSubtitle } from "./detail/MonthBalanc
 
 const SOURCE: Record<DetailItem["source"], { label: string; tone: BadgeTone } | null> = {
   rule: null,
+  booked: null,
   estimate: { label: "stima", tone: "forecast" },
   contribution: { label: "quota", tone: "transfer" },
   planned: { label: "pianificato", tone: "neutral" },
@@ -59,14 +60,31 @@ function Lines({ title, items, empty }: { title: string; items: DetailItem[]; em
   );
 }
 
+function Group({ title, income, expense, kind }: { title?: string; income: DetailItem[]; expense: DetailItem[]; kind: "prevista" | "registrata" }) {
+  return (
+    <section className="flex flex-col gap-2">
+      {title && <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{title}</h3>}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <Lines title="Entrate" items={income} empty={`Nessuna entrata ${kind}.`} />
+        <Lines title="Uscite" items={expense} empty={`Nessuna uscita ${kind}.`} />
+      </div>
+    </section>
+  );
+}
+
 function MonthBody({ m }: { m: DetailMonthView }) {
+  const hasBooked = m.bookedIncome.length > 0 || m.bookedExpense.length > 0;
   return (
     <div className="flex flex-col gap-4 pb-2">
       <MonthBalances openingCents={m.openingCents} netCents={m.netCents} closingCents={m.closingCents} />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Lines title="Entrate" items={m.income} empty="Nessuna entrata prevista." />
-        <Lines title="Uscite" items={m.expense} empty="Nessuna uscita prevista." />
-      </div>
+      {hasBooked ? (
+        <>
+          <Group title="Già registrati" income={m.bookedIncome} expense={m.bookedExpense} kind="registrata" />
+          <Group title="Ancora previsti" income={m.income} expense={m.expense} kind="prevista" />
+        </>
+      ) : (
+        <Group income={m.income} expense={m.expense} kind="prevista" />
+      )}
     </div>
   );
 }
