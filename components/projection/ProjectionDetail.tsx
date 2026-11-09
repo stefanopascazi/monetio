@@ -8,6 +8,7 @@ import { monthLabel } from "@/lib/domain/dates";
 import type { DetailItem, ProjectionDetailMonth } from "@/lib/domain/projection-details";
 import { visibleAccounts } from "./account/account-filter";
 import { useProjectionAccount } from "./account/ProjectionAccountContext";
+import { MonthBalances, MonthClosing, MonthSubtitle } from "./detail/MonthBalances";
 
 const SOURCE: Record<DetailItem["source"], { label: string; tone: BadgeTone } | null> = {
   rule: null,
@@ -61,14 +62,11 @@ function Lines({ title, items, empty }: { title: string; items: DetailItem[]; em
 function MonthBody({ m }: { m: DetailMonthView }) {
   return (
     <div className="flex flex-col gap-4 pb-2">
+      <MonthBalances openingCents={m.openingCents} netCents={m.netCents} closingCents={m.closingCents} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Lines title="Entrate" items={m.income} empty="Nessuna entrata prevista." />
         <Lines title="Uscite" items={m.expense} empty="Nessuna uscita prevista." />
       </div>
-      <p className="flex flex-wrap items-center gap-x-2 text-sm text-ink-muted">
-        Saldo da <Amount cents={m.openingCents} tone="neutral" size="sm" /> a{" "}
-        <Amount cents={m.closingCents} tone={m.closingCents < 0 ? "expense" : "neutral"} size="sm" />
-      </p>
     </div>
   );
 }
@@ -89,12 +87,10 @@ export function ProjectionDetail({ details, accounts }: { details: ProjectionDet
           title: (
             <span className="flex min-w-0 flex-col text-left">
               <span className="font-semibold capitalize">{monthLabel(m.month, true)}</span>
-              <span className="text-sm font-normal text-ink-muted">
-                {m.income.length} entrate · {m.expense.length} uscite
-              </span>
+              <MonthSubtitle openingCents={m.openingCents} netCents={m.netCents} />
             </span>
           ),
-          meta: <Amount cents={m.netCents} size="sm" showSign />,
+          meta: <MonthClosing closingCents={m.closingCents} />,
           content: open.includes(m.month) ? <MonthBody m={m} /> : null,
         }))}
     />
