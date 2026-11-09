@@ -22,13 +22,15 @@ export function PayEntryForm({ entry, today, onClose }: { entry: DueView; today:
         e.preventDefault();
         onSubmit(e);
       }}
-      className="mx-4 mb-4 grid grid-cols-1 gap-3 rounded-[22px] bg-surface-raised p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+      className="mx-4 mb-4 grid grid-cols-1 gap-3 rounded-[22px] bg-surface-raised p-4 sm:grid-cols-[1fr_auto] sm:items-end"
     >
       <FormMessage state={state} />
       <input type="hidden" name="amountCents" value={amount ?? ""} />
-      <AmountInput label="Importo effettivo" kind={entry.amountCents >= 0 ? "income" : "expense"} valueCents={amount} onValueChange={setAmount} error={error("amountCents")} />
+      <div className="sm:col-span-2">
+        <AmountInput label="Importo effettivo" kind={entry.amountCents >= 0 ? "income" : "expense"} valueCents={amount} onValueChange={setAmount} error={error("amountCents")} />
+      </div>
       <TextField name="bookedOn" type="date" label="Pagato il" defaultValue={today} error={error("bookedOn")} />
-      <div className="flex gap-2">
+      <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose}>
           Annulla
         </Button>
@@ -37,7 +39,7 @@ export function PayEntryForm({ entry, today, onClose }: { entry: DueView; today:
         </Button>
       </div>
       {source && (
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-2">
           <FeeInput valueCents={fee} onValueChange={setFee} hint={`${FEE_SOURCE_LABEL[source]}: le spese diventano un movimento separato`} error={error("feeCents")} />
         </div>
       )}
