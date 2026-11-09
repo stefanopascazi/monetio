@@ -32,7 +32,16 @@ export function bookedItems(rows: BookedRow[], categoryNames: Record<string, str
     const label = transfer ? transferLabel(r, accountNames) : (r.categoryId && categoryNames[r.categoryId]) || UNCATEGORIZED_LABEL;
     const counterpart = transfer ? (r.counterpartAccountId ?? undefined) : undefined;
     const key = `${label}|${Math.sign(r.amountCents)}|${counterpart ?? ""}`;
-    const item: DetailItem = lines.get(key) ?? { label, source: "booked", amountCents: 0, count: 0, overdue: false, ...(counterpart ? { counterpartId: counterpart } : {}) };
+    const item: DetailItem = lines.get(key) ?? {
+      label,
+      source: "booked",
+      amountCents: 0,
+      count: 0,
+      overdue: false,
+      categoryId: transfer ? null : r.categoryId,
+      ...(transfer ? { transfer } : {}),
+      ...(counterpart ? { counterpartId: counterpart } : {}),
+    };
     item.amountCents += r.amountCents;
     item.count++;
     lines.set(key, item);

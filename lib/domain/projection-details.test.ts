@@ -24,7 +24,7 @@ describe("projectionDetails", () => {
   it("lists money in and out per month with opening and closing balances", () => {
     const input = { ...base, rules: [mutuo, quota] };
     const [nov, dec] = projectionDetails(input, ["joint"]);
-    expect(nov.byAccount.joint).toEqual({
+    expect(nov.byAccount.joint).toMatchObject({
       openingCents: 100000,
       closingCents: 101890,
       items: [
@@ -46,10 +46,18 @@ describe("projectionDetails", () => {
   it("keeps unpaid past occurrences on a separate overdue line", () => {
     const luce = rule({ id: "l", accountId: "joint", description: "Bolletta luce", amountCents: -10000, schedule: "due", dayOfMonth: 20, startDate: "2026-10-01" });
     const [nov] = projectionDetails({ ...base, months: 1, rules: [luce] }, ["joint"]);
-    expect(nov.byAccount.joint.items).toEqual([
+    expect(nov.byAccount.joint.items).toMatchObject([
       { label: "Bolletta luce", source: "rule", amountCents: -10000, count: 1, overdue: true },
       { label: "Bolletta luce", source: "rule", amountCents: -10000, count: 1, overdue: false },
     ]);
+  });
+
+  it("carries category and counterpart of each line", () => {
+    const [nov] = projectionDetails({ ...base, months: 1, rules: [{ ...mutuo, categoryId: "home" }, quota] }, ["joint"]);
+    const byLabel = Object.fromEntries(nov.byAccount.joint.items.map((x) => [x.label, x]));
+    expect(byLabel["Rata mutuo"]).toMatchObject({ categoryId: "home" });
+    expect(byLabel["Rata mutuo"].transfer).toBeUndefined();
+    expect(byLabel["Quota fissa Asha"]).toMatchObject({ transfer: true, counterpartId: "asha" });
   });
 
   it("stops at maxMonths", () => {

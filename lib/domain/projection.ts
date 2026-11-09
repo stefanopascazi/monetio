@@ -53,6 +53,10 @@ export interface Movement {
   overdue?: boolean;
   /** Estimates: occurrence key (`r:<rule>|<period>`), to close or book it. */
   ref?: string;
+  /** Category of the rule or planned transaction, when it has one. */
+  categoryId?: string | null;
+  /** Transfers: the other account of the pair. */
+  counterpartId?: string;
 }
 
 
@@ -67,11 +71,20 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
   const from = addDays(today, -lookbackDays);
   const out: Movement[] = [];
   // Overdue items still count, as if they happened today.
-  const push = (date: ISODate, accountId: string, amountCents: number, counterpart: string | null, label: string, source: MovementSource, ref?: string) => {
+  const push = (
+    date: ISODate,
+    accountId: string,
+    amountCents: number,
+    counterpart: string | null,
+    label: string,
+    source: MovementSource,
+    ref?: string,
+    categoryId: string | null = null,
+  ) => {
     const overdue = date < today;
     const d = overdue ? today : date;
-    out.push({ date: d, accountId, amountCents, label, source, overdue, ref });
-    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref });
+    out.push({ date: d, accountId, amountCents, label, source, overdue, ref, categoryId, ...(counterpart ? { counterpartId: counterpart } : {}) });
+    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref, categoryId, counterpartId: accountId });
   };
   const draw = estimatePool(input.estimateMovements ?? []);
 
@@ -91,7 +104,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
           const full = Math.abs(r.amountCents);
           amount = covered ? 0 : Math.sign(r.amountCents) * (full - draw(r, full));
         }
-        if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate", key);
+        if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate", key, r.categoryId);
       }
       continue;
     }
@@ -99,7 +112,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       const key = ruleKey(r.id, d, r.frequency);
       if (booked.has(key)) continue;
       const o = input.overrides?.get(key);
-      push(o?.dueDate ?? d, r.accountId, o?.amountCents ?? r.amountCents, counterpart, r.description, "rule");
+      push(o?.dueDate ?? d, r.accountId, o?.amountCents ?? r.amountCents, counterpart, r.description, "rule", undefined, r.categoryId);
       // Bonifico/CBill/transfer fee, booked as its own expense of the paying account with each occurrence.
       const source = feeSource(r.kind, r.paymentMethod);
       if (source && r.feeCents) push(o?.dueDate ?? d, r.accountId, -r.feeCents, null, feeDescription(source, r.description), "rule");
@@ -117,7 +130,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
   }
 
   for (const t of planned) {
-    if (t.status === "planned") push(t.bookedOn, t.accountId, t.amountCents, null, t.description, "planned");
+    if (t.status === "planned") push(t.bookedOn, t.accountId, t.amountCents, null, t.description, "planned", undefined, t.categoryId);
   }
   return out;
 }
