@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { AmountInput, Button, Chip, FormPanel, Select, Switch, TextField } from "@monetio/ui";
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
-import { type NamedRef, toOptions } from "@/components/common/options";
+import { type NamedRef, selectableRefs, toOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
 import type { ContributionRule } from "@/lib/domain/types";
 
@@ -70,7 +70,7 @@ export function ContributionForm({ action, accounts, categories, contribution: c
       <div className="mio-span-full flex flex-col gap-2">
         <span className="text-sm font-medium text-ink-muted">Categorie da dividere</span>
         <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
+          {selectableRefs(categories, c?.categoryIds).map((cat) => (
             <Chip key={cat.id} type="button" selected={cats.includes(cat.id)} onSelectedChange={() => toggle(cat.id)}>
               {cat.name}
             </Chip>

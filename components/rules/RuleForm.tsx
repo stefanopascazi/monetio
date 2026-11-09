@@ -6,7 +6,7 @@ import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextF
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
 import { accountOptions } from "@/components/common/account-options";
-import { type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, toOptions } from "@/components/common/options";
+import { type NamedRef, SCHEDULE_HINT, SCHEDULE_LABEL, selectableRefs, toOptions } from "@/components/common/options";
 import { FeeInput } from "@/components/payments/FeeInput";
 import { amountKind, isPaymentKind, MOVEMENT_KIND_OPTIONS, takesFee } from "@/components/payments/movement-kind";
 import { useFormAction } from "@/hooks/useFormAction";
@@ -121,7 +121,7 @@ export function RuleForm({ action, accounts, categories, transferTargets, rule, 
           error={error("counterpartAccountId")}
         />
       )}
-      <Select name="categoryId" label="Categoria" optional defaultValue={rule?.categoryId ?? ""} options={[{ value: "", label: "Nessuna" }, ...toOptions(categories)]} />
+      <Select name="categoryId" label="Categoria" optional defaultValue={rule?.categoryId ?? ""} options={[{ value: "", label: "Nessuna" }, ...toOptions(selectableRefs(categories, [rule?.categoryId]))]} />
       {schedule === "estimate" && (kind === "expense" || kind === "income") && (
         <DecreasingEstimateFields categories={categories} initial={rule?.decrementCategoryIds} error={error("decrementCategoryIds")} />
       )}

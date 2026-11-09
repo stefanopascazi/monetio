@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Chip, Switch } from "@monetio/ui";
-import type { NamedRef } from "@/components/common/options";
+import { type NamedRef, selectableRefs } from "@/components/common/options";
 
 export interface DecreasingEstimateFieldsProps {
   categories: NamedRef[];
@@ -32,7 +32,7 @@ export function DecreasingEstimateFields({ categories, initial = [], error }: De
           ))}
           <span className="text-sm font-medium text-ink-muted">Categorie da scalare</span>
           <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
+            {selectableRefs(categories, initial).map((cat) => (
               <Chip key={cat.id} type="button" selected={cats.includes(cat.id)} onSelectedChange={() => toggle(cat.id)}>
                 {cat.name}
               </Chip>

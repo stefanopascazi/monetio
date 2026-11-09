@@ -4,6 +4,7 @@ import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { getContext } from "@/lib/data/context";
 import { monthParam, PAGE_STEP, pageSizeParam, stringParam, withQuery } from "@/lib/data/params";
+import { categoryRefs } from "@/components/common/options";
 import { listAccounts, listCategories, listTransactions, transactionTotals } from "@/lib/data/queries";
 import { toTxnView } from "@/lib/data/views";
 import { addMonthsToKey, endOfMonth, monthKey, monthLabel, startOfMonth, todayISO } from "@/lib/domain/dates";
@@ -34,7 +35,7 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
   const txns = rows.slice(0, limit);
   const hasMore = rows.length > limit;
   const refs = accounts.filter((a) => !a.archived).map((a) => ({ id: a.id, name: a.name }));
-  const catRefs = categories.map((c) => ({ id: c.id, name: c.name }));
+  const catRefs = categoryRefs(categories);
   const nav = (m: string) => withQuery("/movimenti", { mese: m, conto: accountId, categoria: categoryId, q });
 
   return (

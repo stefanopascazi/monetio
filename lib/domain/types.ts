@@ -41,6 +41,7 @@ export interface Category {
   kind: "income" | "expense" | "both";
   icon: string | null;
   colorIndex: 1 | 2 | 3 | 4 | 5 | 6;
+  archived: boolean;
 }
 
 export interface Transaction {

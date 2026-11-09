@@ -6,7 +6,7 @@ import { AmountInput, Button, FormPanel, SegmentedControl, Select, Switch, TextF
 import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
 import { accountOptions } from "@/components/common/account-options";
-import { type NamedRef, toOptions } from "@/components/common/options";
+import { type NamedRef, selectableRefs, toOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
 import { FeeInput } from "@/components/payments/FeeInput";
 import { amountKind, MOVEMENT_KIND_OPTIONS, takesFee } from "@/components/payments/movement-kind";
@@ -150,7 +150,7 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
         optional
         value={categoryId}
         onChange={(e) => setCategoryId(e.target.value)}
-        options={[{ value: "", label: "Nessuna" }, ...toOptions(categories)]}
+        options={[{ value: "", label: "Nessuna" }, ...toOptions(selectableRefs(categories, [defaults.categoryId]))]}
       />
       <TextField name="notes" label="Note" optional defaultValue={defaults.notes ?? ""} className="mio-span-full" />
       {/* Only categorised income/expenses can reduce a decreasing estimate. */}

@@ -52,6 +52,45 @@ const ICONS: Record<string, LucideIcon> = {
 
 export const CATEGORY_ICON_NAMES = Object.keys(ICONS);
 
+// Italian labels for icon pickers (accessible names and tooltips).
+const ICON_LABELS: Record<string, string> = {
+  "arrow-left-right": "Trasferimenti",
+  baby: "Bambini",
+  briefcase: "Lavoro",
+  car: "Auto",
+  droplet: "Acqua",
+  flame: "Gas",
+  gift: "Regali",
+  "heart-pulse": "Salute",
+  home: "Casa",
+  landmark: "Banca",
+  percent: "Interessi",
+  receipt: "Ricevute",
+  scale: "Legale",
+  "shopping-bag": "Shopping",
+  "shopping-cart": "Spesa",
+  smartphone: "Telefono",
+  sparkles: "Varie",
+  "trash-2": "Rifiuti",
+  "trending-up": "Crescita",
+  tv: "Abbonamenti TV",
+  zap: "Luce",
+};
+
+export function categoryIconLabel(name: string): string {
+  return ICON_LABELS[name] ?? name;
+}
+
+export const CATEGORY_COLORS = [1, 2, 3, 4, 5, 6] as const;
+
+// Soft tinted background with solid foreground, shared by category badges.
+export function categoryTint(colorIndex: number) {
+  return {
+    background: `color-mix(in srgb, var(--mio-chart-${colorIndex}) 18%, transparent)`,
+    color: `var(--mio-chart-${colorIndex})`,
+  };
+}
+
 export function categoryIcon(name: string | null | undefined): LucideIcon {
   return (name && ICONS[name]) || Tag;
 }
