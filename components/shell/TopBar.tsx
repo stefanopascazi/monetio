@@ -4,7 +4,7 @@ import { BalancePrivacyToggle } from "./BalancePrivacyToggle";
 import { TOPBAR_ID, TOPBAR_SLOT_ID } from "./topbar-ids";
 
 /**
- * Sticky wordmark bar: page actions slot (filled via HeaderAction), balance privacy toggle and
+ * Sticky wordmark bar: page actions slot (filled via TopBarAction), balance privacy toggle and
  * personal area link. Static: no session reads. Theme lives in settings.
  */
 export function TopBar() {

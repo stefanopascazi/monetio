@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type ReactNode, type TouchEvent, useRef } from "react";
-import { swipeDirection } from "@/lib/navigation/swipe";
+import { startsInHorizontalScroller, swipeDirection } from "@/lib/navigation/swipe";
 
 export interface SwipeAreaProps {
   prevHref?: string | null;
@@ -11,14 +11,16 @@ export interface SwipeAreaProps {
   children: ReactNode;
 }
 
-/** Touch area where a horizontal swipe opens the previous/next account. */
+/** Touch area where a horizontal swipe opens the previous/next account, except inside horizontal scrollers. */
 export function SwipeArea({ prevHref, nextHref, className, children }: SwipeAreaProps) {
   const router = useRouter();
   const start = useRef<{ x: number; y: number } | null>(null);
 
-  const onTouchStart = (e: TouchEvent) => {
+  const onTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     const t = e.touches[0];
-    start.current = t ? { x: t.clientX, y: t.clientY } : null;
+    // Leave horizontal scrollers (statement table, charts) to their own gesture.
+    const blocked = startsInHorizontalScroller(e.target as Element, e.currentTarget);
+    start.current = t && !blocked ? { x: t.clientX, y: t.clientY } : null;
   };
   const onTouchEnd = (e: TouchEvent) => {
     const t = e.changedTouches[0];
