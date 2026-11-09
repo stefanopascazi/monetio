@@ -9,6 +9,7 @@ import type { DetailItem, ProjectionDetailMonth } from "@/lib/domain/projection-
 import { visibleAccounts } from "./account/account-filter";
 import { useProjectionAccount } from "./account/ProjectionAccountContext";
 import { MonthBalances, MonthClosing, MonthSubtitle } from "./detail/MonthBalances";
+import { movementCountLabel } from "./detail/movement-count";
 
 const SOURCE: Record<DetailItem["source"], { label: string; tone: BadgeTone } | null> = {
   rule: null,
@@ -35,10 +36,8 @@ function Lines({ title, items, empty }: { title: string; items: DetailItem[]; em
             return (
               <li key={`${x.source}|${x.label}|${x.overdue}`} className="flex items-center justify-between gap-3 border-t border-[var(--mio-border)] py-1.5 text-sm">
                 <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <span className="truncate">
-                    {x.label}
-                    {x.count > 1 ? ` ×${x.count}` : ""}
-                  </span>
+                  <span className="truncate">{x.label}</span>
+                  {x.count > 1 && <span className="text-xs text-ink-muted">{movementCountLabel(x.count)}</span>}
                   {src && (
                     <Badge size="sm" tone={src.tone}>
                       {src.label}
