@@ -8,7 +8,6 @@ import { HorizonSwitch } from "./ProjectionPanel";
 import { BreakdownSection } from "./sections/BreakdownSection";
 import { DetailSection } from "./sections/DetailSection";
 import { ProjectionChartSection } from "./sections/ProjectionChartSection";
-import { TableSection } from "./sections/TableSection";
 
 /** Header and horizon switch show at once; each block streams when its data is ready, filtered by one shared account picker. */
 export async function ProjectionView({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -31,9 +30,6 @@ export async function ProjectionView({ searchParams }: { searchParams: Promise<R
       </StreamBlock>
       <StreamBlock height={320}>
         <DetailSection horizon={horizon} />
-      </StreamBlock>
-      <StreamBlock height={320}>
-        <TableSection horizon={horizon} />
       </StreamBlock>
     </ProjectionAccountProvider>
   );

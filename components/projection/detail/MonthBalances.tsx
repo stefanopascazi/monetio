@@ -1,4 +1,5 @@
 import { Amount } from "@monetio/ui";
+import { BALANCES_CLASS } from "@/lib/privacy/balance-privacy";
 
 interface Balances {
   openingCents: number;
@@ -11,7 +12,7 @@ const closingTone = (cents: number) => (cents < 0 ? "expense" : "neutral");
 /** Collapsed accordion row: opening and net under the month name. */
 export function MonthSubtitle({ openingCents, netCents }: Omit<Balances, "closingCents">) {
   return (
-    <span className="flex flex-wrap items-center gap-x-1.5 text-sm font-normal text-ink-muted">
+    <span className={`flex flex-wrap items-center gap-x-1.5 text-sm font-normal text-ink-muted ${BALANCES_CLASS}`}>
       Inizio <Amount cents={openingCents} tone="neutral" size="sm" />
       <span aria-hidden="true">·</span>
       Mese <Amount cents={netCents} size="sm" showSign />
@@ -22,7 +23,7 @@ export function MonthSubtitle({ openingCents, netCents }: Omit<Balances, "closin
 /** Collapsed accordion row: month-end balance, the figure that matters most. */
 export function MonthClosing({ closingCents }: Pick<Balances, "closingCents">) {
   return (
-    <span className="flex flex-col items-end">
+    <span className={`flex flex-col items-end ${BALANCES_CLASS}`}>
       <span className="text-xs text-ink-muted">Fine mese</span>
       <Amount cents={closingCents} tone={closingTone(closingCents)} size="lg" />
     </span>
@@ -32,7 +33,7 @@ export function MonthClosing({ closingCents }: Pick<Balances, "closingCents">) {
 /** Opened month: opening, net and the highlighted month-end balance. */
 export function MonthBalances({ openingCents, netCents, closingCents }: Balances) {
   return (
-    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <dl className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${BALANCES_CLASS}`}>
       <div className="flex flex-col gap-1 rounded-lg border border-[var(--mio-border)] px-4 py-3">
         <dt className="text-sm text-ink-muted">Saldo iniziale</dt>
         <dd>

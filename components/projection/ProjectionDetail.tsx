@@ -91,7 +91,8 @@ function MonthBody({ m }: { m: DetailMonthView }) {
 /** Month-by-month list of what makes each projected balance, for the page-wide account selection. */
 export function ProjectionDetail({ details, accounts }: { details: ProjectionDetailMonth[]; accounts: NamedRef[] }) {
   const { selected } = useProjectionAccount();
-  const [open, setOpen] = useState<string[]>(details[0] ? [details[0].month] : []);
+  // Months open only on request.
+  const [open, setOpen] = useState<string[]>([]);
   const ids = visibleAccounts(accounts, selected).map((a) => a.id);
   const months = detailMonthViews(details, ids);
   return (
