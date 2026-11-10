@@ -43,7 +43,8 @@ jobs:
 
   deploy:
     needs: build
-    if: github.event_name != 'pull_request'
+    # Skipped until the VPS is provisioned and the VPS_HOST variable is set.
+    if: github.event_name != 'pull_request' && vars.VPS_HOST != ''
     runs-on: ubuntu-latest
     environment: production
     steps:
