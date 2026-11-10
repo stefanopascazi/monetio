@@ -8,14 +8,24 @@ cd "$(dirname "$0")"
 
 echo "== packages"
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades fail2ban ufw curl ca-certificates
+DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades fail2ban ufw curl ca-certificates xz-utils
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
-echo "== node 24"
-if ! node --version 2>/dev/null | grep -q '^v24\.'; then
-  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
-  apt-get install -y nodejs
+echo "== node 24 (private to the worker, system node and pm2 apps untouched)"
+NODE_DIR=/opt/node24
+if ! "$NODE_DIR/bin/node" --version 2>/dev/null | grep -q '^v24\.'; then
+  case "$(uname -m)" in x86_64) arch=x64 ;; aarch64) arch=arm64 ;; *) echo "unsupported arch" >&2; exit 1 ;; esac
+  base=https://nodejs.org/dist/latest-v24.x
+  tmp=$(mktemp -d)
+  curl -fsSL "$base/SHASUMS256.txt" -o "$tmp/SHASUMS256.txt"
+  tarball=$(grep -o "node-v24[^ ]*-linux-$arch\.tar\.xz" "$tmp/SHASUMS256.txt" | head -1)
+  curl -fsSL "$base/$tarball" -o "$tmp/$tarball"
+  (cd "$tmp" && grep " $tarball\$" SHASUMS256.txt | sha256sum -c -)
+  rm -rf "$NODE_DIR" && mkdir -p "$NODE_DIR"
+  tar -xJf "$tmp/$tarball" -C "$NODE_DIR" --strip-components=1
+  rm -rf "$tmp"
 fi
+"$NODE_DIR/bin/node" --version
 
 echo "== swap (1 GB safety net)"
 if ! swapon --show | grep -q /swapfile; then

@@ -26,7 +26,7 @@ Il codice condiviso arriva dal root (es. `scripts/db/ssl.ts`) e viene incluso ne
 ## Primo setup della VPS
 
 1. Installa Tailscale e fai `tailscale up`.
-2. Copia `deploy/` sulla VPS ed esegui `sudo bash provision.sh` (utente `monetio`, swap, ufw solo su tailnet, fail2ban, unattended-upgrades, Node 24, systemd).
+2. Copia `deploy/` sulla VPS ed esegui `sudo bash provision.sh` (utente `monetio`, swap, ufw solo su tailnet, fail2ban, unattended-upgrades, Node 24 privato in `/opt/node24`, il Node di sistema resta intatto, systemd).
 3. Compila `/etc/monetio-worker.env` partendo da `deploy/worker.env.example`.
 4. Genera una chiave SSH per la CI e aggiungi la pubblica a `/home/monetio/.ssh/authorized_keys`.
 5. Su GitHub (environment `production`): secrets `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET` (OAuth client Tailscale con tag `tag:ci`), `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` (`ssh-keyscan <host-tailscale>`), variabile `VPS_HOST`.
