@@ -45,5 +45,8 @@ next-env.d.ts
 # design system build output
 /packages/ui/dist-artifact
 
+# worker bundle
+/packages/worker/dist
+
 # private source data
 *.xlsx

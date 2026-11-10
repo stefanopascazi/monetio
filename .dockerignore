@@ -6,6 +6,7 @@
 node_modules
 coverage
 packages/ui/dist-artifact
+packages/worker
 *.tsbuildinfo
 # Never ship credentials or private data into an image.
 .env*

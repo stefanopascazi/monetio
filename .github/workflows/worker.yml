@@ -1,0 +1,73 @@
+# Worker CI/CD: tests and bundles packages/worker, then ships the bundle to the VPS over Tailscale.
+# Required: secrets TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET, VPS_SSH_KEY, VPS_KNOWN_HOSTS; variable VPS_HOST.
+name: worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/worker/**"
+      - "scripts/db/ssl.ts"
+      - "package-lock.json"
+      - ".github/workflows/worker.yml"
+  pull_request:
+    paths:
+      - "packages/worker/**"
+      - "scripts/db/ssl.ts"
+      - ".github/workflows/worker.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: worker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run --project worker
+      - run: npm run worker:typecheck
+      - run: npm run worker:build
+      - run: cp packages/worker/deploy/activate.sh packages/worker/dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: worker
+          path: packages/worker/dist
+          retention-days: 7
+
+  deploy:
+    needs: build
+    # Skipped until the VPS is provisioned and the VPS_HOST variable is set.
+    if: github.event_name != 'pull_request' && vars.VPS_HOST != ''
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: worker
+          path: dist
+      - uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+      - name: Configure SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+      - name: Upload and activate
+        env:
+          HOST: ${{ vars.VPS_HOST }}
+          RELEASE: ${{ github.sha }}
+        run: |
+          ssh "monetio@$HOST" "mkdir -p /opt/monetio-worker/releases/$RELEASE"
+          scp dist/* "monetio@$HOST:/opt/monetio-worker/releases/$RELEASE/"
+          ssh "monetio@$HOST" "bash /opt/monetio-worker/releases/$RELEASE/activate.sh $RELEASE"
