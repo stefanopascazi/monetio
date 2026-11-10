@@ -14,8 +14,11 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades fail2ban ufw curl ca-certificates xz-utils
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
-echo "== backup tools (pg_dump 17 from PGDG, zstd, age, rclone)"
-DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-common zstd age rclone
+echo "== backup tools (pg_dump 17 from PGDG, zstd, age, upstream rclone)"
+DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-common zstd age python3
+# The packaged rclone is too old for R2: drop it so only /usr/local/bin/rclone is on PATH.
+DEBIAN_FRONTEND=noninteractive apt-get remove -y rclone >/dev/null 2>&1 || true
+bash install-rclone.sh
 # pg_dump must be at least the server major version (Supabase runs Postgres 17).
 if ! command -v pg_dump >/dev/null || ! pg_dump --version | grep -q ' 17\.'; then
   /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y

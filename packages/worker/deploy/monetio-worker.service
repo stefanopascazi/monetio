@@ -21,7 +21,8 @@ MemoryMax=300M
 # Sandbox: read-only system, no privilege escalation.
 NoNewPrivileges=true
 ProtectSystem=strict
-ProtectHome=true
+# tmpfs, not true: libpq stats ~/.postgresql/postgresql.crt and fails on EACCES (ENOENT is fine).
+ProtectHome=tmpfs
 PrivateTmp=true
 
 [Install]
