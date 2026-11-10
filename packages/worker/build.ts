@@ -9,7 +9,9 @@ await build({
   target: "node24",
   format: "esm",
   sourcemap: true,
+  // Release tag for Sentry: the commit CI deploys.
+  define: { __WORKER_RELEASE__: JSON.stringify(process.env.GITHUB_SHA ?? "") },
   // Some CJS dependencies call require(): provide it inside the ESM bundle.
-  banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
+  banner: { js: "import { createRequire as __workerCreateRequire } from 'node:module'; const require = __workerCreateRequire(import.meta.url);" },
   logLevel: "info",
 });

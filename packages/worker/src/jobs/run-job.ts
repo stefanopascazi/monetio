@@ -1,3 +1,4 @@
+import type { ErrorReporter } from "../errors/reporter.ts";
 import type { Heartbeat } from "../heartbeat.ts";
 import { errorMessage, type Logger } from "../logger.ts";
 import type { LockStore } from "./lock.ts";
@@ -7,6 +8,7 @@ import type { Job } from "./types.ts";
 export interface RunJobDeps {
   locks: LockStore;
   heartbeat: Heartbeat;
+  reporter: ErrorReporter;
   log: Logger;
   /** Unique id of this worker process, stored as lock holder. */
   holder: string;
@@ -37,6 +39,7 @@ export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
     await deps.heartbeat.ping(job.name, "success");
   } catch (error) {
     deps.log("error", "job failed", { job: job.name, durationMs: now() - started, error: errorMessage(error) });
+    deps.reporter.capture(error, { job: job.name });
     await deps.heartbeat.ping(job.name, "fail", errorMessage(error));
   }
 }

@@ -6,6 +6,8 @@ export interface WorkerConfig {
   heartbeatUrls: Record<string, string>;
   /** Off-site backup target; null keeps the backup job disabled. */
   backup: { remote: string; ageRecipient: string } | null;
+  /** Sentry DSN; null keeps error reporting off. */
+  sentryDsn: string | null;
 }
 
 const HEARTBEAT_PREFIX = "HEALTHCHECK_URL_";
@@ -26,7 +28,7 @@ export function parseConfig(env: Record<string, string | undefined>): WorkerConf
   for (const [key, value] of Object.entries(env)) {
     if (key.startsWith(HEARTBEAT_PREFIX) && value) heartbeatUrls[key] = value;
   }
-  return { databaseUrl, tickMs, heartbeatUrls, backup: parseBackup(env) };
+  return { databaseUrl, tickMs, heartbeatUrls, backup: parseBackup(env), sentryDsn: env.SENTRY_DSN || null };
 }
 
 function parseBackup(env: Record<string, string | undefined>): WorkerConfig["backup"] {
