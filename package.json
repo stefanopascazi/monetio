@@ -26,6 +26,7 @@
     "auth:invite:local": "node --env-file=.env.stack scripts/dev/invite.ts"
   },
   "dependencies": {
+    "@sentry/nextjs": "^11.12.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.0",
     "@vercel/analytics": "^2.0.1",
@@ -37,6 +38,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@sentry/node": "^11.12.0",
     "@tailwindcss/turbopack": "^4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

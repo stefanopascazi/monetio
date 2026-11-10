@@ -1,4 +1,6 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
+import { sentryBuildOptions } from "./lib/observability/sentry-build";
 
 const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker image (ignored by Vercel).
@@ -18,4 +20,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, sentryBuildOptions(process.env));

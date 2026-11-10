@@ -4,6 +4,9 @@ import { hostname } from "node:os";
 import postgres from "postgres";
 import { cleanUrl, sslFor } from "../../../scripts/db/ssl.ts";
 import { parseConfig } from "./config.ts";
+import { noopReporter } from "./errors/reporter.ts";
+import { createSentryReporter } from "./errors/sentry.ts";
+import { WORKER_RELEASE } from "./release.ts";
 import { createHeartbeat } from "./heartbeat.ts";
 import { createPostgresLockStore } from "./jobs/lock.ts";
 import { createJobs } from "./jobs/registry.ts";
@@ -17,13 +20,18 @@ const SHUTDOWN_GRACE_MS = 20_000;
 
 const log = createLogger();
 const config = parseConfig(process.env);
+const reporter = config.sentryDsn ? createSentryReporter(config.sentryDsn, WORKER_RELEASE) : noopReporter;
 const sql = postgres(cleanUrl(config.databaseUrl), { ssl: sslFor(config.databaseUrl), max: 2, onnotice: () => {} });
 const jobs = createJobs(sql, config);
 
 const shutdown = new AbortController();
-const queue = createSerialQueue((job, error) => log("error", "unhandled job error", { job, error: errorMessage(error) }));
+const queue = createSerialQueue((job, error) => {
+  log("error", "unhandled job error", { job, error: errorMessage(error) });
+  reporter.capture(error, { job });
+});
 const deps = {
   locks: createPostgresLockStore(sql),
+  reporter,
   heartbeat: createHeartbeat(config.heartbeatUrls, (job, error) => log("warn", "heartbeat failed", { job, error: errorMessage(error) })),
   log,
   holder: `${hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`,
@@ -36,7 +44,7 @@ async function stop(signal: string) {
   scheduler.stop();
   shutdown.abort();
   await Promise.race([queue.idle(), new Promise((r) => setTimeout(r, SHUTDOWN_GRACE_MS))]);
-  await sql.end({ timeout: 5 });
+  await Promise.all([sql.end({ timeout: 5 }), reporter.flush(2_000)]);
   process.exit(0);
 }
 

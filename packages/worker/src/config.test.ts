@@ -11,11 +11,15 @@ describe("heartbeatEnvName", () => {
 describe("parseConfig", () => {
   it("prefers the non-pooled URL and applies defaults", () => {
     const config = parseConfig({ POSTGRES_URL: "pooled", POSTGRES_URL_NON_POOLING: "direct" });
-    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {}, backup: null });
+    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {}, backup: null, sentryDsn: null });
   });
 
   it("falls back to the pooled URL", () => {
     expect(parseConfig({ POSTGRES_URL: "pooled" }).databaseUrl).toBe("pooled");
+  });
+
+  it("reads the optional Sentry DSN", () => {
+    expect(parseConfig({ POSTGRES_URL: "x", SENTRY_DSN: "https://k@o.ingest.sentry.io/1" }).sentryDsn).toBe("https://k@o.ingest.sentry.io/1");
   });
 
   it("requires a database URL", () => {

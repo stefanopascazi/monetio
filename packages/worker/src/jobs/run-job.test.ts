@@ -13,8 +13,9 @@ function setup({ acquired = true, lastSuccess = null as Date | null } = {}) {
   };
   const heartbeat = { ping: vi.fn<Heartbeat["ping"]>(async () => {}) };
   const log = vi.fn();
-  const deps = { locks, heartbeat, log, holder: "w1", shutdown: new AbortController().signal, now: () => 1_000 };
-  return { deps, locks, heartbeat, log };
+  const reporter = { capture: vi.fn(), flush: vi.fn(async () => {}) };
+  const deps = { locks, heartbeat, reporter, log, holder: "w1", shutdown: new AbortController().signal, now: () => 1_000 };
+  return { deps, locks, heartbeat, reporter, log };
 }
 
 const job = (run: Job["run"], isDue?: Job["isDue"]): Job => ({ name: "demo", intervalMs: 1_000, timeoutMs: 5_000, run, isDue });
@@ -59,7 +60,7 @@ describe("runJob", () => {
   });
 
   it("reports failures without throwing or recording success", async () => {
-    const { deps, locks, heartbeat, log } = setup();
+    const { deps, locks, heartbeat, reporter, log } = setup();
     await expect(
       runJob(
         job(async () => {
@@ -72,6 +73,7 @@ describe("runJob", () => {
     expect(locks.release).toHaveBeenCalled();
     expect(heartbeat.ping).toHaveBeenLastCalledWith("demo", "fail", "boom");
     expect(log).toHaveBeenCalledWith("error", "job failed", expect.objectContaining({ error: "boom" }));
+    expect(reporter.capture).toHaveBeenCalledWith(expect.objectContaining({ message: "boom" }), { job: "demo" });
   });
 
   it("passes a signal aborted on shutdown", async () => {

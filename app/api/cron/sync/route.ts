@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { connection, type NextRequest, NextResponse } from "next/server";
 import { isAuthorizedCron } from "@/lib/cron/auth";
 import { syncHousehold } from "@/lib/data/sync";
@@ -14,13 +15,18 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const today = todayISO();
   const { data: households, error } = await admin.from("households").select("id");
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    Sentry.captureException(error, { tags: { cron: "sync" } });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   const results: { householdId: string; booked?: number; error?: string }[] = [];
   for (const h of households ?? []) {
     try {
       results.push({ householdId: h.id, booked: await syncHousehold(admin, h.id, today) });
     } catch (e) {
+      // Handled per household so the others still sync: report it explicitly.
+      Sentry.captureException(e, { tags: { cron: "sync" } });
       results.push({ householdId: h.id, error: e instanceof Error ? e.message : String(e) });
     }
   }

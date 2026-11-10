@@ -41,3 +41,7 @@ Job `backup`, giornaliero dopo le 01:00 UTC. L'ultimo successo è salvato in `jo
 - Sulla VPS c'è solo la chiave pubblica `age`. La privata sta nel password manager e nel secret GitHub del test di ripristino.
 - Il job si attiva compilando le variabili `BACKUP_*` e `RCLONE_CONFIG_R2_*` in `/etc/monetio-worker.env` (vedi `deploy/worker.env.example`).
 - Test di ripristino: `.github/workflows/backup-restore-test.yml`, il giorno 3 di ogni mese o a mano. Ripristina l'ultimo backup su Postgres 17 usa e getta ed esegue controlli di coerenza (`scripts/restore-test.sh`).
+
+## Errori (Sentry, #48)
+
+Con `SENTRY_DSN` impostato in `/etc/monetio-worker.env`, i job falliti vengono inviati a Sentry con il tag `job` e la release (SHA del commit). Raccoglie solo errori: niente tracing, niente OpenTelemetry. Gli eventi passano da `lib/observability/scrub-event.ts`, che toglie email, IBAN, importi e valori delle righe Postgres. Senza DSN il reporting è spento.

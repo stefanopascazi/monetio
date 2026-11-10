@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createJobs } from "./registry.ts";
 
 const sql = (() => {}) as unknown as Sql;
-const base = { databaseUrl: "postgres://u:p@h/db", tickMs: 30_000, heartbeatUrls: {} };
+const base = { databaseUrl: "postgres://u:p@h/db", tickMs: 30_000, heartbeatUrls: {}, sentryDsn: null };
 
 describe("createJobs", () => {
   it("registers the backup only when configured", () => {
