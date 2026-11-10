@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # One-time, idempotent VPS setup for the worker (Ubuntu). Run as root from this folder:
 #   sudo bash provision.sh
-# Requires Tailscale already installed and logged in (`tailscale up`): the firewall
-# only allows SSH through the tailnet.
+# Requires Tailscale already installed and logged in (`tailscale up`).
+# Options (environment variables, re-run the script to change them):
+#   PUBLIC_SSH=1          keep SSH reachable on the public IP (rate limited), not only via Tailscale
+#   KEEP_PASSWORD_AUTH=1  keep SSH password login (key-only otherwise)
+#   e.g. sudo PUBLIC_SSH=1 bash provision.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -59,8 +62,12 @@ systemctl restart systemd-journald
 systemctl daemon-reload
 systemctl enable monetio-worker
 
-echo "== ssh: keys only"
-if [ -s /root/.ssh/authorized_keys ] || { [ -n "${SUDO_USER:-}" ] && [ -s "/home/${SUDO_USER}/.ssh/authorized_keys" ]; }; then
+echo "== ssh"
+SSH_HARDENING=/etc/ssh/sshd_config.d/10-monetio.conf
+if [ "${KEEP_PASSWORD_AUTH:-}" = 1 ]; then
+  if [ -f "$SSH_HARDENING" ]; then rm "$SSH_HARDENING" && systemctl reload ssh; fi
+  echo "password login kept (KEEP_PASSWORD_AUTH=1)"
+elif [ -s /root/.ssh/authorized_keys ] || { [ -n "${SUDO_USER:-}" ] && [ -s "/home/${SUDO_USER}/.ssh/authorized_keys" ]; }; then
   printf 'PasswordAuthentication no\nKbdInteractiveAuthentication no\nPermitRootLogin prohibit-password\n' > /etc/ssh/sshd_config.d/10-monetio.conf
   systemctl reload ssh
 else
@@ -72,6 +79,13 @@ if tailscale status >/dev/null 2>&1; then
   ufw default deny incoming
   ufw default allow outgoing
   ufw allow in on tailscale0
+  ssh_port=$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')
+  if [ "${PUBLIC_SSH:-}" = 1 ]; then
+    ufw limit "${ssh_port:-22}/tcp"
+    echo "public SSH kept on port ${ssh_port:-22} (PUBLIC_SSH=1)"
+  else
+    ufw delete limit "${ssh_port:-22}/tcp" >/dev/null 2>&1 || true
+  fi
   ufw --force enable
 else
   echo "SKIPPED: Tailscale not up, firewall not enabled (would lock SSH out)" >&2
