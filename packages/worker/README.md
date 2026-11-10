@@ -32,3 +32,12 @@ Il codice condiviso arriva dal root (es. `scripts/db/ssl.ts`) e viene incluso ne
 5. Su GitHub (environment `production`): secrets `TS_OAUTH_CLIENT_ID`, `TS_OAUTH_SECRET` (OAuth client Tailscale con tag `tag:ci`), `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` (`ssh-keyscan <host-tailscale>`), variabile `VPS_HOST`.
 
 I rilasci stanno in `/opt/monetio-worker/releases/<sha>`, con `current` come symlink; `activate.sh` fa rollback se il servizio non resta attivo. Log: `journalctl -u monetio-worker -f`.
+
+## Backup (#48)
+
+Job `backup`, giornaliero dopo le 01:00 UTC. L'ultimo successo è salvato in `job_locks.last_success_at`, quindi un riavvio o un deploy non lo rilanciano. La catena è `pg_dump` (schemi `public` e `auth`) | `zstd -3` | `age` | `rclone rcat`, con upload su R2 in streaming e nessun file locale. La domenica e il giorno 1 viene fatta anche una copia lato server in `weekly/` e `monthly/`.
+
+- Retention con le lifecycle rules del bucket: `daily/` 7 giorni, `weekly/` 28, `monthly/` 180.
+- Sulla VPS c'è solo la chiave pubblica `age`. La privata sta nel password manager e nel secret GitHub del test di ripristino.
+- Il job si attiva compilando le variabili `BACKUP_*` e `RCLONE_CONFIG_R2_*` in `/etc/monetio-worker.env` (vedi `deploy/worker.env.example`).
+- Test di ripristino: `.github/workflows/backup-restore-test.yml`, il giorno 3 di ogni mese o a mano. Ripristina l'ultimo backup su Postgres 17 usa e getta ed esegue controlli di coerenza (`scripts/restore-test.sh`).

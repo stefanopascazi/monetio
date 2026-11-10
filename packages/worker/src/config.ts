@@ -4,6 +4,8 @@ export interface WorkerConfig {
   tickMs: number;
   /** Healthchecks.io ping URLs keyed by env variable name (see heartbeatEnvName). */
   heartbeatUrls: Record<string, string>;
+  /** Off-site backup target; null keeps the backup job disabled. */
+  backup: { remote: string; ageRecipient: string } | null;
 }
 
 const HEARTBEAT_PREFIX = "HEALTHCHECK_URL_";
@@ -24,5 +26,14 @@ export function parseConfig(env: Record<string, string | undefined>): WorkerConf
   for (const [key, value] of Object.entries(env)) {
     if (key.startsWith(HEARTBEAT_PREFIX) && value) heartbeatUrls[key] = value;
   }
-  return { databaseUrl, tickMs, heartbeatUrls };
+  return { databaseUrl, tickMs, heartbeatUrls, backup: parseBackup(env) };
+}
+
+function parseBackup(env: Record<string, string | undefined>): WorkerConfig["backup"] {
+  const remote = env.BACKUP_REMOTE;
+  const ageRecipient = env.BACKUP_AGE_RECIPIENT;
+  if (!remote && !ageRecipient) return null;
+  if (!remote || !ageRecipient) throw new Error("BACKUP_REMOTE and BACKUP_AGE_RECIPIENT must be set together");
+  if (!ageRecipient.startsWith("age1")) throw new Error("BACKUP_AGE_RECIPIENT must be an age public key (age1...)");
+  return { remote: remote.replace(/\/$/, ""), ageRecipient };
 }

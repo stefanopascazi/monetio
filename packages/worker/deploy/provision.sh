@@ -14,6 +14,15 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades fail2ban ufw curl ca-certificates xz-utils
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
+echo "== backup tools (pg_dump 17 from PGDG, zstd, age, rclone)"
+DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-common zstd age rclone
+# pg_dump must be at least the server major version (Supabase runs Postgres 17).
+if ! command -v pg_dump >/dev/null || ! pg_dump --version | grep -q ' 17\.'; then
+  /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+  DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql-client-17
+fi
+pg_dump --version
+
 echo "== node 24 (private to the worker, system node and pm2 apps untouched)"
 NODE_DIR=/opt/node24
 if ! "$NODE_DIR/bin/node" --version 2>/dev/null | grep -q '^v24\.'; then

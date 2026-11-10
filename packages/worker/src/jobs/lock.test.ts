@@ -3,7 +3,7 @@ import { type LockStore, withJobLock } from "./lock.ts";
 
 /** In-memory lease store with a controllable clock. */
 function memoryStore(clock: { now: number }): LockStore {
-  const leases = new Map<string, { holder: string; until: number }>();
+  const leases = new Map<string, { holder: string; until: number; success?: number }>();
   return {
     async acquire(name, holder, ttlMs) {
       const lease = leases.get(name);
@@ -14,6 +14,14 @@ function memoryStore(clock: { now: number }): LockStore {
     async release(name, holder) {
       const lease = leases.get(name);
       if (lease?.holder === holder) lease.until = clock.now;
+    },
+    async lastSuccess(name) {
+      const at = leases.get(name)?.success;
+      return at === undefined ? null : new Date(at);
+    },
+    async markSuccess(name, holder) {
+      const lease = leases.get(name);
+      if (lease?.holder === holder) lease.success = clock.now;
     },
   };
 }

@@ -2,7 +2,7 @@ import type { Sql } from "postgres";
 import { describe, expect, it, vi } from "vitest";
 import { createDbPingJob } from "./db-ping.ts";
 
-const ctx = { log: vi.fn(), signal: new AbortController().signal };
+const ctx = { log: vi.fn(), signal: new AbortController().signal, now: new Date() };
 const fakeSql = (rows: unknown[]) => vi.fn(async () => rows) as unknown as Sql;
 
 describe("createDbPingJob", () => {

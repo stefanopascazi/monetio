@@ -4,6 +4,9 @@ export interface LockStore {
   /** Takes the lease when free or expired; false when another holder owns it. */
   acquire(name: string, holder: string, ttlMs: number): Promise<boolean>;
   release(name: string, holder: string): Promise<void>;
+  /** When the job last completed successfully (any runner), null if never. */
+  lastSuccess(name: string): Promise<Date | null>;
+  markSuccess(name: string, holder: string): Promise<void>;
 }
 
 export type LockResult<T> = { ran: true; value: T } | { ran: false };
@@ -24,7 +27,7 @@ export async function withJobLock<T>(
   }
 }
 
-/** Lease rows in `job_locks` (migration 0018). */
+/** Lease rows in `job_locks` (migrations 0018, 0019). */
 export function createPostgresLockStore(sql: Sql): LockStore {
   return {
     async acquire(name, holder, ttlMs) {
@@ -39,6 +42,13 @@ export function createPostgresLockStore(sql: Sql): LockStore {
     },
     async release(name, holder) {
       await sql`update job_locks set locked_until = now() where name = ${name} and holder = ${holder}`;
+    },
+    async lastSuccess(name) {
+      const [row] = await sql<{ last_success_at: Date | null }[]>`select last_success_at from job_locks where name = ${name}`;
+      return row?.last_success_at ?? null;
+    },
+    async markSuccess(name, holder) {
+      await sql`update job_locks set last_success_at = now() where name = ${name} and holder = ${holder}`;
     },
   };
 }

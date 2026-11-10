@@ -4,36 +4,61 @@ import type { LockStore } from "./lock.ts";
 import { runJob } from "./run-job.ts";
 import type { Job } from "./types.ts";
 
-function setup(acquired = true) {
-  const locks: LockStore = { acquire: vi.fn(async () => acquired), release: vi.fn(async () => {}) };
+function setup({ acquired = true, lastSuccess = null as Date | null } = {}) {
+  const locks: LockStore = {
+    acquire: vi.fn(async () => acquired),
+    release: vi.fn(async () => {}),
+    lastSuccess: vi.fn(async () => lastSuccess),
+    markSuccess: vi.fn(async () => {}),
+  };
   const heartbeat = { ping: vi.fn<Heartbeat["ping"]>(async () => {}) };
   const log = vi.fn();
-  const deps = { locks, heartbeat, log, holder: "w1", shutdown: new AbortController().signal };
+  const deps = { locks, heartbeat, log, holder: "w1", shutdown: new AbortController().signal, now: () => 1_000 };
   return { deps, locks, heartbeat, log };
 }
 
-const job = (run: Job["run"]): Job => ({ name: "demo", intervalMs: 1_000, timeoutMs: 5_000, run });
+const job = (run: Job["run"], isDue?: Job["isDue"]): Job => ({ name: "demo", intervalMs: 1_000, timeoutMs: 5_000, run, isDue });
 
 describe("runJob", () => {
-  it("runs under the lease and reports success", async () => {
+  it("runs under the lease, records success and pings start/success", async () => {
     const { deps, locks, heartbeat, log } = setup();
     const run = vi.fn(async () => {});
     await runJob(job(run), deps);
     expect(locks.acquire).toHaveBeenCalledWith("demo", "w1", 5_000);
-    expect(run).toHaveBeenCalledWith(expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(run).toHaveBeenCalledWith(expect.objectContaining({ signal: expect.any(AbortSignal), now: new Date(1_000) }));
+    expect(locks.markSuccess).toHaveBeenCalledWith("demo", "w1");
     expect(heartbeat.ping.mock.calls.map((c) => c[1])).toEqual(["start", "success"]);
     expect(log).toHaveBeenCalledWith("info", "job done", expect.objectContaining({ job: "demo" }));
   });
 
-  it("skips the run when the lease is held elsewhere", async () => {
-    const { deps, heartbeat } = setup(false);
+  it("skips silently when the lease is held elsewhere", async () => {
+    const { deps, heartbeat } = setup({ acquired: false });
     const run = vi.fn(async () => {});
     await runJob(job(run), deps);
     expect(run).not.toHaveBeenCalled();
-    expect(heartbeat.ping).toHaveBeenLastCalledWith("demo", "success", expect.stringContaining("skipped"));
+    expect(heartbeat.ping).not.toHaveBeenCalled();
   });
 
-  it("reports failures without throwing", async () => {
+  it("skips silently when the job is not due", async () => {
+    const last = new Date(500);
+    const { deps, locks, heartbeat } = setup({ lastSuccess: last });
+    const run = vi.fn(async () => {});
+    const isDue = vi.fn(() => false);
+    await runJob(job(run, isDue), deps);
+    expect(isDue).toHaveBeenCalledWith(last, new Date(1_000));
+    expect(run).not.toHaveBeenCalled();
+    expect(heartbeat.ping).not.toHaveBeenCalled();
+    expect(locks.release).toHaveBeenCalled();
+  });
+
+  it("runs when due", async () => {
+    const { deps } = setup();
+    const run = vi.fn(async () => {});
+    await runJob(job(run, () => true), deps);
+    expect(run).toHaveBeenCalled();
+  });
+
+  it("reports failures without throwing or recording success", async () => {
     const { deps, locks, heartbeat, log } = setup();
     await expect(
       runJob(
@@ -43,6 +68,7 @@ describe("runJob", () => {
         deps,
       ),
     ).resolves.toBeUndefined();
+    expect(locks.markSuccess).not.toHaveBeenCalled();
     expect(locks.release).toHaveBeenCalled();
     expect(heartbeat.ping).toHaveBeenLastCalledWith("demo", "fail", "boom");
     expect(log).toHaveBeenCalledWith("error", "job failed", expect.objectContaining({ error: "boom" }));

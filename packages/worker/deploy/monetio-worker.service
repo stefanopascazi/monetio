@@ -10,6 +10,8 @@ User=monetio
 Group=monetio
 WorkingDirectory=/opt/monetio-worker/current
 EnvironmentFile=/etc/monetio-worker.env
+# rclone has no writable home under ProtectHome: keep its cache in the private /tmp.
+Environment=RCLONE_CACHE_DIR=/tmp/rclone
 ExecStart=/opt/node24/bin/node --max-old-space-size=256 --enable-source-maps /opt/monetio-worker/current/worker.mjs
 Restart=always
 RestartSec=5
