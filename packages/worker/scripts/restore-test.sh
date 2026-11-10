@@ -28,6 +28,8 @@ echo "dump size: $(du -h "$work/db.dump" | cut -f1)"
 
 # Supabase roles and extensions referenced by policies and functions in the dump.
 psql -v ON_ERROR_STOP=1 -q <<'SQL'
+-- The dump recreates public (explicit --schema=public): drop the default one first.
+drop schema public cascade;
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin;
