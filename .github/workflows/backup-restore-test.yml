@@ -42,7 +42,8 @@ jobs:
       - name: Install tools
         run: |
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y postgresql-client-17 age zstd rclone
+          sudo apt-get install -y postgresql-client-17 age zstd
+          sudo bash packages/worker/deploy/install-rclone.sh
       - name: Restore and verify
         run: |
           [ -z "$HC_URL" ] || curl -fsS -m 10 "$HC_URL/start" || true
