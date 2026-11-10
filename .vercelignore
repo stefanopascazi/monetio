@@ -1,0 +1,3 @@
+# The VPS worker is built and deployed by GitHub Actions, never by Vercel.
+packages/worker
+.github

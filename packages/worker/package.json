@@ -1,0 +1,15 @@
+{
+  "name": "@monetio/worker",
+  "version": "0.1.0",
+  "description": "MonetIO background worker: scheduled jobs that cannot run on Vercel (systemd service on the VPS).",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "node build.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "postgres": "^4.0.0"
+  }
+}

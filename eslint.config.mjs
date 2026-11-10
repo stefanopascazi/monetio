@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated design-system artifact output.
     "packages/ui/dist-artifact/**",
+    // Worker bundle output.
+    "packages/worker/dist/**",
   ]),
 ]);
 

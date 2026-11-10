@@ -26,7 +26,11 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { ...shared, name: "ui", include: ["packages/**/*.test.{ts,tsx}"], setupFiles: ["./vitest.setup.ts", "./packages/ui/vitest.setup.en.ts"] },
+        test: { ...shared, name: "ui", include: ["packages/ui/**/*.test.{ts,tsx}"], setupFiles: ["./vitest.setup.ts", "./packages/ui/vitest.setup.en.ts"] },
+      },
+      {
+        extends: true,
+        test: { ...shared, environment: "node", name: "worker", include: ["packages/worker/**/*.test.ts"] },
       },
       {
         extends: true,

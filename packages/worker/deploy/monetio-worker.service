@@ -1,0 +1,26 @@
+# systemd unit for the MonetIO worker. Install: provision.sh copies it to /etc/systemd/system/.
+[Unit]
+Description=MonetIO worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=monetio
+Group=monetio
+WorkingDirectory=/opt/monetio-worker/current
+EnvironmentFile=/etc/monetio-worker.env
+ExecStart=/usr/bin/node --max-old-space-size=256 --enable-source-maps /opt/monetio-worker/current/worker.mjs
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+# Hard ceiling: the VPS has 1 GB of RAM.
+MemoryMax=300M
+# Sandbox: read-only system, no privilege escalation.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
