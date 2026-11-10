@@ -11,7 +11,7 @@ describe("heartbeatEnvName", () => {
 describe("parseConfig", () => {
   it("prefers the non-pooled URL and applies defaults", () => {
     const config = parseConfig({ POSTGRES_URL: "pooled", POSTGRES_URL_NON_POOLING: "direct" });
-    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {} });
+    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {}, backup: null });
   });
 
   it("falls back to the pooled URL", () => {
@@ -25,6 +25,18 @@ describe("parseConfig", () => {
   it("rejects invalid tick intervals", () => {
     expect(() => parseConfig({ POSTGRES_URL: "x", WORKER_TICK_MS: "abc" })).toThrow(/WORKER_TICK_MS/);
     expect(() => parseConfig({ POSTGRES_URL: "x", WORKER_TICK_MS: "10" })).toThrow(/WORKER_TICK_MS/);
+  });
+
+  it("parses the backup target", () => {
+    expect(parseConfig({ POSTGRES_URL: "x", BACKUP_REMOTE: "r2:bucket/", BACKUP_AGE_RECIPIENT: "age1abc" }).backup).toEqual({
+      remote: "r2:bucket",
+      ageRecipient: "age1abc",
+    });
+  });
+
+  it("rejects a partial or invalid backup target", () => {
+    expect(() => parseConfig({ POSTGRES_URL: "x", BACKUP_REMOTE: "r2:bucket" })).toThrow(/together/);
+    expect(() => parseConfig({ POSTGRES_URL: "x", BACKUP_REMOTE: "r2:b", BACKUP_AGE_RECIPIENT: "AGE-SECRET-KEY-1" })).toThrow(/public key/);
   });
 
   it("collects non-empty heartbeat URLs", () => {

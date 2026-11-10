@@ -18,7 +18,7 @@ const SHUTDOWN_GRACE_MS = 20_000;
 const log = createLogger();
 const config = parseConfig(process.env);
 const sql = postgres(cleanUrl(config.databaseUrl), { ssl: sslFor(config.databaseUrl), max: 2, onnotice: () => {} });
-const jobs = createJobs(sql);
+const jobs = createJobs(sql, config);
 
 const shutdown = new AbortController();
 const queue = createSerialQueue((job, error) => log("error", "unhandled job error", { job, error: errorMessage(error) }));
