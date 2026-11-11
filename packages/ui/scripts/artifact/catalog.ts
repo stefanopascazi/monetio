@@ -304,23 +304,28 @@ Do not open dialogs from buttons: expand a FormPanel, switch a Tab or reveal an 
   {
     name: "BottomNav",
     group: "Layout",
-    height: 110,
+    height: 220,
     readme: `App navigation. A fixed bottom bar on phones (safe-area aware) that becomes a left rail from 960px.
 
-**Consumer provides:** \`items\` (\`id\`, \`label\`, \`icon\`, \`href\`, optional \`badge\`), \`activeId\`, \`linkAs\` (pass Next.js \`Link\`), optional \`action\`.
+**Consumer provides:** \`items\` (\`id\`, \`label\`, \`icon\`, \`href\`, optional \`badge\`), optional \`moreItems\` (same shape), \`activeId\`, \`linkAs\` (pass Next.js \`Link\`), optional \`action\`.
 
-- Max five items: Home, Accounts, Activity, Due, Insights.
+- Four main items on phones: Home, Accounts, Activity, Due. Every other section goes in \`moreItems\`.
+- Phones: a handle above the bar opens \`moreItems\` in a panel (drag up or tap; drag down, Escape, an outside press or navigating closes it). The handle turns mint when the current page is one of them.
+- Rail: a last "More" entry opens \`moreItems\` in a column beside the rail; it is lightly tinted while open and fully selected when the current page is there.
 - \`badge\` only for things needing action (overdue payments).
 - Add \`mio-nav--static\` to render it in flow (docs, previews).`,
     demo: `
   (() => { const [a, setA] = useState("home"); return (
+  <div style={{display:"flex",flexDirection:"column",justifyContent:"flex-end",minHeight:200}}>
   <M.BottomNav className="mio-nav--static" activeId={a} onSelect={setA} items={[
     { id: "home", label: "Home", icon: <M.LayoutDashboard /> },
     { id: "accounts", label: "Accounts", icon: <M.Landmark /> },
     { id: "activity", label: "Activity", icon: <M.ArrowLeftRight /> },
     { id: "due", label: "Due", icon: <M.CalendarClock />, badge: 2 },
+  ]} moreItems={[
     { id: "insights", label: "Insights", icon: <M.BarChart3 /> },
-  ]} />); })()`,
+    { id: "data", label: "Data", icon: <M.Landmark /> },
+  ]} /></div>); })()`,
   },
   {
     name: "Amount",
