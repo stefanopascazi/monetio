@@ -5,6 +5,7 @@ import { getContext } from "@/lib/data/context";
 import { mapCategory } from "@/lib/data/mappers";
 import { addDays } from "@/lib/domain/dates";
 import type { ISODate } from "@/lib/domain/types";
+import { batchStats, parseImportMeta } from "@/lib/import/batch";
 import { classifyDrafts, type DraftStatus, POSSIBLE_WINDOW_DAYS } from "@/lib/import/classify";
 import type { Movement } from "@/lib/import/dedup";
 import { parseDrafts } from "@/lib/import/payload";
@@ -81,10 +82,12 @@ export async function previewImport(accountId: string, payload: unknown): Promis
  * Imports the drafts the user kept. Exact duplicates and movements covered by the opening
  * balance are dropped again here; possible duplicates are imported because the user chose them.
  */
-export async function importStatement(accountId: string, payload: unknown): Promise<ActionState> {
+export async function importStatement(accountId: string, payload: unknown, metaInput: unknown): Promise<ActionState> {
   const ctx = await getContext();
   const drafts = parseDrafts(payload);
   if (!drafts) return failure("Nessun movimento valido da importare.");
+  const meta = parseImportMeta(metaInput);
+  if (!meta) return failure("File di origine non valido.");
   const supabase = await createClient();
   const account = await loadAccount(supabase, ctx.householdId, accountId);
   if (!account) return failure("Conto non trovato.");
@@ -96,18 +99,51 @@ export async function importStatement(accountId: string, payload: unknown): Prom
 
   const { data: cats, error: catError } = await supabase.from("categories").select("*").eq("household_id", ctx.householdId);
   if (catError) return failure(dbErrorMessage(catError));
-  const rows = importRows(keep, { householdId: ctx.householdId, accountId: account.id, categories: (cats ?? []).map(mapCategory) });
 
-  let inserted = 0;
+  const { data: batch, error: batchError } = await supabase
+    .from("import_batches")
+    .insert({ household_id: ctx.householdId, account_id: account.id, file_name: meta.fileName, bank: meta.bank, created_by: ctx.userId })
+    .select("id")
+    .single();
+  if (batchError) return failure(dbErrorMessage(batchError));
+  const rows = importRows(keep, { householdId: ctx.householdId, accountId: account.id, categories: (cats ?? []).map(mapCategory), batchId: String(batch.id) });
+
+  const inserted: { amountCents: number; bookedOn: string }[] = [];
+  let failed: string | null = null;
   for (let i = 0; i < rows.length; i += CHUNK) {
     // Import refs are unique: rows already imported are skipped instead of failing the batch.
     const { data, error } = await supabase
       .from("transactions")
       .upsert(rows.slice(i, i + CHUNK), { onConflict: "import_ref", ignoreDuplicates: true })
-      .select("id");
-    if (error) return failure(inserted ? `Importati ${inserted} movimenti, poi: ${dbErrorMessage(error)}` : dbErrorMessage(error));
-    inserted += data?.length ?? 0;
+      .select("amount_cents, booked_on");
+    if (error) {
+      failed = dbErrorMessage(error);
+      break;
+    }
+    for (const r of data ?? []) inserted.push({ amountCents: Number(r.amount_cents), bookedOn: String(r.booked_on) });
   }
+
+  // The batch records what actually went in, so undoing it removes exactly those rows.
+  const stats = batchStats(inserted);
+  if (stats.rowCount) {
+    await supabase
+      .from("import_batches")
+      .update({ row_count: stats.rowCount, total_cents: stats.totalCents, first_date: stats.firstDate, last_date: stats.lastDate })
+      .eq("id", batch.id);
+  } else await supabase.from("import_batches").update({ undone_at: new Date().toISOString() }).eq("id", batch.id);
+
   refresh();
-  return success(inserted === 1 ? "1 movimento importato." : `${inserted} movimenti importati.`);
+  if (failed) return failure(stats.rowCount ? `Importati ${stats.rowCount} movimenti, poi: ${failed}` : failed);
+  return success(stats.rowCount === 1 ? "1 movimento importato." : `${stats.rowCount} movimenti importati.`);
+}
+
+export async function undoImport(batchId: string): Promise<ActionState> {
+  if (!isUUID(batchId)) return failure("Import non trovato.");
+  await getContext();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("undo_import", { p_batch: batchId });
+  if (error) return failure(/import not found/.test(error.message ?? "") ? "Import non trovato o già annullato." : dbErrorMessage(error));
+  refresh();
+  const n = Number(data ?? 0);
+  return success(n === 1 ? "Import annullato: 1 movimento eliminato." : `Import annullato: ${n} movimenti eliminati.`);
 }

@@ -16,6 +16,8 @@ export interface ImportTarget {
   householdId: string;
   accountId: string;
   categories: Category[];
+  /** Import batch the rows belong to (Storico import). */
+  batchId?: string | null;
 }
 
 export function importRows(drafts: ImportDraft[], t: ImportTarget) {
@@ -30,6 +32,7 @@ export function importRows(drafts: ImportDraft[], t: ImportTarget) {
     booked_on: d.bookedOn,
     description: d.description,
     import_ref: d.importRef,
+    import_batch_id: t.batchId ?? null,
     // Imports carry no author, like the sheet import.
     created_by: null,
   }));

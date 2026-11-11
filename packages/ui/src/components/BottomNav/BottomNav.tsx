@@ -10,6 +10,8 @@ export interface NavItem {
   href?: string;
   /** Small count badge (e.g. due payments). */
   badge?: number;
+  /** Shown only in the desktop rail (keeps the phone bar at five items). */
+  railOnly?: boolean;
 }
 
 export interface LinkLikeProps {
@@ -35,7 +37,7 @@ function DefaultLink(props: LinkLikeProps) {
   return <a {...props} />;
 }
 
-/** App navigation: bottom bar on phones, vertical rail from 960px. Max five items. */
+/** App navigation: bottom bar on phones, vertical rail from 960px. Max five items on phones (extra ones use railOnly). */
 export function BottomNav({ items, activeId, onSelect, linkAs, action, className, ...aria }: BottomNavProps) {
   const Link = linkAs ?? DefaultLink;
   return (
@@ -54,7 +56,7 @@ export function BottomNav({ items, activeId, onSelect, linkAs, action, className
             </>
           );
           return (
-            <li key={item.id}>
+            <li key={item.id} className={item.railOnly ? "mio-nav__rail-only" : undefined}>
               {item.href ? (
                 <Link
                   href={item.href}

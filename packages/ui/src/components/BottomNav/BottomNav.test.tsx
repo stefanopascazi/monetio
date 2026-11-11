@@ -28,4 +28,10 @@ describe("BottomNav", () => {
     expect(screen.getByRole("link", { name: "Accounts" })).toHaveAttribute("href", "/accounts");
     expect(Link).toHaveBeenCalled();
   });
+
+  it("marks rail-only items for the desktop rail", () => {
+    render(<BottomNav items={[...items, { id: "data", label: "Data", icon: <svg />, railOnly: true }]} activeId="home" />);
+    expect(screen.getByRole("button", { name: "Data" }).closest("li")).toHaveClass("mio-nav__rail-only");
+    expect(screen.getByRole("button", { name: "Home" }).closest("li")).not.toHaveClass("mio-nav__rail-only");
+  });
 });

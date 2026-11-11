@@ -1,23 +1,18 @@
-import Link from "next/link";
-import { EmptyState, PageHeader } from "@monetio/ui";
+import { EmptyState } from "@monetio/ui";
 import { Landmark } from "lucide-react";
+import { getContext } from "@/lib/data/context";
+import { stringParam } from "@/lib/data/params";
 import { listAccounts } from "@/lib/data/queries";
 import { ImportWizard } from "./ImportWizard";
 
-export async function ImportView() {
+type SP = Record<string, string | string[] | undefined>;
+
+export async function ImportView({ searchParams }: { searchParams: Promise<SP> }) {
+  const [sp] = await Promise.all([searchParams, getContext()]);
   const accounts = (await listAccounts()).filter((a) => !a.archived).map((a) => ({ value: a.id, label: a.name }));
-  return (
-    <>
-      <PageHeader
-        title="Importa movimenti"
-        description="Carica l'estratto conto della banca: i movimenti già presenti vengono riconosciuti e saltati."
-        actions={
-          <Link href="/movimenti" className="text-sm font-semibold text-brand-ink">
-            Torna ai movimenti
-          </Link>
-        }
-      />
-      {accounts.length ? <ImportWizard accounts={accounts} /> : <EmptyState icon={<Landmark />} title="Nessun conto" description="Crea prima un conto in cui importare i movimenti." />}
-    </>
-  );
+  if (!accounts.length) return <EmptyState icon={<Landmark />} title="Nessun conto" description="Crea prima un conto in cui importare i movimenti." />;
+  // ?conto= comes from the account page: preselect it when visible.
+  const wanted = stringParam(sp.conto);
+  const initial = accounts.find((a) => a.value === wanted)?.value ?? accounts[0].value;
+  return <ImportWizard accounts={accounts} initialAccountId={initial} />;
 }

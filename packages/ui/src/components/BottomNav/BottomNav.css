@@ -51,6 +51,7 @@
   text-align: center;
 }
 .mio-nav__action { order: 2; }
+.mio-nav__list > li.mio-nav__rail-only { display: none; }
 
 /* Desktop: vertical rail on the left. */
 @media (min-width: 960px) {
@@ -66,4 +67,5 @@
   }
   .mio-nav:not(.mio-nav--static) .mio-nav__list { flex: none; flex-direction: column; gap: var(--mio-space-2); width: 100%; }
   .mio-nav:not(.mio-nav--static) .mio-nav__action { order: 0; margin-bottom: var(--mio-space-4); }
+  .mio-nav:not(.mio-nav--static) .mio-nav__list > li.mio-nav__rail-only { display: block; }
 }

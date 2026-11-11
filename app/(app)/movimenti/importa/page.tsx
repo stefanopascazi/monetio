@@ -1,14 +1,6 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/common/PageSkeleton";
-import { ImportView } from "@/components/import/ImportView";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Importa movimenti" };
-
-export default function ImportPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <ImportView />
-    </Suspense>
-  );
+// The import moved to the "Dati e banche" section.
+export default function LegacyImportPage() {
+  redirect("/dati/importa");
 }

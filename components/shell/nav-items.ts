@@ -2,6 +2,8 @@ export interface NavEntry {
   id: string;
   label: string;
   href: string;
+  /** Desktop rail only: the phone bar keeps five items. */
+  railOnly?: boolean;
 }
 
 export const NAV_ENTRIES: NavEntry[] = [
@@ -10,6 +12,7 @@ export const NAV_ENTRIES: NavEntry[] = [
   { id: "movimenti", label: "Movimenti", href: "/movimenti" },
   { id: "scadenze", label: "Scadenze", href: "/scadenze" },
   { id: "proiezioni", label: "Proiezioni", href: "/proiezioni" },
+  { id: "dati", label: "Dati", href: "/dati", railOnly: true },
 ];
 
 /** Nav item matching a pathname (nested routes highlight their section). */

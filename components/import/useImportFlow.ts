@@ -90,7 +90,7 @@ export function useImportFlow(defaultAccountId: string) {
     if (!statuses) return;
     const chosen = drafts.filter((d, i) => isSelected(d.line, statuses[i], choices));
     startImporting(async () => {
-      const res = await importStatement(accountId, chosen);
+      const res = await importStatement(accountId, chosen, { fileName: file?.name ?? "", bank });
       toast.show(res.message ?? "", { tone: res.ok ? "success" : "danger" });
       if (res.ok) reset();
     });

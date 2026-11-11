@@ -18,12 +18,15 @@ const GRID = [
   ["2025-01-05", "2025-01-05", null, 1500, "EUR", "27", "Stipendio"],
 ];
 
-const accounts = [{ value: "acc-1", label: "Conto cointestato" }];
+const accounts = [
+  { value: "acc-1", label: "Conto cointestato" },
+  { value: "acc-2", label: "Revolut" },
+];
 
-const renderWizard = () =>
+const renderWizard = (initialAccountId?: string) =>
   render(
     <ToastProvider>
-      <ImportWizard accounts={accounts} />
+      <ImportWizard accounts={accounts} initialAccountId={initialAccountId} />
     </ToastProvider>,
   );
 
@@ -38,9 +41,9 @@ beforeEach(() => {
   actions.importStatement.mockResolvedValue({ ok: true, message: "1 movimenti importati.", done: 1 });
 });
 
-async function upload() {
+async function upload(initialAccountId?: string) {
   const user = userEvent.setup();
-  renderWizard();
+  renderWizard(initialAccountId);
   await user.upload(screen.getByLabelText("File da importare"), new File(["x"], "cherry.xlsx"));
   return user;
 }
@@ -56,8 +59,10 @@ describe("ImportWizard", () => {
     // Only the new row is selected; the possible duplicate waits for the user.
     await user.click(screen.getByRole("button", { name: "Importa 1 movimento" }));
     await waitFor(() => expect(actions.importStatement).toHaveBeenCalledTimes(1));
-    const [, sent] = actions.importStatement.mock.calls[0];
+    const [accountId, sent, meta] = actions.importStatement.mock.calls[0];
+    expect(accountId).toBe("acc-1");
     expect(sent.map((d: { description: string }) => d.description)).toEqual(["Stipendio"]);
+    expect(meta).toEqual({ fileName: "cherry.xlsx", bank: "Cherry Bank" });
   });
 
   it("includes a possible duplicate once ticked", async () => {
@@ -68,6 +73,11 @@ describe("ImportWizard", () => {
     await user.click(screen.getByRole("button", { name: "Importa 2 movimenti" }));
     await waitFor(() => expect(actions.importStatement).toHaveBeenCalled());
     expect(actions.importStatement.mock.calls[0][1]).toHaveLength(2);
+  });
+
+  it("uses the preselected account", async () => {
+    await upload("acc-2");
+    await waitFor(() => expect(actions.previewImport).toHaveBeenCalledWith("acc-2", expect.any(Array)));
   });
 
   it("shows the reading error and stays on the file step", async () => {

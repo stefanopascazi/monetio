@@ -22,10 +22,12 @@ describe("importRows", () => {
         { line: 2, bookedOn: "2025-01-02", amountCents: -120, description: "Bar", category: "Spesa" },
         { line: 3, bookedOn: "2025-01-03", amountCents: 1000, description: "Rimborso", category: null },
       ],
-      { householdId: "h", accountId: "a", categories },
+      { householdId: "h", accountId: "a", categories, batchId: "b1" },
     );
-    expect(rows[0]).toMatchObject({ household_id: "h", account_id: "a", category_id: "spesa", kind: "expense", status: "booked", source: "import", amount_cents: -120, booked_on: "2025-01-02", created_by: null });
+    expect(rows[0]).toMatchObject({ household_id: "h", account_id: "a", category_id: "spesa", kind: "expense", status: "booked", source: "import", import_batch_id: "b1", amount_cents: -120, booked_on: "2025-01-02", created_by: null });
     expect(rows[0].import_ref).toMatch(/^imp:a:2025-01-02:-120:/);
     expect(rows[1]).toMatchObject({ kind: "income", category_id: null });
+    expect(importRows([], { householdId: "h", accountId: "a", categories })).toEqual([]);
+    expect(importRows([{ line: 1, bookedOn: "2025-01-01", amountCents: -1, description: "x", category: null }], { householdId: "h", accountId: "a", categories })[0].import_batch_id).toBeNull();
   });
 });

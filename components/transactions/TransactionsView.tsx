@@ -3,6 +3,7 @@ import { Amount, Card, PageHeader } from "@monetio/ui";
 import { Upload } from "lucide-react";
 import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
+import { importHref } from "@/components/data/data-tabs";
 import { getContext } from "@/lib/data/context";
 import { monthParam, PAGE_STEP, pageSizeParam, stringParam, withQuery } from "@/lib/data/params";
 import { categoryRefs } from "@/components/common/options";
@@ -45,7 +46,7 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
         title="Movimenti"
         description="Tutti i movimenti dei conti che vedi, mese per mese."
         actions={
-          <Link href="/movimenti/importa" className="inline-flex items-center gap-1.5 rounded-full bg-surface-raised px-3 py-2 text-sm font-semibold text-ink hover:bg-brand-soft">
+          <Link href={importHref()} className="inline-flex items-center gap-1.5 rounded-full bg-surface-raised px-3 py-2 text-sm font-semibold text-ink hover:bg-brand-soft">
             <Upload className="size-4" aria-hidden="true" />
             Importa
           </Link>
