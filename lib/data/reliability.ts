@@ -34,13 +34,16 @@ export const loadReliability = cache(async (): Promise<ReliabilityView> => {
     Promise.all(
       ids.map(async (id) => {
         const [past, existing] = await Promise.all([accountHistory(supabase, id, today), accountRules(supabase, id)]);
-        return [id, detectRecurring(past, existing, today).filter((p) => p.amountCents < 0).length] as const;
+        const missing = detectRecurring(past, existing, today)
+          .filter((p) => p.amountCents < 0)
+          .map((p) => ({ label: p.description, amountCents: p.amountCents, frequency: p.frequency }));
+        return [id, missing] as const;
       }),
     ),
   ]);
 
   const facts = accountFacts({
-    accounts: accounts.map((a) => ({ id: a.id, name: a.name })),
+    accounts: accounts.map((a) => ({ id: a.id, name: a.name, type: a.type })),
     today,
     lastBooked,
     flows,
