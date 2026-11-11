@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm test && npm run build && npm run db:migrate",
   "crons": [{ "path": "/api/cron/sync", "schedule": "0 4 * * *" }],
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)packages/worker' ':(exclude).github'"
 }
