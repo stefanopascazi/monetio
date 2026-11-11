@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CategoryDonut } from "@monetio/ui";
 import { donutMonth } from "@/lib/data/dashboard";
 import { categorySlices } from "@/lib/data/flows";
@@ -9,7 +10,7 @@ export async function CategoryCard() {
   const { flows, month, categories } = await loadDashboardFlows();
   const shown = donutMonth(flows, month, categories);
   return (
-    <Card title="Spese per categoria" subtitle={monthLabel(shown, true)}>
+    <Card title="Spese per categoria" subtitle={monthLabel(shown, true)} action={<Link href="/analisi/statistiche" className="text-sm font-semibold text-brand-ink">Statistiche</Link>}>
       <CategoryDonut data={categorySlices(flows, shown, categories)} />
     </Card>
   );
