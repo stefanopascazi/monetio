@@ -2,6 +2,7 @@
 
 import type { ComponentType, PointerEvent, ReactNode } from "react";
 import { useEffect, useId, useRef, useState } from "react";
+import { Ellipsis } from "lucide-react";
 import { cx } from "../../utils/cx";
 import { messages } from "../../i18n";
 
@@ -26,7 +27,7 @@ export interface BottomNavProps {
   items: NavItem[];
   /**
    * Secondary sections. Phones: hidden in a panel opened by dragging the bar's handle up (or tapping it).
-   * Rail: listed below the main items.
+   * Rail: shown in a column beside the rail, opened from its last entry ("More").
    */
   moreItems?: NavItem[];
   activeId: string;
@@ -160,6 +161,23 @@ export function BottomNav({ items, moreItems = [], activeId, onSelect, linkAs, a
       {action && <div className="mio-nav__action">{action}</div>}
       <ul className="mio-nav__list">
         <Items items={items} activeId={activeId} onSelect={onSelect} Link={Link} onNavigate={close} />
+        {hasMore && (
+          // Rail only (hidden on phones by CSS): opens the secondary column beside the rail.
+          <li className="mio-nav__more-entry">
+            <button
+              type="button"
+              className={cx("mio-nav__item", moreActive && "is-active", open && !moreActive && "is-expanded")}
+              aria-expanded={open}
+              aria-controls={panelId}
+              onClick={() => setOpenOn(open ? null : activeId)}
+            >
+              <span className="mio-nav__icon">
+                <Ellipsis />
+              </span>
+              <span className="mio-nav__label">{messages.nav.more}</span>
+            </button>
+          </li>
+        )}
       </ul>
     </nav>
   );

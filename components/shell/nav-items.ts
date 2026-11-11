@@ -12,11 +12,10 @@ export const NAV_ENTRIES: NavEntry[] = [
   { id: "scadenze", label: "Scadenze", href: "/scadenze" },
 ];
 
-/** Phones: in the panel opened by dragging the bar up. Rail: below the main entries. New sections go here. */
+/** Phones: in the panel opened by dragging the bar up. Rail: in the column opened by "Altro". New sections go here. */
 export const MORE_ENTRIES: NavEntry[] = [
   { id: "proiezioni", label: "Proiezioni", href: "/proiezioni" },
   { id: "dati", label: "Dati", href: "/dati" },
-  { id: "impostazioni", label: "Impostazioni", href: "/impostazioni" },
 ];
 
 /** Nav item matching a pathname (nested routes highlight their section). */

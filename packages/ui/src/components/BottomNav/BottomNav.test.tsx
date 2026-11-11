@@ -94,6 +94,21 @@ describe("BottomNav more panel", () => {
     expect(handle()).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("offers a rail entry that opens the same panel and reflects a secondary active page", async () => {
+    const { rerender } = render(<BottomNav items={items} moreItems={more} activeId="home" />);
+    const entry = screen.getByRole("button", { name: "More" });
+    expect(entry.closest("li")).toHaveClass("mio-nav__more-entry");
+    await userEvent.click(entry);
+    expect(entry).toHaveAttribute("aria-expanded", "true");
+    expect(entry).toHaveClass("is-expanded");
+    expect(entry).not.toHaveClass("is-active");
+    await userEvent.click(entry);
+    expect(entry).toHaveAttribute("aria-expanded", "false");
+    expect(entry).not.toHaveClass("is-expanded");
+    rerender(<BottomNav items={items} moreItems={more} activeId="data" />);
+    expect(screen.getByRole("button", { name: "More" })).toHaveClass("is-active");
+  });
+
   it("closes when the active page changes and flags a secondary active page on the handle", async () => {
     const { rerender } = render(<BottomNav items={items} moreItems={more} activeId="home" />);
     await userEvent.click(handle());

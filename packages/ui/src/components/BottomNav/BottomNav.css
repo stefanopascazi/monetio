@@ -36,6 +36,8 @@
 .mio-nav__icon { position: relative; display: grid; place-items: center; width: 26px; height: 26px; }
 .mio-nav__icon svg { width: 22px; height: 22px; stroke-width: 2; }
 .mio-nav__item.is-active { background: var(--mio-brand); color: var(--mio-on-brand); }
+/* An open "More" entry is lighter than the current page, so only one item reads as active. */
+.mio-nav__item.is-expanded { background: var(--mio-brand-soft); color: var(--mio-brand-ink); }
 .mio-nav__badge {
   position: absolute;
   top: -4px;
@@ -89,11 +91,15 @@
 .mio-nav__list--more {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  gap: var(--mio-space-2);
   min-height: 0;
   overflow: hidden;
 }
-.mio-nav.is-open .mio-nav__list--more { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--mio-border); }
+.mio-nav.is-open .mio-nav__list--more { padding: 4px 4px 10px; margin-bottom: 6px; border-bottom: 1px solid var(--mio-border); }
+/* Secondary items breathe a little more than the dense main bar. */
+.mio-nav__list--more .mio-nav__item { padding: 10px 8px 8px; }
+/* Rail-only "Altro" entry; phones use the handle instead. */
+.mio-nav__list > li.mio-nav__more-entry { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .mio-nav__more { transition: none; }
 }
@@ -112,8 +118,25 @@
   }
   .mio-nav:not(.mio-nav--static) .mio-nav__list { flex: none; flex-direction: column; gap: var(--mio-space-2); width: 100%; }
   .mio-nav:not(.mio-nav--static) .mio-nav__action { order: 0; margin-bottom: var(--mio-space-4); }
-  /* The rail has room: secondary sections follow the main ones, no handle. */
+  /* Rail: no handle; the last entry "Altro" opens the secondary sections in a column beside the rail. */
+  .mio-nav:not(.mio-nav--static).mio-nav--more { flex-wrap: nowrap; padding-top: var(--mio-space-4); }
   .mio-nav:not(.mio-nav--static) .mio-nav__handle { display: none; }
-  .mio-nav:not(.mio-nav--static) .mio-nav__more { order: 1; display: block; width: 100%; visibility: visible; margin-top: var(--mio-space-2); padding-top: var(--mio-space-2); border-top: 1px solid var(--mio-border); }
-  .mio-nav:not(.mio-nav--static) .mio-nav__list--more { display: flex; padding: 0; margin: 0; border: 0; }
+  .mio-nav:not(.mio-nav--static) .mio-nav__list > li.mio-nav__more-entry { display: block; }
+  .mio-nav:not(.mio-nav--static) .mio-nav__more {
+    position: absolute;
+    top: 0;
+    left: calc(100% + var(--mio-space-2));
+    display: block;
+    width: 112px;
+    padding: var(--mio-space-4) 8px;
+    background: var(--mio-surface-raised);
+    border-radius: var(--mio-radius-xl);
+    box-shadow: var(--mio-shadow-lg);
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity var(--mio-duration-base) var(--mio-ease), transform var(--mio-duration-base) var(--mio-ease), visibility var(--mio-duration-base);
+  }
+  .mio-nav:not(.mio-nav--static).is-open .mio-nav__more { opacity: 1; transform: none; }
+  .mio-nav:not(.mio-nav--static) .mio-nav__list--more { display: flex; flex-direction: column; gap: var(--mio-space-2); padding: 0; margin: 0; border: 0; overflow: visible; }
+  .mio-nav:not(.mio-nav--static) .mio-nav__list--more .mio-nav__item { padding: 8px 4px 6px; }
 }
