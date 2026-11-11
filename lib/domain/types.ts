@@ -33,6 +33,11 @@ export interface Account {
   openingDate: ISODate;
   sortOrder: number;
   archived: boolean;
+  /** Masked IBAN ("IT60 •••• 3456"): the full value never leaves the server. */
+  ibanMasked: string | null;
+  bic: string | null;
+  /** Last 4 digits of the linked cards. */
+  cardLast4: string[];
 }
 
 export interface Category {

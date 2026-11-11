@@ -1,4 +1,5 @@
 // Database rows (snake_case, bigint as number|string) to domain objects.
+import { maskIban } from "../banking/identifiers";
 import { feeSource } from "../domain/fees";
 import type { Account, Category, ContributionRule, Member, RecurringRule, Transaction } from "../domain/types";
 
@@ -30,6 +31,9 @@ export function mapAccount(r: Row): Account {
     openingDate: String(r.opening_date),
     sortOrder: num(r.sort_order),
     archived: r.archived_at != null,
+    ibanMasked: r.iban ? maskIban(String(r.iban)) : null,
+    bic: str(r.bic),
+    cardLast4: Array.isArray(r.card_last4) ? r.card_last4.map(String) : [],
   };
 }
 

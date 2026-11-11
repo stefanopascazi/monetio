@@ -7,6 +7,7 @@ import type { ActionState } from "@/app/actions/state";
 import { FormMessage } from "@/components/common/FormMessage";
 import { ACCOUNT_TYPE_LABEL, enumOptions } from "@/components/common/options";
 import { useFormAction } from "@/hooks/useFormAction";
+import { AccountBankFields } from "./AccountBankFields";
 import type { AccountType, Visibility } from "@/lib/domain/types";
 
 export interface AccountDefaults {
@@ -16,6 +17,10 @@ export interface AccountDefaults {
   visibility?: Visibility;
   openingBalanceCents?: number;
   openingDate: string;
+  /** Saved IBAN, masked: the form never receives the full value. */
+  ibanMasked?: string | null;
+  bic?: string | null;
+  cardLast4?: string[];
 }
 
 export interface AccountFormProps {
@@ -38,6 +43,7 @@ export function AccountForm({ action, defaults, embedded, canMakePrivate = true,
   const [visibility, setVisibility] = useState<Visibility>(defaults.visibility ?? "shared");
   const [opening, setOpening] = useState<number | null>(defaults.openingBalanceCents ? Math.abs(defaults.openingBalanceCents) : null);
   const [negative, setNegative] = useState((defaults.openingBalanceCents ?? 0) < 0);
+  const [removeIban, setRemoveIban] = useState(false);
   const [open, setOpen] = useState(!!embedded || !!initiallyOpen || !!plain);
   const [formKey, setFormKey] = useState(0);
   // After saving: close the panel so the outcome is visible, and clear the create form.
@@ -47,6 +53,7 @@ export function AccountForm({ action, defaults, embedded, canMakePrivate = true,
     setOpening(null);
     setNegative(false);
     setVisibility("shared");
+    setRemoveIban(false);
     setFormKey((k) => k + 1);
     onClosed?.();
   }, [embedded, onSaved, onClosed]);
@@ -77,12 +84,14 @@ export function AccountForm({ action, defaults, embedded, canMakePrivate = true,
       <input type="hidden" name="visibility" value={visibility} />
       <input type="hidden" name="openingBalanceCents" value={opening ?? 0} />
       <input type="hidden" name="openingNegative" value={String(negative)} />
+      <input type="hidden" name="ibanRemove" value={String(removeIban)} />
       <TextField name="name" label="Nome" placeholder="Es. Conto cointestato" defaultValue={defaults.name} error={error("name")} required />
       <TextField name="institution" label="Banca" optional placeholder="Es. Intesa Sanpaolo" defaultValue={defaults.institution ?? ""} />
       <Select name="type" label="Tipo" defaultValue={defaults.type ?? "checking"} options={enumOptions(ACCOUNT_TYPE_LABEL)} error={error("type")} />
       <TextField name="openingDate" label="Data saldo iniziale" type="date" defaultValue={defaults.openingDate} error={error("openingDate")} required />
       <AmountInput label="Saldo iniziale" kind="neutral" valueCents={opening} onValueChange={setOpening} hint="Saldo alla data indicata" />
       <Switch label="Saldo negativo" checked={negative} onCheckedChange={setNegative} />
+      <AccountBankFields defaults={defaults} removeIban={removeIban} onRemoveIbanChange={setRemoveIban} error={error} />
       <div className="mio-span-full flex flex-col gap-2">
         <span className="text-sm font-medium text-ink-muted">Chi può vederlo</span>
         <SegmentedControl<Visibility>
