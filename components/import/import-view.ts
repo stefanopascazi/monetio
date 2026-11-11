@@ -2,6 +2,7 @@
 import type { SelectOption } from "@monetio/ui";
 import type { DraftStatus } from "@/lib/import/classify";
 import { cellText } from "@/lib/import/mapping";
+import type { TransferLink } from "@/lib/import/transfers";
 import type { ColumnMapping, Grid, ImportDraft } from "@/lib/import/types";
 
 /** Spreadsheet-style column name: 0 -> A, 26 -> AA. */
@@ -32,24 +33,28 @@ export function fallbackMapping(grid: Grid): ColumnMapping {
   return { headerRow: 0, date: 0, description: Math.min(1, last), amount: { mode: "signed", column: Math.min(2, last) } };
 }
 
-export const isSelectable = (s: DraftStatus | undefined) => s?.kind === "new" || s?.kind === "possible" || s?.kind === "transfer";
+const isTransfer = (s: DraftStatus | undefined) => s?.kind === "transfer" || s?.kind === "transferNew";
+
+export const isSelectable = (s: DraftStatus | undefined) => s?.kind === "new" || s?.kind === "possible" || isTransfer(s);
 
 /** New rows and giroconti start selected; possible duplicates wait for the user's choice. */
 export function isSelected(line: number, status: DraftStatus | undefined, choices: ReadonlyMap<number, boolean>): boolean {
   if (!isSelectable(status)) return false;
-  return choices.get(line) ?? (status?.kind === "new" || status?.kind === "transfer");
+  return choices.get(line) ?? (status?.kind === "new" || isTransfer(status));
 }
 
 /** A selected giroconto is linked to the other account unless the user opted out. */
 export function isLinked(line: number, status: DraftStatus | undefined, choices: ReadonlyMap<number, boolean>, unlinked: ReadonlySet<number>): boolean {
-  return status?.kind === "transfer" && isSelected(line, status, choices) && !unlinked.has(line);
+  return isTransfer(status) && isSelected(line, status, choices) && !unlinked.has(line);
 }
 
-/** Links to send with the import: line and the existing movement it pairs with. */
-export function transferLinks(drafts: ImportDraft[], statuses: DraftStatus[], choices: ReadonlyMap<number, boolean>, unlinked: ReadonlySet<number>) {
-  return drafts.flatMap((d, i) => {
+/** Links to send with the import: the existing movement each line pairs with, or the account to create its side on. */
+export function transferLinks(drafts: ImportDraft[], statuses: DraftStatus[], choices: ReadonlyMap<number, boolean>, unlinked: ReadonlySet<number>): TransferLink[] {
+  return drafts.flatMap((d, i): TransferLink[] => {
     const s = statuses[i];
-    return s?.kind === "transfer" && isLinked(d.line, s, choices, unlinked) ? [{ line: d.line, transactionId: s.match.id }] : [];
+    if (!isLinked(d.line, s, choices, unlinked)) return [];
+    if (s.kind === "transfer") return [{ line: d.line, transactionId: s.match.id }];
+    return s.kind === "transferNew" ? [{ line: d.line, accountId: s.account.id }] : [];
   });
 }
 

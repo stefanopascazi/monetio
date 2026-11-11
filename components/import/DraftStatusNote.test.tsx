@@ -30,4 +30,10 @@ describe("DraftStatusNote", () => {
     rerender(<DraftStatusNote status={{ kind: "transfer", match }} selected={false} />);
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
+
+  it("explains a giroconto recognised by IBAN whose other side will be created", () => {
+    render(<DraftStatusNote status={{ kind: "transferNew", account: { id: "a2", name: "Conto privato di Asha" }, via: "iban" }} selected linked />);
+    expect(screen.getByText("Giroconto con Conto privato di Asha")).toBeInTheDocument();
+    expect(screen.getByText(/Riconosciuto dall'IBAN\. L'altro lato non è ancora registrato: verrà creato/)).toBeInTheDocument();
+  });
 });

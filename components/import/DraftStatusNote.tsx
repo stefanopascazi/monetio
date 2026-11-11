@@ -13,6 +13,8 @@ export interface DraftStatusNoteProps {
   selected?: boolean;
 }
 
+const VIA_LABEL = { iban: "Riconosciuto dall'IBAN", card: "Riconosciuto dalla carta" } as const;
+
 /** Why a draft is excluded, flagged or paired with another account. */
 export function DraftStatusNote({ status, linked = false, onLinkChange, selected = false }: DraftStatusNoteProps) {
   if (!status || status.kind === "new") return null;
@@ -30,14 +32,19 @@ export function DraftStatusNote({ status, linked = false, onLinkChange, selected
       </span>
     );
   }
-  const { match } = status;
+  const via = status.via ? VIA_LABEL[status.via] : "";
+  const detail =
+    status.kind === "transfer"
+      ? `Altro lato: “${status.match.description}” del ${dateLabel(status.match.bookedOn)}`
+      : `L'altro lato non è ancora registrato: verrà creato`;
   return (
     <span className="flex flex-col items-start gap-1">
       <Badge size="sm" tone="transfer">
-        Giroconto con {match.accountName}
+        Giroconto con {status.kind === "transfer" ? status.match.accountName : status.account.name}
       </Badge>
       <span className="text-xs text-ink-muted">
-        Altro lato: “{match.description}” del {dateLabel(match.bookedOn)}
+        {via ? `${via}. ` : ""}
+        {detail}
       </span>
       {selected && (
         <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold">

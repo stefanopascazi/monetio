@@ -80,6 +80,13 @@ describe("giroconti", () => {
     expect(summarize(drafts, statuses, new Map()).transfers).toBe(1);
     expect(summarize(drafts, statuses, new Map(), new Set([1]))).toMatchObject({ transfers: 0, count: 2 });
   });
+
+  it("links giroconti whose other side gets created to their account", () => {
+    const created: DraftStatus = { kind: "transferNew", account: { id: "acc-cherry", name: "Cherry" }, via: "iban" };
+    expect(isSelected(1, created, new Map())).toBe(true);
+    expect(transferLinks(drafts, [created, { kind: "new" }], new Map(), new Set())).toEqual([{ line: 1, accountId: "acc-cherry" }]);
+    expect(summarize(drafts, [created, { kind: "new" }], new Map()).transfers).toBe(1);
+  });
 });
 
 describe("categories in the preview", () => {

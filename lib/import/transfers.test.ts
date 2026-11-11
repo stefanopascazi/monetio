@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DraftStatus } from "./classify";
-import { confirmedLinks, detectTransfers, parseLinks, type TransferCandidate } from "./transfers";
+import { confirmedLinks, detectTransfers, draftIdentifiers, identifyAccounts, parseLinks, type TransferCandidate } from "./transfers";
 
 const cand = (id: string, bookedOn: string, amountCents: number, accountId = "cherry"): TransferCandidate => ({
   id,
@@ -66,6 +66,80 @@ describe("confirmedLinks", () => {
       { line: 3, transactionId: ID },
       { line: 4, transactionId: ID },
     ];
-    expect([...confirmedLinks(links, drafts, statuses)]).toEqual([[2, match]]);
+    expect([...confirmedLinks(links, drafts, statuses)]).toEqual([[2, { accountId: "cherry", categoryId: "giro", existingId: ID }]]);
+  });
+
+  it("never keeps a link of the wrong shape for its status", () => {
+    const ACC = "22222222-2222-4222-8222-222222222222";
+    const statuses: DraftStatus[] = [{ kind: "transferNew", account: { id: ACC, name: "Cherry" }, via: "iban" }, { kind: "transfer", match: cand(ID, "2026-11-05", -1) }];
+    const drafts = [{ line: 2 }, { line: 3 }];
+    expect([...confirmedLinks([{ line: 2, accountId: ACC }, { line: 3, accountId: ACC }], drafts, statuses)]).toEqual([[2, { accountId: ACC, categoryId: null, existingId: null }]]);
+    expect([...confirmedLinks([{ line: 2, transactionId: ID }], drafts, statuses)]).toEqual([]);
+  });
+});
+
+const ACC_CHERRY = "cherry";
+const IBAN_CHERRY = "IT60X0542811101000000123456";
+const IBAN_OWN = "DE89370400440532013000";
+const names = new Map([["cherry", "Cherry"], ["rev", "Revolut"]]);
+
+describe("identifyAccounts", () => {
+  const matches = [
+    { accountId: ACC_CHERRY, iban: IBAN_CHERRY, card: null },
+    { accountId: "rev", iban: IBAN_OWN, card: null },
+    { accountId: ACC_CHERRY, iban: null, card: "1234" },
+    { accountId: "a", iban: null, card: "9999" },
+    { accountId: "b", iban: null, card: "9999" },
+  ];
+
+  it("finds the account by IBAN first, then by unambiguous card digits, ignoring the own account", () => {
+    const drafts = [
+      { description: `Bonifico Coor.Benef.: ${IBAN_CHERRY.replace(/(.{4})/g, "$1 ")} Banca` },
+      { description: "Ricarica di *1234" },
+      { description: `SDD debitore ${IBAN_OWN}` },
+      { description: "Ricarica di *9999" },
+      { description: "Bar" },
+    ];
+    expect(identifyAccounts(drafts, "rev", matches, names)).toEqual([
+      { id: ACC_CHERRY, name: "Cherry", via: "iban" },
+      { id: ACC_CHERRY, name: "Cherry", via: "card" },
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("collects the identifiers to look up", () => {
+    expect(draftIdentifiers([{ description: `x ${IBAN_CHERRY} *1234` }, { description: `${IBAN_CHERRY} *5678` }])).toEqual({ ibans: [IBAN_CHERRY], cards: ["1234", "5678"] });
+  });
+});
+
+describe("detectTransfers with identified accounts", () => {
+  const cherry = { id: ACC_CHERRY, name: "Cherry", via: "iban" as const };
+
+  it("pairs with a movement on the named account, before amount-only matching", () => {
+    const drafts = [{ bookedOn: "2026-11-05", amountCents: 80000 }];
+    const other = cand("other", "2026-11-05", -80000, "fineco");
+    const onCherry = cand("onCherry", "2026-11-03", -80000, ACC_CHERRY);
+    expect(detectTransfers(drafts, [NEW], [other, onCherry], [cherry])).toEqual([{ kind: "transfer", match: onCherry, via: "iban" }]);
+  });
+
+  it("asks to create the other side when the named account has no matching movement", () => {
+    const drafts = [
+      { bookedOn: "2026-11-05", amountCents: 80000 },
+      { bookedOn: "2026-11-05", amountCents: 80000 },
+    ];
+    const res = detectTransfers(drafts, [NEW, NEW], [cand("other", "2026-11-05", -80000, "fineco")], [cherry, null]);
+    expect(res[0]).toEqual({ kind: "transferNew", account: { id: ACC_CHERRY, name: "Cherry" }, via: "iban" });
+    expect(res[1]).toMatchObject({ kind: "transfer", match: { id: "other" } });
+  });
+
+  it("leaves duplicates alone even when the account is named", () => {
+    expect(detectTransfers([{ bookedOn: "2026-11-05", amountCents: 1 }], [{ kind: "duplicate" }], [], [cherry])).toEqual([{ kind: "duplicate" }]);
+  });
+
+  it("accepts account links in parseLinks", () => {
+    expect(parseLinks([{ line: 1, accountId: ID }])).toEqual([{ line: 1, accountId: ID }]);
+    expect(parseLinks([{ line: 1, accountId: ID, transactionId: ID }])).toBeNull();
   });
 });

@@ -5,9 +5,12 @@ import type { CategorisedMovement } from "../import/categories";
 import { POSSIBLE_WINDOW_DAYS } from "../import/classify";
 import type { Movement } from "../import/dedup";
 import type { ExistingRule, PastMovement } from "../import/recurring";
-import { TRANSFER_WINDOW_DAYS, type TransferCandidate } from "../import/transfers";
+import { mirrorRows, type MirrorSource } from "../import/rows";
+import { type AccountMatch, draftIdentifiers, type IdentifiedAccount, identifyAccounts, TRANSFER_WINDOW_DAYS, type TransferCandidate } from "../import/transfers";
 import type { ImportDraft } from "../import/types";
 import { isUUID } from "../forms/parse";
+import { listHiddenAccounts } from "./queries";
+import { transferTargets } from "./transfer-targets";
 import type { createClient } from "../supabase/server";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -48,9 +51,21 @@ export async function loadImportAccount(supabase: Client, householdId: string, a
 export async function movementsAround(supabase: Client, accountId: string, drafts: ImportDraft[]): Promise<Movement[]> {
   const [from, to] = dateRange(drafts, POSSIBLE_WINDOW_DAYS);
   const rows = await allPages<Record<string, unknown>>((a, b) =>
-    supabase.from("transactions").select("booked_on, amount_cents, description").eq("account_id", accountId).gte("booked_on", from).lte("booked_on", to).order("id").range(a, b),
+    supabase
+      .from("transactions")
+      .select("booked_on, amount_cents, description, kind, source, import_ref")
+      .eq("account_id", accountId)
+      .gte("booked_on", from)
+      .lte("booked_on", to)
+      .order("id")
+      .range(a, b),
   );
-  return rows.map((r) => ({ bookedOn: String(r.booked_on), amountCents: Number(r.amount_cents), description: String(r.description) }));
+  return rows.map((r) => ({
+    bookedOn: String(r.booked_on),
+    amountCents: Number(r.amount_cents),
+    description: String(r.description),
+    importedMirror: r.kind === "transfer" && r.source === "import" && r.import_ref == null,
+  }));
 }
 
 /** Plain booked income/expense on the other visible accounts that could be the other side of a giroconto. */
@@ -88,6 +103,52 @@ export async function transferCandidates(supabase: Client, householdId: string, 
       description: String(r.description),
       categoryId: (r.category_id as string | null) ?? null,
     }));
+}
+
+/**
+ * Other household account named by each draft (IBAN or card digits), private accounts of other members
+ * included: the lookup function returns only their ids, labelled like transfer destinations.
+ */
+export async function identifiedAccounts(supabase: Client, householdId: string, accountId: string, drafts: ImportDraft[]): Promise<(IdentifiedAccount | null)[]> {
+  const { ibans, cards } = draftIdentifiers(drafts);
+  if (!ibans.length && !cards.length) return drafts.map(() => null);
+  const { data, error } = await supabase.rpc("match_household_accounts", { p_household: householdId, p_ibans: ibans, p_cards: cards });
+  if (error) throw error;
+  const matches: AccountMatch[] = ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    accountId: String(r.account_id),
+    iban: (r.iban as string | null) ?? null,
+    card: (r.card as string | null) ?? null,
+  }));
+  if (!matches.length) return drafts.map(() => null);
+  const [{ data: visible, error: namesError }, hidden] = await Promise.all([supabase.from("accounts").select("id, name").eq("household_id", householdId), listHiddenAccounts()]);
+  if (namesError) throw namesError;
+  const names = new Map((visible ?? []).map((a) => [String(a.id), String(a.name)]));
+  const hiddenLabels = transferTargets(hidden);
+  for (const h of hiddenLabels) if (!names.has(h.id)) names.set(h.id, h.name);
+  return identifyAccounts(drafts, accountId, matches, names);
+}
+
+/**
+ * Creates the other side of imported giroconti whose counterpart was not booked yet (it may be a private
+ * account the caller cannot see: the insert policy allows transfer sides). When that fails, the imported
+ * rows fall back to plain income/expense. Returns how many giroconti were completed.
+ */
+export async function createTransferSides(
+  supabase: Client,
+  sources: (MirrorSource & { importRef: string })[],
+  target: { householdId: string; accountId: string; batchId: string | null },
+): Promise<number> {
+  if (!sources.length) return 0;
+  // No returning select: rows on hidden accounts are not readable by the caller.
+  const { error } = await supabase.from("transactions").insert(mirrorRows(sources, target));
+  if (!error) return sources.length;
+  for (const s of sources) {
+    await supabase
+      .from("transactions")
+      .update({ kind: s.amountCents > 0 ? "income" : "expense", counterpart_account_id: null, transfer_group_id: null })
+      .eq("import_ref", s.importRef);
+  }
+  return 0;
 }
 
 /**
