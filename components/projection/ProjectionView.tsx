@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { PageHeader } from "@monetio/ui";
 import { StreamBlock } from "@/components/common/StreamBlock";
+import { ReliabilitySection } from "@/components/reliability/ReliabilitySection";
 import { AccountPickerSection } from "./account/AccountPickerSection";
 import { ProjectionAccountProvider } from "./account/ProjectionAccountContext";
 import { horizonParam } from "./horizons";
@@ -24,6 +25,9 @@ export async function ProjectionView({ searchParams }: { searchParams: Promise<R
       </Suspense>
       <StreamBlock height={360}>
         <ProjectionChartSection horizon={horizon} />
+      </StreamBlock>
+      <StreamBlock height={200}>
+        <ReliabilitySection showAccounts />
       </StreamBlock>
       <StreamBlock height={240}>
         <BreakdownSection horizon={horizon} />

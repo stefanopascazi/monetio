@@ -256,3 +256,16 @@ export const listOverrides = cache(async (): Promise<OccurrenceOverride[]> => {
     note: r.note == null ? null : String(r.note),
   }));
 });
+
+/** Date of the latest booked movement per account (null when it has none): one indexed read each. */
+export const listLastBookedDates = cache(async (accountIds: string[]): Promise<Record<string, ISODate | null>> => {
+  const supabase = await createClient();
+  const rows = await Promise.all(
+    accountIds.map(async (id) => {
+      const { data, error } = await supabase.from("transactions").select("booked_on").eq("account_id", id).eq("status", "booked").order("booked_on", { ascending: false }).limit(1).maybeSingle();
+      if (error) throw error;
+      return [id, data ? String(data.booked_on) : null] as const;
+    }),
+  );
+  return Object.fromEntries(rows);
+});

@@ -1,4 +1,5 @@
 import { StreamBlock } from "@/components/common/StreamBlock";
+import { ReliabilitySection } from "@/components/reliability/ReliabilitySection";
 import { AccountsSection } from "./sections/AccountsSection";
 import { BalanceHero } from "./sections/BalanceHero";
 import { CashflowCard } from "./sections/CashflowCard";
@@ -42,9 +43,14 @@ export function Dashboard() {
         <StreamBlock height={320}>
           <CashflowCard />
         </StreamBlock>
-        <StreamBlock height={320}>
-          <ProjectionCard />
-        </StreamBlock>
+        <div className="flex flex-col gap-4">
+          <StreamBlock height={320}>
+            <ProjectionCard />
+          </StreamBlock>
+          <StreamBlock height={160}>
+            <ReliabilitySection maxSuggestions={3} />
+          </StreamBlock>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
