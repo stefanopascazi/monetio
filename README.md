@@ -60,6 +60,9 @@ First login: `npm run db:import -- spese.xlsx --ste-email you@example.com` (opti
 `db:migrate`, `db:import` and `auth:invite` read `.env.stack` only for variables not already set, and never on
 Vercel, where the project variables point them at the production database.
 
+Production migrations run in the Vercel build (`buildCommand` in `vercel.json`: tests, build, then `db:migrate`).
+Preview deployments share the production database, so `db:migrate` skips them; concurrent runs wait on an advisory lock.
+
 Other stack scripts: `stack:up` (full stack with app and cron), `stack:down`.
 The `stack:*` scripts find Docker on the PATH or, on Windows, inside WSL (`MONETIO_WSL_DISTRO` picks the distro;
 without systemd, start the daemon with `wsl -u root -e service docker start`).
