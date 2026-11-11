@@ -1,0 +1,120 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@monetio/ui";
+import { ImportWizard } from "./ImportWizard";
+
+const actions = vi.hoisted(() => ({
+  readStatementFile: vi.fn(),
+  previewImport: vi.fn(),
+  importStatement: vi.fn(),
+}));
+vi.mock("@/app/actions/import", () => actions);
+vi.mock("@/app/actions/rules", () => ({ createRule: vi.fn() }));
+
+const GRID = [
+  ["Data contabile", "Valuta", "Dare", "Avere", "Divisa", "Causale", "Descrizione"],
+  ["2025-01-03", "2025-01-03", -13.99, null, "EUR", "(2", "Streaming"],
+  ["2025-01-04", "2025-01-04", -76.35, null, "EUR", "TE", "Addebito Hera"],
+  ["2025-01-05", "2025-01-05", null, 1500, "EUR", "27", "Stipendio"],
+];
+
+const accounts = [
+  { value: "acc-1", label: "Conto cointestato" },
+  { value: "acc-2", label: "Revolut" },
+];
+
+const renderWizard = () =>
+  render(
+    <ToastProvider>
+      <ImportWizard accounts={accounts} categories={[{ id: "stip", name: "Stipendio", kind: "income" }]} />
+    </ToastProvider>,
+  );
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  actions.readStatementFile.mockResolvedValue({ ok: true, grid: GRID });
+  actions.previewImport.mockResolvedValue({
+    ok: true,
+    openingDate: "2024-12-31",
+    statuses: [{ kind: "duplicate" }, { kind: "possible", match: { bookedOn: "2025-01-02", amountCents: -7635, description: "Bolletta luce" } }, { kind: "new" }],
+    suggestions: [[4, "stip"]],
+    recurring: [],
+  });
+  actions.importStatement.mockResolvedValue({ ok: true, message: "1 movimenti importati.", done: 1 });
+});
+
+async function upload() {
+  const user = userEvent.setup();
+  renderWizard();
+  await user.upload(screen.getByLabelText("File da importare"), new File(["x"], "cherry.xlsx"));
+  return user;
+}
+
+describe("ImportWizard", () => {
+  it("recognises the bank, checks duplicates and imports only the chosen rows", async () => {
+    const user = await upload();
+    expect(await screen.findByText(/Formato Cherry Bank riconosciuto/)).toBeInTheDocument();
+    expect(await screen.findByText("Già presente")).toBeInTheDocument();
+    expect(screen.getByText(/Simile a “Bolletta luce”/)).toBeInTheDocument();
+    expect(actions.previewImport).toHaveBeenCalledWith("acc-1", expect.arrayContaining([expect.objectContaining({ description: "Stipendio", amountCents: 150000 })]));
+
+    // Only the new row is selected; the possible duplicate waits for the user.
+    await user.click(screen.getByRole("button", { name: "Importa 1 movimento" }));
+    await waitFor(() => expect(actions.importStatement).toHaveBeenCalledTimes(1));
+    const [accountId, sent, meta] = actions.importStatement.mock.calls[0];
+    expect(accountId).toBe("acc-1");
+    expect(sent.map((d: { description: string }) => d.description)).toEqual(["Stipendio"]);
+    expect(meta).toEqual({ fileName: "cherry.xlsx", bank: "Cherry Bank" });
+    // The suggested category travels with the import.
+    expect(actions.importStatement.mock.calls[0][4]).toEqual([{ line: 4, categoryId: "stip" }]);
+  });
+
+  it("includes a possible duplicate once ticked", async () => {
+    const user = await upload();
+    // Checkboxes stay disabled until the duplicate check answers.
+    await screen.findByText("Già presente");
+    await user.click(screen.getByRole("checkbox", { name: /Importa Addebito Hera/ }));
+    await user.click(screen.getByRole("button", { name: "Importa 2 movimenti" }));
+    await waitFor(() => expect(actions.importStatement).toHaveBeenCalled());
+    expect(actions.importStatement.mock.calls[0][1]).toHaveLength(2);
+  });
+
+  it("checks duplicates again for a different account", async () => {
+    const user = await upload();
+    await screen.findByText("Già presente");
+    await user.selectOptions(screen.getByLabelText("Conto di destinazione"), "acc-2");
+    await waitFor(() => expect(actions.previewImport).toHaveBeenCalledWith("acc-2", expect.any(Array)));
+  });
+
+  describe("giroconti", () => {
+    const match = { id: "11111111-1111-4111-8111-111111111111", accountId: "acc-2", accountName: "Revolut", bookedOn: "2025-01-05", amountCents: -150000, description: "Ricarica", categoryId: null };
+    beforeEach(() => {
+      actions.previewImport.mockResolvedValue({ ok: true, openingDate: "2024-12-31", statuses: [{ kind: "duplicate" }, { kind: "duplicate" }, { kind: "transfer", match }], suggestions: [], recurring: [] });
+    });
+
+    it("are linked by default", async () => {
+      const user = await upload();
+      expect(await screen.findByText("Giroconto con Revolut")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Importa 1 movimento" }));
+      await waitFor(() => expect(actions.importStatement).toHaveBeenCalledTimes(1));
+      expect(actions.importStatement.mock.calls[0][3]).toEqual([{ line: 4, transactionId: match.id }]);
+    });
+
+    it("are imported plain once unlinked", async () => {
+      const user = await upload();
+      await user.click(await screen.findByRole("checkbox", { name: "Collega come giroconto" }));
+      await user.click(screen.getByRole("button", { name: "Importa 1 movimento" }));
+      await waitFor(() => expect(actions.importStatement).toHaveBeenCalledTimes(1));
+      expect(actions.importStatement.mock.calls[0][3]).toEqual([]);
+    });
+  });
+
+  it("shows the reading error and stays on the file step", async () => {
+    actions.readStatementFile.mockResolvedValue({ ok: false, message: "Il file è vuoto." });
+    await upload();
+    expect(await screen.findByText("Il file è vuoto.")).toBeInTheDocument();
+    expect(screen.getByLabelText("File da importare")).toBeInTheDocument();
+    expect(actions.previewImport).not.toHaveBeenCalled();
+  });
+});

@@ -50,3 +50,6 @@ next-env.d.ts
 
 # private source data
 *.xlsx
+
+# Real bank exports used for manual import checks
+/*.csv
