@@ -13,7 +13,7 @@ function setup({ acquired = true, lastSuccess = null as Date | null } = {}) {
   };
   const heartbeat = { ping: vi.fn<Heartbeat["ping"]>(async () => {}) };
   const log = vi.fn();
-  const reporter = { capture: vi.fn(), flush: vi.fn(async () => {}) };
+  const reporter = { capture: vi.fn(), flush: vi.fn(async () => {}), sendTest: vi.fn() };
   const deps = { locks, heartbeat, reporter, log, holder: "w1", shutdown: new AbortController().signal, now: () => 1_000 };
   return { deps, locks, heartbeat, reporter, log };
 }

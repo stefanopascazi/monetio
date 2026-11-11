@@ -45,3 +45,9 @@ Job `backup`, giornaliero dopo le 01:00 UTC. L'ultimo successo è salvato in `jo
 ## Errori (Sentry, #48)
 
 Con `SENTRY_DSN` impostato in `/etc/monetio-worker.env`, i job falliti vengono inviati a Sentry con il tag `job` e la release (SHA del commit). Raccoglie solo errori: niente tracing, niente OpenTelemetry. Gli eventi passano da `lib/observability/scrub-event.ts`, che toglie email, IBAN, importi e valori delle righe Postgres. Senza DSN il reporting è spento.
+
+Verifica della consegna, da lanciare a mano sulla VPS:
+
+```bash
+sudo systemd-run --pipe --wait -p User=monetio -p EnvironmentFile=/etc/monetio-worker.env /opt/node24/bin/node /opt/monetio-worker/current/worker.mjs --sentry-test
+```

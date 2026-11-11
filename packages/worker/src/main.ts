@@ -21,6 +21,13 @@ const SHUTDOWN_GRACE_MS = 20_000;
 const log = createLogger();
 const config = parseConfig(process.env);
 const reporter = config.sentryDsn ? createSentryReporter(config.sentryDsn, WORKER_RELEASE) : noopReporter;
+
+// Manual delivery check, run by hand on the VPS: node worker.mjs --sentry-test
+if (process.argv.includes("--sentry-test")) {
+  const result = await reporter.sendTest();
+  log(result.delivered ? "info" : "error", "sentry test", { ...result });
+  process.exit(result.delivered ? 0 : 1);
+}
 const sql = postgres(cleanUrl(config.databaseUrl), { ssl: sslFor(config.databaseUrl), max: 2, onnotice: () => {} });
 const jobs = createJobs(sql, config);
 
