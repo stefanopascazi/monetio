@@ -6,6 +6,7 @@ import type { Account, Category, ContributionRule, ISODate, OccurrenceOverride, 
 import { createClient } from "../supabase/server";
 import { activeHouseholdId } from "./context";
 import { type MonthlyFlow, mapFlow } from "./flows";
+import type { ExpenseRow } from "./statistics";
 import { attachFees, type ListTotals, mapAccount, mapCategory, mapContribution, mapRule, mapTotals, mapTransaction } from "./mappers";
 import { searchTerm } from "./params";
 import type { HiddenAccount } from "./transfer-targets";
@@ -268,4 +269,33 @@ export const listLastBookedDates = cache(async (accountIds: string[]): Promise<R
     }),
   );
   return Object.fromEntries(rows);
+});
+
+/** Booked expenses of a period (optionally one account), lean: what Statistiche groups by merchant. */
+export const listExpenseRows = cache(async (from: ISODate, to: ISODate, accountId: string | null): Promise<ExpenseRow[]> => {
+  const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
+  const rows: ExpenseRow[] = [];
+  for (let start = 0; ; start += 1000) {
+    let q = supabase
+      .from("transactions")
+      .select("account_id, description, amount_cents, booked_on, category_id, recurring_rule_id, contribution_rule_id")
+      .eq("household_id", hh)
+      .eq("kind", "expense")
+      .eq("status", "booked")
+      .gte("booked_on", from)
+      .lte("booked_on", to);
+    if (accountId) q = q.eq("account_id", accountId);
+    const { data, error } = await q.order("id").range(start, start + 999);
+    if (error) throw error;
+    for (const r of data ?? [])
+      rows.push({
+        accountId: String(r.account_id),
+        description: String(r.description),
+        amountCents: Number(r.amount_cents),
+        bookedOn: String(r.booked_on),
+        categoryId: r.category_id == null ? null : String(r.category_id),
+        fromRule: r.recurring_rule_id != null || r.contribution_rule_id != null,
+      });
+    if (!data || data.length < 1000) return rows;
+  }
 });

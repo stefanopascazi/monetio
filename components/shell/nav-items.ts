@@ -14,7 +14,7 @@ export const NAV_ENTRIES: NavEntry[] = [
 
 /** Phones: in the panel opened by dragging the bar up. Rail: in the column opened by "Altro". New sections go here. */
 export const MORE_ENTRIES: NavEntry[] = [
-  { id: "proiezioni", label: "Proiezioni", href: "/proiezioni" },
+  { id: "analisi", label: "Analisi", href: "/analisi" },
   { id: "dati", label: "Dati", href: "/dati" },
 ];
 

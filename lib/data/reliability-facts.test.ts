@@ -9,7 +9,7 @@ const due = (ruleId: string, overdue: boolean, accountId = "a") => ({ ruleId, ov
 describe("accountFacts", () => {
   it("counts history months, averages the last full months of spending and splits deadlines", () => {
     const [f] = accountFacts({
-      accounts: [{ id: "a", name: "Conto" }],
+      accounts: [{ id: "a", name: "Conto", type: "checking" }],
       today: "2026-11-11",
       lastBooked: { a: "2026-11-09" },
       flows: [
@@ -27,7 +27,7 @@ describe("accountFacts", () => {
       summary: { a: { rulesIncomeCents: 0, rulesExpenseCents: 25000, transfersCents: 0, netCents: 0 } },
       due: [due("est", true), due("bill", true), due("bill", false), due("other", true, "b")],
       estimateRuleIds: new Set(["est"]),
-      missingRules: { a: 2 },
+      missingRules: { a: [{ label: "Netflix", amountCents: -1299, frequency: "monthly" }] },
     });
     expect(f).toEqual({
       accountId: "a",
@@ -38,12 +38,13 @@ describe("accountFacts", () => {
       declaredMonthlyExpenseCents: 25000,
       overdueCount: 1,
       openEstimates: 1,
-      missingRules: 2,
+      missingRules: [{ label: "Netflix", amountCents: -1299, frequency: "monthly" }],
+      quiet: false,
     });
   });
 
   it("defaults missing data to an empty account", () => {
-    const [f] = accountFacts({ accounts: [{ id: "a", name: "Nuovo" }], today: "2026-11-11", lastBooked: {}, flows: [], summary: {}, due: [], estimateRuleIds: new Set(), missingRules: {} });
-    expect(f).toMatchObject({ lastBookedOn: null, historyMonths: 0, avgMonthlyExpenseCents: 0, declaredMonthlyExpenseCents: 0, overdueCount: 0, openEstimates: 0, missingRules: 0 });
+    const [f] = accountFacts({ accounts: [{ id: "a", name: "Nuovo", type: "savings" }], today: "2026-11-11", lastBooked: {}, flows: [], summary: {}, due: [], estimateRuleIds: new Set(), missingRules: {} });
+    expect(f).toMatchObject({ lastBookedOn: null, historyMonths: 0, avgMonthlyExpenseCents: 0, declaredMonthlyExpenseCents: 0, overdueCount: 0, openEstimates: 0, missingRules: [], quiet: true });
   });
 });

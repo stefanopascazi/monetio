@@ -11,7 +11,7 @@ describe("activeNavId", () => {
   });
 
   it("matches secondary sections", () => {
-    expect(activeNavId("/proiezioni")).toBe("proiezioni");
+    expect(activeNavId("/analisi/proiezioni")).toBe("analisi");
     expect(activeNavId("/dati/storico")).toBe("dati");
     // Settings live behind the profile icon in the top bar, not in the nav.
     expect(activeNavId("/impostazioni")).toBe("");

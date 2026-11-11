@@ -5,7 +5,7 @@ import { ProjectionView } from "@/components/projection/ProjectionView";
 
 export const metadata: Metadata = { title: "Proiezioni" };
 
-export default function ProjectionPage({ searchParams }: PageProps<"/proiezioni">) {
+export default function ProjectionPage({ searchParams }: PageProps<"/analisi/proiezioni">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
       <ProjectionView searchParams={searchParams} />

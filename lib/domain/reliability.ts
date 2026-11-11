@@ -1,7 +1,7 @@
 // How much the projection can be trusted: a 0-100 score per account and for the household, from how
 // complete and fresh the declared data is, with the concrete actions that would raise it.
 import { daysBetween } from "./dates";
-import type { ISODate } from "./types";
+import type { ISODate, RuleFrequency } from "./types";
 
 export type ReliabilityLevel = "high" | "medium" | "low";
 
@@ -22,7 +22,20 @@ export interface AccountFacts {
   /** Past estimates still open (neither booked nor closed). */
   openEstimates: number;
   /** Merchants paid in several months without a recurring rule. */
-  missingRules: number;
+  missingRules: MissingRule[];
+  /**
+   * Savings or investment account: money moves rarely by design, so freshness, history and rule
+   * coverage do not apply, and it stays out of the household average.
+   */
+  quiet: boolean;
+}
+
+/** Recurring expense found in the movements with no rule covering it. */
+export interface MissingRule {
+  label: string;
+  /** Signed: negative. */
+  amountCents: number;
+  frequency: RuleFrequency;
 }
 
 export type SuggestionKind = "stale" | "history" | "coverage" | "overdue" | "estimates" | "rules";
@@ -59,11 +72,27 @@ export function levelOf(score: number): ReliabilityLevel {
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many.replace("#", String(n)));
 
+const EUR = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const EVERY: Partial<Record<RuleFrequency, string>> = { weekly: "a settimana", monthly: "al mese", bimonthly: "ogni 2 mesi", quarterly: "ogni 3 mesi", yearly: "all'anno" };
+/** Names shown in one suggestion; the rest are counted. */
+const MAX_NAMED = 3;
+
+/** "Netflix (12,99 € al mese), Enel (45,00 € ogni 2 mesi) e altre 2". */
+export function missingRulesText(rules: MissingRule[]): string {
+  const named = rules.slice(0, MAX_NAMED).map((r) => `${r.label} (${EUR.format(Math.abs(r.amountCents) / 100)}${EVERY[r.frequency] ? ` ${EVERY[r.frequency]}` : ""})`);
+  const rest = rules.length - named.length;
+  return rest > 0 ? `${named.join(", ")} e ${plural(rest, "un'altra", "altre #")}` : named.join(", ");
+}
+
 /** Penalties of one account, each with the suggestion that removes it. */
 function penalties(f: AccountFacts, today: ISODate): ReliabilitySuggestion[] {
   const out: ReliabilitySuggestion[] = [];
   const add = (kind: SuggestionKind, gain: number, message: string, href: string) => gain > 0 && out.push({ kind, accountId: f.accountId, message, href, gain });
   const account = `/conti/${f.accountId}`;
+
+  add("overdue", Math.min(15, 5 * f.overdueCount), `${plural(f.overdueCount, "1 scadenza passata", "# scadenze passate")} da saldare su ${f.name}`, "/scadenze");
+  add("estimates", Math.min(10, 5 * f.openEstimates), `${plural(f.openEstimates, "1 stima aperta", "# stime aperte")} su ${f.name}: registra la spesa o chiudila`, account);
+  if (f.quiet) return out;
 
   const age = f.lastBookedOn ? daysBetween(f.lastBookedOn, today) : null;
   const stale = age === null || age > 30 ? 40 : age > 14 ? 25 : age > 7 ? 10 : 0;
@@ -82,15 +111,15 @@ function penalties(f: AccountFacts, today: ISODate): ReliabilitySuggestion[] {
     add("coverage", coverage >= 0.8 ? 0 : coverage >= 0.5 ? 10 : 20, `Spesa media di ${f.name} coperta dalle regole: ${pct}%. Aggiungi le spese ricorrenti o una stima`, "/scadenze");
   }
 
-  add("overdue", Math.min(15, 5 * f.overdueCount), `${plural(f.overdueCount, "1 scadenza passata", "# scadenze passate")} da saldare su ${f.name}`, "/scadenze");
-  add("estimates", Math.min(10, 5 * f.openEstimates), `${plural(f.openEstimates, "1 stima aperta", "# stime aperte")} su ${f.name}: registra la spesa o chiudila`, account);
-  add("rules", Math.min(15, 5 * f.missingRules), `${plural(f.missingRules, "1 spesa ricorrente", "# spese ricorrenti")} senza regola su ${f.name}: crea la regola dalle Scadenze`, "/scadenze");
+  const missing = f.missingRules.length;
+  add("rules", Math.min(15, 5 * missing), `${plural(missing, "1 spesa ricorrente", "# spese ricorrenti")} senza regola su ${f.name}: ${missingRulesText(f.missingRules)}`, "/scadenze");
   return out;
 }
 
 /**
- * Score per account (100 minus its penalties) and for the household (mean of the accounts, so a
- * forgotten account weighs as much as a busy one). Suggestions come sorted by the points they add.
+ * Score per account (100 minus its penalties) and for the household (mean of the active accounts, so a
+ * forgotten one weighs as much as a busy one; quiet savings accounts stay out unless they are all there
+ * is). Suggestions come sorted by the points they add.
  */
 export function assessReliability(facts: AccountFacts[], today: ISODate): Reliability {
   const suggestions: ReliabilitySuggestion[] = [];
@@ -100,7 +129,9 @@ export function assessReliability(facts: AccountFacts[], today: ISODate): Reliab
     const score = Math.max(0, 100 - own.reduce((s, p) => s + p.gain, 0));
     return { accountId: f.accountId, name: f.name, score, level: levelOf(score) };
   });
-  const score = accounts.length ? Math.round(accounts.reduce((s, a) => s + a.score, 0) / accounts.length) : 0;
+  const counted = accounts.filter((_, i) => !facts[i].quiet);
+  const pool = counted.length ? counted : accounts;
+  const score = pool.length ? Math.round(pool.reduce((s, a) => s + a.score, 0) / pool.length) : 0;
   suggestions.sort((a, b) => b.gain - a.gain);
   return { score, level: levelOf(score), accounts, suggestions };
 }

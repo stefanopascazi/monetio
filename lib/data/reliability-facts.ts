@@ -1,9 +1,9 @@
 // Turns stored data (monthly flows, rule summary, deadlines) into the facts the reliability score reads.
 import { addMonthsToKey, monthKey } from "../domain/dates";
 import type { AccountMonthlySummary } from "../domain/monthly-summary";
-import type { AccountFacts } from "../domain/reliability";
+import type { AccountFacts, MissingRule } from "../domain/reliability";
 import type { DueEntry } from "../domain/schedule";
-import type { ISODate } from "../domain/types";
+import type { AccountType, ISODate } from "../domain/types";
 import type { MonthlyFlow } from "./flows";
 
 /** Months of history the score looks at, and full months averaged for the spending. */
@@ -11,7 +11,7 @@ export const HISTORY_WINDOW = 12;
 export const SPENDING_MONTHS = 3;
 
 export interface FactsInput {
-  accounts: { id: string; name: string }[];
+  accounts: { id: string; name: string; type: AccountType }[];
   today: ISODate;
   /** Latest booked movement per account. */
   lastBooked: Record<string, ISODate | null>;
@@ -21,7 +21,7 @@ export interface FactsInput {
   due: DueEntry[];
   /** Rules whose occurrences are estimates (closed or booked by hand). */
   estimateRuleIds: ReadonlySet<string>;
-  missingRules: Record<string, number>;
+  missingRules: Record<string, MissingRule[]>;
 }
 
 export function accountFacts(i: FactsInput): AccountFacts[] {
@@ -48,7 +48,8 @@ export function accountFacts(i: FactsInput): AccountFacts[] {
       declaredMonthlyExpenseCents: i.summary[a.id]?.rulesExpenseCents ?? 0,
       overdueCount: overdue.length - estimates,
       openEstimates: estimates,
-      missingRules: i.missingRules[a.id] ?? 0,
+      missingRules: i.missingRules[a.id] ?? [],
+      quiet: a.type === "savings" || a.type === "investment",
     };
   });
 }

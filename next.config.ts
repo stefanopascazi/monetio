@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "4mb" },
   },
   cacheComponents: true,
+  // Proiezioni moved under Analisi; the query string (e.g. ?mesi=36) is passed through.
+  async redirects() {
+    return [{ source: "/proiezioni", destination: "/analisi/proiezioni", permanent: true }];
+  },
   partialPrefetching: true,
   turbopack: {
     rules: {
