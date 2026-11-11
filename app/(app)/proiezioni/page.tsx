@@ -1,14 +1,8 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/common/PageSkeleton";
-import { ProjectionView } from "@/components/projection/ProjectionView";
+import { redirect } from "next/navigation";
+import { withQuery } from "@/lib/data/params";
 
-export const metadata: Metadata = { title: "Proiezioni" };
-
-export default function ProjectionPage({ searchParams }: PageProps<"/proiezioni">) {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <ProjectionView searchParams={searchParams} />
-    </Suspense>
-  );
+// Old address: Proiezioni moved under Analisi; the horizon param is kept.
+export default async function LegacyProjectionPage({ searchParams }: PageProps<"/proiezioni">) {
+  const { mesi } = await searchParams;
+  redirect(withQuery("/analisi/proiezioni", { mesi: typeof mesi === "string" ? mesi : undefined }));
 }

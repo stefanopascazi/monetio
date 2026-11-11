@@ -6,13 +6,14 @@ import { combinedUncertainty } from "@/lib/domain/reliability";
 
 /** Total balance projected over the next 12 months. */
 export async function ProjectionCard() {
-  const [{ projection, accounts }, { bands }] = await Promise.all([loadProjection(12), loadReliability()]);
+  const [{ projection, accounts }, reliability] = await Promise.all([loadProjection(12), loadReliability()]);
   const ids = accounts.map((a) => a.id);
   return (
     <ProjectionPanel
       title="Dove stiamo andando"
       subtitle="Prossimi 12 mesi da ricorrenze e quote"
-      series={[{ id: "all", name: "tutti i conti", points: projectionPoints([], projection, (p) => p.totalCents, (n) => combinedUncertainty(bands, ids, n)) }]}
+      reliability={reliability}
+      series={[{ id: "all", name: "tutti i conti", points: projectionPoints([], projection, (p) => p.totalCents, (n) => combinedUncertainty(reliability.bands, ids, n)) }]}
     />
   );
 }

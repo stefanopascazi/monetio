@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { Amount, Card, ProjectionChart, type ProjectionPoint, SegmentedControl } from "@monetio/ui";
+import { ReliabilityNote } from "@/components/reliability/ReliabilityNote";
+import type { ReliabilityData } from "@/components/reliability/reliability-view";
 import { useProjectionAccount } from "./account/ProjectionAccountContext";
 import { HORIZONS } from "./horizons";
 
@@ -12,7 +14,7 @@ export interface ProjectionSeries {
 }
 
 /** Projection chart for the page-wide account selection; series are computed on the server. */
-export function ProjectionPanel({ series, title, subtitle }: { series: ProjectionSeries[]; title: string; subtitle?: string }) {
+export function ProjectionPanel({ series, title, subtitle, reliability }: { series: ProjectionSeries[]; title: string; subtitle?: string; reliability?: ReliabilityData }) {
   const { selected } = useProjectionAccount();
   const current = series.find((s) => s.id === selected) ?? series[0];
   if (!current) return null;
@@ -23,6 +25,7 @@ export function ProjectionPanel({ series, title, subtitle }: { series: Projectio
   return (
     <Card title={title} subtitle={subtitle}>
       <div className="flex flex-col gap-4">
+        {reliability && <ReliabilityNote data={reliability} seriesId={current.id} />}
         <ProjectionChart data={current.points} title={`Proiezione ${current.name}`} />
         <div className="grid grid-cols-2 gap-4">
           {last && (
