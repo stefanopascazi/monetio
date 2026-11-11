@@ -52,8 +52,16 @@ async function movementsAround(supabase: Client, accountId: string, drafts: Impo
 /** Visible, active account of the current household (RLS hides the others). */
 async function loadAccount(supabase: Client, householdId: string, accountId: string) {
   if (!isUUID(accountId)) return null;
-  const { data } = await supabase.from("accounts").select("id, opening_date, archived").eq("id", accountId).eq("household_id", householdId).maybeSingle();
-  return data && !data.archived ? { id: String(data.id), openingDate: String(data.opening_date) as ISODate } : null;
+  const { data, error } = await supabase
+    .from("accounts")
+    .select("id, opening_date")
+    .eq("id", accountId)
+    .eq("household_id", householdId)
+    .is("archived_at", null)
+    .maybeSingle();
+  // A failing query is a bug, not a missing account: surface it.
+  if (error) throw error;
+  return data ? { id: String(data.id), openingDate: String(data.opening_date) as ISODate } : null;
 }
 
 export type PreviewResult = { ok: true; statuses: DraftStatus[]; openingDate: ISODate } | { ok: false; message: string };
