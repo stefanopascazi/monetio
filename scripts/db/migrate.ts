@@ -1,5 +1,6 @@
 // Applies pending SQL migrations from supabase/migrations to the database.
-// Usage: node --env-file=.env.local scripts/db/migrate.ts
+// Usage: npm run db:migrate (local Docker stack; on Vercel the project database).
+import "./load-local-env.ts";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { connect } from "./connect.ts";

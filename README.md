@@ -43,18 +43,26 @@ docker compose up -d --build
 - Invite a member: `docker compose run --rm migrate node scripts/dev/invite.ts you@example.com`.
 - Reset everything (deletes local data): `docker compose down -v`.
 
-### `npm run dev` against the local stack
+### Local development (always against the Docker stack)
 
-`.env.stack` (committed, local-only values) points the app and scripts at the Docker stack and
-takes precedence over `.env.local`, so nothing reaches production.
+`.env.stack` (committed, local-only values) points the app and the DB scripts at the Docker stack.
+`npm run dev` loads it on top of everything else, so a `.env.local` with production values is never used in dev.
 
 ```bash
 npm run stack:dev     # docker-compose.dev.yml: Supabase services only (no app, no cron)
-npm run dev:local     # Next dev on http://localhost:3000
+npm run db:migrate    # applies pending migrations to the connected database (here: the stack)
+npm run dev           # Next dev on http://localhost:3000
 ```
 
-Also available: `db:migrate:local`, `db:import:local`, `auth:invite:local`, `stack:up` (full stack), `stack:down`.
-The `stack:*` scripts find Docker on the PATH or, on Windows, inside WSL (`MONETIO_WSL_DISTRO` picks the distro).
+First login: `npm run db:import -- spese.xlsx --ste-email you@example.com` (optional sample data), then
+`npm run auth:invite -- you@example.com --link` prints a one-time link to choose the password.
+
+`db:migrate`, `db:import` and `auth:invite` read `.env.stack` only for variables not already set, and never on
+Vercel, where the project variables point them at the production database.
+
+Other stack scripts: `stack:up` (full stack with app and cron), `stack:down`.
+The `stack:*` scripts find Docker on the PATH or, on Windows, inside WSL (`MONETIO_WSL_DISTRO` picks the distro;
+without systemd, start the daemon with `wsl -u root -e service docker start`).
 `docker-compose.yml` includes `docker-compose.dev.yml`, so both share the same project and data.
 
 ## Learn More

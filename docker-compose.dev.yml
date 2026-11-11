@@ -1,5 +1,5 @@
 # Local Supabase stack only (Postgres, GoTrue, PostgREST, gateway, Mailpit): no app, no cron.
-# Use with `npm run dev:local`: docker compose -f docker-compose.dev.yml up -d
+# Use with `npm run dev`: docker compose -f docker-compose.dev.yml up -d
 # docker-compose.yml includes this file and adds the dockerized app and cron (same project and data).
 # Defaults are LOCAL-ONLY demo secrets; override them in .env (see .env.docker.example).
 

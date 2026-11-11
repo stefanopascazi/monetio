@@ -1,5 +1,6 @@
 // Imports the "Piano Risparmi" history and seed rules into Supabase. Safe to re-run (idempotent by import_ref).
 // Usage: npm run db:import -- spese.xlsx --ste-email you@example.com [--asha-email her@example.com] [--household "Famiglia"]
+import "../db/load-local-env.ts";
 import { parseArgs } from "node:util";
 import { connect } from "../db/connect.ts";
 import { buildImport } from "./build.ts";
