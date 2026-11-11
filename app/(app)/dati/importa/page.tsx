@@ -5,10 +5,10 @@ import { ImportView } from "@/components/import/ImportView";
 
 export const metadata: Metadata = { title: "Importa movimenti" };
 
-export default function ImportPage({ searchParams }: PageProps<"/dati/importa">) {
+export default function ImportPage() {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <ImportView searchParams={searchParams} />
+      <ImportView />
     </Suspense>
   );
 }

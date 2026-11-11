@@ -23,10 +23,10 @@ const accounts = [
   { value: "acc-2", label: "Revolut" },
 ];
 
-const renderWizard = (initialAccountId?: string) =>
+const renderWizard = () =>
   render(
     <ToastProvider>
-      <ImportWizard accounts={accounts} initialAccountId={initialAccountId} />
+      <ImportWizard accounts={accounts} />
     </ToastProvider>,
   );
 
@@ -41,9 +41,9 @@ beforeEach(() => {
   actions.importStatement.mockResolvedValue({ ok: true, message: "1 movimenti importati.", done: 1 });
 });
 
-async function upload(initialAccountId?: string) {
+async function upload() {
   const user = userEvent.setup();
-  renderWizard(initialAccountId);
+  renderWizard();
   await user.upload(screen.getByLabelText("File da importare"), new File(["x"], "cherry.xlsx"));
   return user;
 }
@@ -75,8 +75,10 @@ describe("ImportWizard", () => {
     expect(actions.importStatement.mock.calls[0][1]).toHaveLength(2);
   });
 
-  it("uses the preselected account", async () => {
-    await upload("acc-2");
+  it("checks duplicates again for a different account", async () => {
+    const user = await upload();
+    await screen.findByText("Già presente");
+    await user.selectOptions(screen.getByLabelText("Conto di destinazione"), "acc-2");
     await waitFor(() => expect(actions.previewImport).toHaveBeenCalledWith("acc-2", expect.any(Array)));
   });
 

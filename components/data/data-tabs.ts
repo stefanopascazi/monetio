@@ -15,8 +15,3 @@ export const DATA_TABS: DataTab[] = [
 export function activeDataTab(pathname: string): string {
   return DATA_TABS.find((t) => pathname === t.href || pathname.startsWith(`${t.href}/`))?.id ?? "";
 }
-
-/** Import page link, optionally with the target account preselected. */
-export function importHref(accountId?: string): string {
-  return accountId ? `/dati/importa?conto=${encodeURIComponent(accountId)}` : "/dati/importa";
-}

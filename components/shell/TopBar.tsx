@@ -1,4 +1,4 @@
-import { CircleUserRound, DatabaseZap } from "lucide-react";
+import { CircleUserRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BalancePrivacyToggle } from "./BalancePrivacyToggle";
@@ -21,14 +21,6 @@ export function TopBar({ create }: { create?: ReactNode }) {
         <div id={TOPBAR_SLOT_ID} className="flex items-center gap-2 empty:hidden" />
         {create}
         <BalancePrivacyToggle />
-        {/* Phones only: the desktop rail has its own Dati entry. */}
-        <Link
-          href="/dati"
-          aria-label="Dati e banche"
-          className="inline-flex size-10 items-center justify-center rounded-full bg-surface text-ink-muted hover:text-ink min-[960px]:hidden"
-        >
-          <DatabaseZap className="size-5" aria-hidden="true" />
-        </Link>
         <Link
           href="/impostazioni"
           aria-label="Profilo e impostazioni"

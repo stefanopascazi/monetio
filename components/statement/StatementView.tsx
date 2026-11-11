@@ -1,12 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Upload } from "lucide-react";
 import { Suspense } from "react";
 import { AccountSettings } from "@/components/accounts/AccountSettings";
 import { RememberAccount } from "@/components/accounts/RememberAccount";
 import { SwipeArea } from "@/components/accounts/SwipeArea";
 import { StreamBlock } from "@/components/common/StreamBlock";
-import { importHref } from "@/components/data/data-tabs";
 import { TopBarAction } from "@/components/shell/TopBarAction";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
@@ -43,13 +40,6 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
       <RememberAccount id={id} />
       <h1 className="sr-only">{account.name}</h1>
       <TopBarAction>
-        <Link
-          href={importHref(id)}
-          aria-label="Importa movimenti in questo conto"
-          className="inline-flex size-10 items-center justify-center rounded-full bg-surface text-ink-muted hover:text-ink"
-        >
-          <Upload className="size-5" aria-hidden="true" />
-        </Link>
         <AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />
       </TopBarAction>
       <SwipeArea prevHref={prevHref} nextHref={nextHref}>

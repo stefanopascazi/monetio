@@ -8,8 +8,8 @@ import { MappingEditor } from "./MappingEditor";
 import { PreviewList } from "./PreviewList";
 import { useImportFlow } from "./useImportFlow";
 
-export function ImportWizard({ accounts, initialAccountId }: { accounts: SelectOption[]; initialAccountId?: string }) {
-  const flow = useImportFlow(initialAccountId ?? accounts[0]?.value ?? "");
+export function ImportWizard({ accounts }: { accounts: SelectOption[] }) {
+  const flow = useImportFlow(accounts[0]?.value ?? "");
   return (
     <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
       <div className="flex flex-col gap-4 lg:sticky lg:top-6">

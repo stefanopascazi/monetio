@@ -51,7 +51,52 @@
   text-align: center;
 }
 .mio-nav__action { order: 2; }
-.mio-nav__list > li.mio-nav__rail-only { display: none; }
+
+/* Phones: secondary sections in a panel above the bar, opened from the handle (drag up or tap). */
+.mio-nav--more { flex-wrap: wrap; padding-top: 0; }
+.mio-nav__handle {
+  order: -2;
+  flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  /* The handle owns vertical drags instead of the page scroll. */
+  touch-action: none;
+}
+.mio-nav__grip {
+  width: 40px;
+  height: 4px;
+  border-radius: var(--mio-radius-pill);
+  background: var(--mio-border-strong);
+  transition: background-color var(--mio-duration-fast) var(--mio-ease);
+}
+.mio-nav__handle.is-active .mio-nav__grip,
+.mio-nav__handle:hover .mio-nav__grip { background: var(--mio-brand); }
+.mio-nav__handle:focus-visible { outline: 2px solid var(--mio-brand); outline-offset: -2px; border-radius: var(--mio-radius-lg); }
+.mio-nav__more {
+  order: -1;
+  flex-basis: 100%;
+  display: grid;
+  grid-template-rows: 0fr;
+  /* Hidden panels leave the tab order too. */
+  visibility: hidden;
+  transition: grid-template-rows 200ms var(--mio-ease), visibility 200ms;
+}
+.mio-nav.is-open .mio-nav__more { grid-template-rows: 1fr; visibility: visible; }
+.mio-nav__list--more {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 0;
+  overflow: hidden;
+}
+.mio-nav.is-open .mio-nav__list--more { padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--mio-border); }
+@media (prefers-reduced-motion: reduce) {
+  .mio-nav__more { transition: none; }
+}
 
 /* Desktop: vertical rail on the left. */
 @media (min-width: 960px) {
@@ -67,5 +112,8 @@
   }
   .mio-nav:not(.mio-nav--static) .mio-nav__list { flex: none; flex-direction: column; gap: var(--mio-space-2); width: 100%; }
   .mio-nav:not(.mio-nav--static) .mio-nav__action { order: 0; margin-bottom: var(--mio-space-4); }
-  .mio-nav:not(.mio-nav--static) .mio-nav__list > li.mio-nav__rail-only { display: block; }
+  /* The rail has room: secondary sections follow the main ones, no handle. */
+  .mio-nav:not(.mio-nav--static) .mio-nav__handle { display: none; }
+  .mio-nav:not(.mio-nav--static) .mio-nav__more { order: 1; display: block; width: 100%; visibility: visible; margin-top: var(--mio-space-2); padding-top: var(--mio-space-2); border-top: 1px solid var(--mio-border); }
+  .mio-nav:not(.mio-nav--static) .mio-nav__list--more { display: flex; padding: 0; margin: 0; border: 0; }
 }
