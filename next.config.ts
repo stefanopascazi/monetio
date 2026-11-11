@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
     agentFeedback: true,
+    // Statement uploads go through a Server Action (files up to 3 MB, Vercel caps bodies at 4.5 MB).
+    serverActions: { bodySizeLimit: "4mb" },
   },
   cacheComponents: true,
   partialPrefetching: true,

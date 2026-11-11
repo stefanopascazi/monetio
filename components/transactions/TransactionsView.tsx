@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Amount, Card, PageHeader } from "@monetio/ui";
+import { Upload } from "lucide-react";
 import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { getContext } from "@/lib/data/context";
@@ -40,7 +41,16 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader title="Movimenti" description="Tutti i movimenti dei conti che vedi, mese per mese." />
+      <PageHeader
+        title="Movimenti"
+        description="Tutti i movimenti dei conti che vedi, mese per mese."
+        actions={
+          <Link href="/movimenti/importa" className="inline-flex items-center gap-1.5 rounded-full bg-surface-raised px-3 py-2 text-sm font-semibold text-ink hover:bg-brand-soft">
+            <Upload className="size-4" aria-hidden="true" />
+            Importa
+          </Link>
+        }
+      />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
         {/* Sticky side column scrolls on its own when taller than the viewport (open form). */}
         <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-[22px]">
