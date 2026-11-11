@@ -27,6 +27,19 @@ describe("projectionPoints", () => {
     ]);
   });
 
+  it("adds a band that widens with the months ahead", () => {
+    const months = [
+      { month: "2026-11", byAccount: {}, totalCents: 1000 },
+      { month: "2026-12", byAccount: {}, totalCents: 1000 },
+    ];
+    const pts = projectionPoints([], months, (p) => p.totalCents, (n) => n * 100);
+    expect(pts.map((p) => [p.lowCents, p.highCents])).toEqual([
+      [900, 1100],
+      [800, 1200],
+    ]);
+    expect(projectionPoints([], months, (p) => p.totalCents, () => 0)[0]).not.toHaveProperty("lowCents");
+  });
+
   it("adds the year when months would repeat", () => {
     const projection = Array.from({ length: 13 }, (_, i) => ({ month: `20${27 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`, byAccount: {}, totalCents: 0 }));
     const labels = projectionPoints([], projection, (p) => p.totalCents).map((p) => p.label);

@@ -31,13 +31,23 @@ export function lastMonths(current: string, n: number): string[] {
 }
 
 /** Chart points: history (excluding the current month) followed by projected month-ends. */
-export function projectionPoints(history: { month: string; valueCents: number }[], projection: ProjectionMonth[], pick: (p: ProjectionMonth) => number): ProjectionPoint[] {
+export function projectionPoints(
+  history: { month: string; valueCents: number }[],
+  projection: ProjectionMonth[],
+  pick: (p: ProjectionMonth) => number,
+  /** Uncertainty `monthsAhead` months out (1 = current month end): adds a low/high band. */
+  margin?: (monthsAhead: number) => number,
+): ProjectionPoint[] {
   // Over 12 points the same month name repeats: add the year so labels stay distinct.
   const withYear = history.length + projection.length > 12;
   const label = (m: string) => (withYear ? monthLabel(m) : monthLabel(m).split(" ")[0]);
   return [
     ...history.map((h) => ({ label: label(h.month), valueCents: h.valueCents })),
-    ...projection.map((p) => ({ label: label(p.month), valueCents: pick(p), projected: true })),
+    ...projection.map((p, i) => {
+      const value = pick(p);
+      const m = margin?.(i + 1) ?? 0;
+      return { label: label(p.month), valueCents: value, projected: true, ...(m > 0 ? { lowCents: value - m, highCents: value + m } : {}) };
+    }),
   ];
 }
 
