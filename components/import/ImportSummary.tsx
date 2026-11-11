@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Amount, Button, Card } from "@monetio/ui";
+import { Alert, Amount, Card } from "@monetio/ui";
 import { dateLabel } from "@/lib/domain/dates";
 import type { SelectionSummary } from "./import-view";
 
@@ -9,12 +9,10 @@ export interface ImportSummaryProps {
   openingDate: string | null;
   checking: boolean;
   error: string | null;
-  importing: boolean;
-  onConfirm: () => void;
 }
 
-/** What will be imported, the reasons for what is left out, and the confirm button. */
-export function ImportSummary({ summary, openingDate, checking, error, importing, onConfirm }: ImportSummaryProps) {
+/** What will be imported and the reasons for what is left out (confirm lives in ImportActionBar). */
+export function ImportSummary({ summary, openingDate, checking, error }: ImportSummaryProps) {
   if (error) return <Alert tone="danger">{error}</Alert>;
   if (!summary) return <Card title="Riepilogo" subtitle={checking ? "Controllo dei movimenti già presenti…" : "Nessun movimento valido nel file."} />;
   const { count, totalCents, from, to, duplicates, possible, beforeOpening } = summary;
@@ -50,9 +48,6 @@ export function ImportSummary({ summary, openingDate, checking, error, importing
             {possible} movimenti somigliano a movimenti già registrati (stesso importo, data vicina). Restano esclusi finché non li selezioni.
           </Alert>
         )}
-        <Button block loading={importing} disabled={count === 0 || checking} onClick={onConfirm}>
-          {count === 1 ? "Importa 1 movimento" : `Importa ${count} movimenti`}
-        </Button>
       </div>
     </Card>
   );

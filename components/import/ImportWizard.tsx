@@ -2,6 +2,7 @@
 
 import type { SelectOption } from "@monetio/ui";
 import { FileStep } from "./FileStep";
+import { ImportActionBar } from "./ImportActionBar";
 import { ImportSummary } from "./ImportSummary";
 import { MappingEditor } from "./MappingEditor";
 import { PreviewList } from "./PreviewList";
@@ -24,12 +25,13 @@ export function ImportWizard({ accounts }: { accounts: SelectOption[] }) {
         />
         {flow.file && flow.mapping && <MappingEditor grid={flow.file.grid} mapping={flow.mapping} bank={flow.bank} onChange={flow.setMapping} />}
         {flow.file && (
-          <ImportSummary summary={flow.summary} openingDate={flow.openingDate} checking={flow.checking} error={flow.previewError} importing={flow.importing} onConfirm={flow.confirm} />
+          <ImportSummary summary={flow.summary} openingDate={flow.openingDate} checking={flow.checking} error={flow.previewError} />
         )}
       </div>
       {flow.file && (
         <div className="flex flex-col gap-4">
           <PreviewList drafts={flow.drafts} statuses={flow.statuses} choices={flow.choices} onToggle={flow.toggle} skipped={flow.skipped} />
+          <ImportActionBar summary={flow.summary} checking={flow.checking} importing={flow.importing} onConfirm={flow.confirm} />
         </div>
       )}
     </section>
