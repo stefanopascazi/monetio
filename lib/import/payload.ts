@@ -34,3 +34,19 @@ export function parseDrafts(input: unknown): ImportDraft[] | null {
   }
   return out;
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Category picked per line in the preview (null = none); null when the payload is invalid. */
+export function parseCategoryChoices(input: unknown): Map<number, string | null> | null {
+  if (input == null) return new Map();
+  if (!Array.isArray(input) || input.length > MAX_IMPORT_ROWS) return null;
+  const out = new Map<number, string | null>();
+  for (const v of input) {
+    const { line, categoryId } = (v ?? {}) as Record<string, unknown>;
+    if (!Number.isInteger(line)) return null;
+    if (categoryId !== null && (typeof categoryId !== "string" || !UUID_RE.test(categoryId))) return null;
+    out.set(line as number, categoryId as string | null);
+  }
+  return out;
+}

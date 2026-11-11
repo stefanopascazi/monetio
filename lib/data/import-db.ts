@@ -1,8 +1,10 @@
 import "server-only";
 import { addDays } from "../domain/dates";
-import type { ISODate } from "../domain/types";
+import type { ISODate, RuleFrequency } from "../domain/types";
+import type { CategorisedMovement } from "../import/categories";
 import { POSSIBLE_WINDOW_DAYS } from "../import/classify";
 import type { Movement } from "../import/dedup";
+import type { ExistingRule, PastMovement } from "../import/recurring";
 import { TRANSFER_WINDOW_DAYS, type TransferCandidate } from "../import/transfers";
 import type { ImportDraft } from "../import/types";
 import { isUUID } from "../forms/parse";
@@ -17,13 +19,13 @@ function dateRange(drafts: ImportDraft[], days: number): [ISODate, ISODate] {
 }
 
 /** Reads every page of a ranged query (PostgREST caps responses at 1000 rows). */
-async function allPages<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+async function allPages<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>, maxRows = Infinity): Promise<T[]> {
   const out: T[] = [];
   for (let p = 0; ; p++) {
     const { data, error } = await page(p * PAGE, p * PAGE + PAGE - 1);
     if (error) throw error;
     out.push(...(data ?? []));
-    if ((data?.length ?? 0) < PAGE) return out;
+    if ((data?.length ?? 0) < PAGE || out.length >= maxRows) return out.slice(0, maxRows);
   }
 }
 
@@ -118,4 +120,44 @@ export async function linkTransferSides(
       .eq("import_ref", row.importRef);
   }
   return linked;
+}
+
+/** Recent categorised income/expense of the household: the examples category suggestions learn from. */
+export async function categorisedHistory(supabase: Client, householdId: string, limit = 3000): Promise<CategorisedMovement[]> {
+  const rows = await allPages<Record<string, unknown>>((a, b) =>
+    supabase
+      .from("transactions")
+      .select("description, amount_cents, category_id")
+      .eq("household_id", householdId)
+      .in("kind", ["income", "expense"])
+      .not("category_id", "is", null)
+      .order("booked_on", { ascending: false })
+      .order("id")
+      .range(a, b),
+    limit,
+  );
+  return rows.map((r) => ({ description: String(r.description), amountCents: Number(r.amount_cents), categoryId: String(r.category_id) }));
+}
+
+/** Last 13 months of plain income/expense on the account, for recurring detection. */
+export async function accountHistory(supabase: Client, accountId: string, today: ISODate): Promise<PastMovement[]> {
+  const rows = await allPages<Record<string, unknown>>((a, b) =>
+    supabase
+      .from("transactions")
+      .select("booked_on, amount_cents, description, category_id")
+      .eq("account_id", accountId)
+      .in("kind", ["income", "expense"])
+      .eq("status", "booked")
+      .gte("booked_on", addDays(today, -400))
+      .order("id")
+      .range(a, b),
+  );
+  return rows.map((r) => ({ bookedOn: String(r.booked_on), amountCents: Number(r.amount_cents), description: String(r.description), categoryId: (r.category_id as string | null) ?? null }));
+}
+
+/** Active rules of the account, so already planned commitments are not proposed again. */
+export async function accountRules(supabase: Client, accountId: string): Promise<ExistingRule[]> {
+  const { data, error } = await supabase.from("recurring_rules").select("amount_cents, frequency, description").eq("account_id", accountId).eq("active", true);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ amountCents: Number(r.amount_cents), frequency: r.frequency as RuleFrequency, description: String(r.description) }));
 }

@@ -44,4 +44,16 @@ describe("importRows", () => {
     expect(rows[0]).toMatchObject({ kind: "transfer", counterpart_account_id: "cherry", transfer_group_id: "g1", category_id: "giro", amount_cents: 800 });
     expect(rows[1]).toMatchObject({ kind: "expense", counterpart_account_id: null, transfer_group_id: null });
   });
+
+  it("uses the category picked in the preview over every other source", () => {
+    const link = { id: "t1", accountId: "cherry", accountName: "Cherry", bookedOn: "2025-01-02", amountCents: -800, description: "Ricarica", categoryId: "giro" };
+    const rows = importRows(
+      [
+        { line: 2, bookedOn: "2025-01-02", amountCents: 800, description: "Ricarica", category: null },
+        { line: 3, bookedOn: "2025-01-03", amountCents: -120, description: "Bar", category: "Spesa" },
+      ],
+      { householdId: "h", accountId: "rev", categories, transfers: new Map([[2, link]]), categoryByLine: new Map([[2, "extra"], [3, null]]) },
+    );
+    expect(rows.map((r) => r.category_id)).toEqual(["extra", null]);
+  });
 });

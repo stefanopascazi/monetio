@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DraftStatus } from "@/lib/import/classify";
-import { columnLetter, columnOptions, fallbackMapping, headerRowOptions, isLinked, isSelected, summarize, transferLinks } from "./import-view";
+import { categoriesFor, categoryPayload, columnLetter, effectiveCategory, frequencyLabel, columnOptions, fallbackMapping, headerRowOptions, isLinked, isSelected, summarize, transferLinks } from "./import-view";
 
 describe("columnLetter", () => {
   it.each([
@@ -79,5 +79,37 @@ describe("giroconti", () => {
     expect(transferLinks(drafts, statuses, new Map(), new Set([1]))).toEqual([]);
     expect(summarize(drafts, statuses, new Map()).transfers).toBe(1);
     expect(summarize(drafts, statuses, new Map(), new Set([1]))).toMatchObject({ transfers: 0, count: 2 });
+  });
+});
+
+describe("categories in the preview", () => {
+  const cats = [
+    { id: "spesa", name: "Spesa", kind: "expense" as const },
+    { id: "stip", name: "Stipendio", kind: "income" as const },
+    { id: "extra", name: "Extra", kind: "both" as const },
+  ];
+
+  it("offers categories matching the direction of money", () => {
+    expect(categoriesFor(-1, cats).map((c) => c.id)).toEqual(["spesa", "extra"]);
+    expect(categoriesFor(1, cats).map((c) => c.id)).toEqual(["stip", "extra"]);
+  });
+
+  it("prefers the user's pick, then the suggestion", () => {
+    const sugg = new Map([[1, "spesa"]]);
+    expect(effectiveCategory(1, new Map(), sugg)).toBe("spesa");
+    expect(effectiveCategory(1, new Map([[1, ""]]), sugg)).toBe("");
+    expect(effectiveCategory(2, new Map(), sugg)).toBe("");
+    const drafts = [
+      { line: 1, bookedOn: "2025-01-01", amountCents: -1, description: "a", category: null },
+      { line: 2, bookedOn: "2025-01-01", amountCents: -1, description: "b", category: null },
+    ];
+    expect(categoryPayload(drafts, new Map([[2, "extra"]]), sugg)).toEqual([
+      { line: 1, categoryId: "spesa" },
+      { line: 2, categoryId: "extra" },
+    ]);
+  });
+
+  it("labels frequencies", () => {
+    expect(frequencyLabel("bimonthly")).toBe("ogni 2 mesi");
   });
 });

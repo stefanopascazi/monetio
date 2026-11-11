@@ -21,6 +21,8 @@ export interface ImportTarget {
   batchId?: string | null;
   /** Drafts (by line) to book as the other side of an existing movement on another account. */
   transfers?: ReadonlyMap<number, TransferCandidate>;
+  /** Category chosen in the preview per line (already validated; null = none). Wins over everything else. */
+  categoryByLine?: ReadonlyMap<number, string | null>;
 }
 
 export function importRows(drafts: ImportDraft[], t: ImportTarget, newId: () => string = () => crypto.randomUUID()) {
@@ -29,7 +31,7 @@ export function importRows(drafts: ImportDraft[], t: ImportTarget, newId: () => 
     return {
       household_id: t.householdId,
       account_id: t.accountId,
-      category_id: link ? link.categoryId : matchCategory(d.category, d.amountCents, t.categories),
+      category_id: t.categoryByLine?.has(d.line) ? (t.categoryByLine.get(d.line) ?? null) : link ? link.categoryId : matchCategory(d.category, d.amountCents, t.categories),
       kind: link ? "transfer" : d.amountCents > 0 ? "income" : "expense",
       counterpart_account_id: link?.accountId ?? null,
       // The existing side joins this group after the insert (linkTransferSides).

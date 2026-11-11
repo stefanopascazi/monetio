@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_IMPORT_ROWS, parseDrafts } from "./payload";
+import { MAX_IMPORT_ROWS, parseCategoryChoices, parseDrafts } from "./payload";
 
 const ok = { line: 2, bookedOn: "2025-01-02", amountCents: -120, description: " Bar ", category: " Spesa " };
 
@@ -31,5 +31,22 @@ describe("parseDrafts", () => {
 
   it("rejects too many rows", () => {
     expect(parseDrafts(Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => ({ ...ok, line: i + 1 })))).toBeNull();
+  });
+});
+
+describe("parseCategoryChoices", () => {
+  const CAT = "22222222-2222-4222-8222-222222222222";
+  it("accepts a missing or valid list, null meaning no category", () => {
+    expect(parseCategoryChoices(undefined)).toEqual(new Map());
+    expect(parseCategoryChoices([{ line: 2, categoryId: CAT }, { line: 3, categoryId: null }])).toEqual(
+      new Map<number, string | null>([
+        [2, CAT],
+        [3, null],
+      ]),
+    );
+  });
+
+  it.each(["x", [{ line: "2", categoryId: CAT }], [{ line: 2, categoryId: "nope" }], [{ line: 2 }]])("rejects %j", (input) => {
+    expect(parseCategoryChoices(input)).toBeNull();
   });
 });

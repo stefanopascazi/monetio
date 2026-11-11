@@ -2,12 +2,15 @@
 
 import { refresh } from "next/cache";
 import { getContext } from "@/lib/data/context";
-import { linkTransferSides, loadImportAccount, movementsAround, transferCandidates } from "@/lib/data/import-db";
+import { accountHistory, accountRules, categorisedHistory, linkTransferSides, loadImportAccount, movementsAround, transferCandidates } from "@/lib/data/import-db";
 import { mapCategory } from "@/lib/data/mappers";
+import { todayISO } from "@/lib/domain/dates";
 import type { ISODate } from "@/lib/domain/types";
 import { batchStats, parseImportMeta } from "@/lib/import/batch";
+import { validCategory } from "@/lib/import/categories";
 import { classifyDrafts, type DraftStatus } from "@/lib/import/classify";
-import { parseDrafts } from "@/lib/import/payload";
+import { buildInsights, type ImportInsights } from "@/lib/import/insights";
+import { parseCategoryChoices, parseDrafts } from "@/lib/import/payload";
 import { type PlainCell, readStatement } from "@/lib/import/read";
 import { importRows } from "@/lib/import/rows";
 import { confirmedLinks, detectTransfers, parseLinks } from "@/lib/import/transfers";
@@ -34,7 +37,13 @@ async function classify(supabase: Client, householdId: string, accountId: string
   return detectTransfers(drafts, classifyDrafts(drafts, existing, openingDate), candidates);
 }
 
-export type PreviewResult = { ok: true; statuses: DraftStatus[]; openingDate: ISODate } | { ok: false; message: string };
+export type PreviewResult = ({ ok: true; statuses: DraftStatus[]; openingDate: ISODate } & ImportInsights) | { ok: false; message: string };
+
+async function householdCategories(supabase: Client, householdId: string) {
+  const { data, error } = await supabase.from("categories").select("*").eq("household_id", householdId);
+  if (error) throw error;
+  return (data ?? []).map(mapCategory);
+}
 
 export async function previewImport(accountId: string, payload: unknown): Promise<PreviewResult> {
   const ctx = await getContext();
@@ -43,7 +52,16 @@ export async function previewImport(accountId: string, payload: unknown): Promis
   const supabase = await createClient();
   const account = await loadImportAccount(supabase, ctx.householdId, accountId);
   if (!account) return { ok: false, message: "Conto non trovato." };
-  return { ok: true, statuses: await classify(supabase, ctx.householdId, account.id, account.openingDate, drafts), openingDate: account.openingDate };
+  const today = todayISO();
+  const [statuses, history, past, rules, categories] = await Promise.all([
+    classify(supabase, ctx.householdId, account.id, account.openingDate, drafts),
+    categorisedHistory(supabase, ctx.householdId),
+    accountHistory(supabase, account.id, today),
+    accountRules(supabase, account.id),
+    householdCategories(supabase, ctx.householdId),
+  ]);
+  const insights = buildInsights({ drafts, statuses, history, accountHistory: past, rules, categories, today });
+  return { ok: true, statuses, openingDate: account.openingDate, ...insights };
 }
 
 /**
@@ -51,13 +69,14 @@ export async function previewImport(accountId: string, payload: unknown): Promis
  * dropped again here; possible duplicates are imported because the user chose them. Links to existing
  * movements become giroconti only when this server-side check confirms them.
  */
-export async function importStatement(accountId: string, payload: unknown, metaInput: unknown, linksInput?: unknown): Promise<ActionState> {
+export async function importStatement(accountId: string, payload: unknown, metaInput: unknown, linksInput?: unknown, categoriesInput?: unknown): Promise<ActionState> {
   const ctx = await getContext();
   const drafts = parseDrafts(payload);
   if (!drafts) return failure("Nessun movimento valido da importare.");
   const meta = parseImportMeta(metaInput);
   const links = parseLinks(linksInput);
-  if (!meta || !links) return failure("Dati dell'import non validi.");
+  const choices = parseCategoryChoices(categoriesInput);
+  if (!meta || !links || !choices) return failure("Dati dell'import non validi.");
   const supabase = await createClient();
   const account = await loadImportAccount(supabase, ctx.householdId, accountId);
   if (!account) return failure("Conto non trovato.");
@@ -67,8 +86,10 @@ export async function importStatement(accountId: string, payload: unknown, metaI
   if (!keep.length) return failure("Tutti i movimenti scelti sono già presenti.");
   const transfers = confirmedLinks(links, drafts, statuses);
 
-  const { data: cats, error: catError } = await supabase.from("categories").select("*").eq("household_id", ctx.householdId);
-  if (catError) return failure(dbErrorMessage(catError));
+  const categories = await householdCategories(supabase, ctx.householdId);
+  // Categories picked in the preview, kept only when valid for the row's direction of money.
+  const categoryByLine = new Map<number, string | null>();
+  for (const d of keep) if (choices.has(d.line)) categoryByLine.set(d.line, validCategory(choices.get(d.line), d.amountCents, categories));
 
   const { data: batch, error: batchError } = await supabase
     .from("import_batches")
@@ -76,7 +97,7 @@ export async function importStatement(accountId: string, payload: unknown, metaI
     .select("id")
     .single();
   if (batchError) return failure(dbErrorMessage(batchError));
-  const rows = importRows(keep, { householdId: ctx.householdId, accountId: account.id, categories: (cats ?? []).map(mapCategory), batchId: String(batch.id), transfers });
+  const rows = importRows(keep, { householdId: ctx.householdId, accountId: account.id, categories, categoryByLine, batchId: String(batch.id), transfers });
   // Rows keep the order of `keep`, so each import ref maps back to its draft's link.
   const candidateByRef = new Map<string, string>();
   rows.forEach((r, i) => {

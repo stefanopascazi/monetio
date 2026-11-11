@@ -10,6 +10,7 @@ const actions = vi.hoisted(() => ({
   importStatement: vi.fn(),
 }));
 vi.mock("@/app/actions/import", () => actions);
+vi.mock("@/app/actions/rules", () => ({ createRule: vi.fn() }));
 
 const GRID = [
   ["Data contabile", "Valuta", "Dare", "Avere", "Divisa", "Causale", "Descrizione"],
@@ -26,7 +27,7 @@ const accounts = [
 const renderWizard = () =>
   render(
     <ToastProvider>
-      <ImportWizard accounts={accounts} />
+      <ImportWizard accounts={accounts} categories={[{ id: "stip", name: "Stipendio", kind: "income" }]} />
     </ToastProvider>,
   );
 
@@ -37,6 +38,8 @@ beforeEach(() => {
     ok: true,
     openingDate: "2024-12-31",
     statuses: [{ kind: "duplicate" }, { kind: "possible", match: { bookedOn: "2025-01-02", amountCents: -7635, description: "Bolletta luce" } }, { kind: "new" }],
+    suggestions: [[4, "stip"]],
+    recurring: [],
   });
   actions.importStatement.mockResolvedValue({ ok: true, message: "1 movimenti importati.", done: 1 });
 });
@@ -63,6 +66,8 @@ describe("ImportWizard", () => {
     expect(accountId).toBe("acc-1");
     expect(sent.map((d: { description: string }) => d.description)).toEqual(["Stipendio"]);
     expect(meta).toEqual({ fileName: "cherry.xlsx", bank: "Cherry Bank" });
+    // The suggested category travels with the import.
+    expect(actions.importStatement.mock.calls[0][4]).toEqual([{ line: 4, categoryId: "stip" }]);
   });
 
   it("includes a possible duplicate once ticked", async () => {
@@ -85,7 +90,7 @@ describe("ImportWizard", () => {
   describe("giroconti", () => {
     const match = { id: "11111111-1111-4111-8111-111111111111", accountId: "acc-2", accountName: "Revolut", bookedOn: "2025-01-05", amountCents: -150000, description: "Ricarica", categoryId: null };
     beforeEach(() => {
-      actions.previewImport.mockResolvedValue({ ok: true, openingDate: "2024-12-31", statuses: [{ kind: "duplicate" }, { kind: "duplicate" }, { kind: "transfer", match }] });
+      actions.previewImport.mockResolvedValue({ ok: true, openingDate: "2024-12-31", statuses: [{ kind: "duplicate" }, { kind: "duplicate" }, { kind: "transfer", match }], suggestions: [], recurring: [] });
     });
 
     it("are linked by default", async () => {

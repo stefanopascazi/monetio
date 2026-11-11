@@ -6,7 +6,8 @@ import { dateLabel } from "@/lib/domain/dates";
 import type { DraftStatus } from "@/lib/import/classify";
 import type { ImportDraft, SkippedRow } from "@/lib/import/types";
 import { DraftStatusNote } from "./DraftStatusNote";
-import { isLinked, isSelectable, isSelected } from "./import-view";
+import { type CategoryOption, effectiveCategory, isLinked, isSelectable, isSelected } from "./import-view";
+import { RowCategory } from "./RowCategory";
 
 export interface PreviewListProps {
   drafts: ImportDraft[];
@@ -15,13 +16,17 @@ export interface PreviewListProps {
   onToggle: (line: number, value: boolean) => void;
   unlinked: ReadonlySet<number>;
   onToggleLink: (line: number, linked: boolean) => void;
+  categories: CategoryOption[];
+  picks: ReadonlyMap<number, string>;
+  suggestions: ReadonlyMap<number, string>;
+  onPickCategory: (line: number, categoryId: string) => void;
   skipped: SkippedRow[];
 }
 
 const PAGE = 100;
 
 /** Movements found in the file, with a checkbox for those that can be imported. */
-export function PreviewList({ drafts, statuses, choices, onToggle, unlinked, onToggleLink, skipped }: PreviewListProps) {
+export function PreviewList({ drafts, statuses, choices, onToggle, unlinked, onToggleLink, categories, picks, suggestions, onPickCategory, skipped }: PreviewListProps) {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? drafts : drafts.slice(0, PAGE);
   return (
@@ -48,6 +53,16 @@ export function PreviewList({ drafts, statuses, choices, onToggle, unlinked, onT
                     {dateLabel(d.bookedOn)}
                     {d.category ? ` · ${d.category}` : ""}
                   </span>
+                  {selected && (
+                    <RowCategory
+                      amountCents={d.amountCents}
+                      value={effectiveCategory(d.line, picks, suggestions)}
+                      suggested={!picks.has(d.line) && suggestions.has(d.line)}
+                      categories={categories}
+                      onChange={(id) => onPickCategory(d.line, id)}
+                      label={`Categoria di ${d.description}`}
+                    />
+                  )}
                   <DraftStatusNote status={status} selected={selected} linked={isLinked(d.line, status, choices, unlinked)} onLinkChange={(v) => onToggleLink(d.line, v)} />
                 </span>
                 <Amount cents={d.amountCents} tone={isLinked(d.line, status, choices, unlinked) ? "transfer" : "auto"} showSign />

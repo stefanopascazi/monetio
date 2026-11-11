@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useToast } from "@monetio/ui";
 import { importStatement, previewImport, readStatementFile } from "@/app/actions/import";
 import type { DraftStatus } from "@/lib/import/classify";
+import type { RecurringProposal } from "@/lib/import/recurring";
 import { mapRows } from "@/lib/import/mapping";
 import { detectMapping } from "@/lib/import/presets";
 import type { ColumnMapping, Grid } from "@/lib/import/types";
-import { fallbackMapping, isSelected, summarize, transferLinks } from "./import-view";
+import { categoryPayload, fallbackMapping, isSelected, summarize, transferLinks } from "./import-view";
 
 interface LoadedFile {
   name: string;
@@ -18,6 +19,8 @@ interface Preview {
   key: string;
   statuses: DraftStatus[];
   openingDate: string;
+  suggestions: Map<number, string>;
+  recurring: RecurringProposal[];
 }
 
 const PREVIEW_DELAY_MS = 400;
@@ -34,6 +37,8 @@ export function useImportFlow(defaultAccountId: string) {
   const [choices, setChoices] = useState<Map<number, boolean>>(new Map());
   // Giroconti the user wants imported as plain income/expense instead.
   const [unlinked, setUnlinked] = useState<Set<number>>(new Set());
+  // Category picked per line ("" = none); lines without a pick use the suggestion.
+  const [picks, setPicks] = useState<Map<number, string>>(new Map());
   const [reading, startReading] = useTransition();
   const [importing, startImporting] = useTransition();
 
@@ -50,7 +55,7 @@ export function useImportFlow(defaultAccountId: string) {
     const timer = setTimeout(async () => {
       const res = await previewImport(accountId, drafts).catch(() => ({ ok: false as const, message: "Controllo dei duplicati non riuscito. Riprova." }));
       if (stale) return;
-      if (res.ok) setPreview({ key, statuses: res.statuses, openingDate: res.openingDate });
+      if (res.ok) setPreview({ key, statuses: res.statuses, openingDate: res.openingDate, suggestions: new Map(res.suggestions), recurring: res.recurring });
       else setPreviewError({ key, message: res.message });
       setChoices(new Map());
       setUnlinked(new Set());
@@ -84,9 +89,11 @@ export function useImportFlow(defaultAccountId: string) {
     setPreview(null);
     setChoices(new Map());
     setUnlinked(new Set());
+    setPicks(new Map());
   };
 
   const toggle = (line: number, value: boolean) => setChoices((prev) => new Map(prev).set(line, value));
+  const pickCategory = (line: number, categoryId: string) => setPicks((prev) => new Map(prev).set(line, categoryId));
   const toggleLink = (line: number, link: boolean) =>
     setUnlinked((prev) => {
       const next = new Set(prev);
@@ -95,6 +102,7 @@ export function useImportFlow(defaultAccountId: string) {
       return next;
     });
 
+  const suggestions = useMemo(() => (statuses && preview ? preview.suggestions : new Map<number, string>()), [statuses, preview]);
   const summary = statuses ? summarize(drafts, statuses, choices, unlinked) : null;
 
   const confirm = () => {
@@ -102,7 +110,8 @@ export function useImportFlow(defaultAccountId: string) {
     const chosen = drafts.filter((d, i) => isSelected(d.line, statuses[i], choices));
     startImporting(async () => {
       const links = transferLinks(drafts, statuses, choices, unlinked);
-      const res = await importStatement(accountId, chosen, { fileName: file?.name ?? "", bank }, links);
+      const categories = categoryPayload(chosen, picks, suggestions);
+      const res = await importStatement(accountId, chosen, { fileName: file?.name ?? "", bank }, links, categories);
       toast.show(res.message ?? "", { tone: res.ok ? "success" : "danger" });
       if (res.ok) reset();
     });
@@ -125,6 +134,10 @@ export function useImportFlow(defaultAccountId: string) {
     toggle,
     unlinked,
     toggleLink,
+    picks,
+    pickCategory,
+    suggestions,
+    recurring: statuses ? preview!.recurring : [],
     summary,
     reading,
     importing,

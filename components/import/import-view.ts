@@ -81,3 +81,31 @@ export function summarize(drafts: ImportDraft[], statuses: DraftStatus[], choice
   });
   return s;
 }
+
+export interface CategoryOption {
+  id: string;
+  name: string;
+  kind: "income" | "expense" | "both";
+}
+
+/** Categories usable for a row: same direction of money, or "both". */
+export function categoriesFor(amountCents: number, categories: CategoryOption[]): CategoryOption[] {
+  const kind = amountCents > 0 ? "income" : "expense";
+  return categories.filter((c) => c.kind === kind || c.kind === "both");
+}
+
+/** Category shown for a row: the user's pick ("" = none) or the suggestion. */
+export function effectiveCategory(line: number, picks: ReadonlyMap<number, string>, suggestions: ReadonlyMap<number, string>): string {
+  return picks.get(line) ?? suggestions.get(line) ?? "";
+}
+
+/** Categories to send with the import, one per chosen row (null = none). */
+export function categoryPayload(drafts: ImportDraft[], picks: ReadonlyMap<number, string>, suggestions: ReadonlyMap<number, string>) {
+  return drafts.map((d) => ({ line: d.line, categoryId: effectiveCategory(d.line, picks, suggestions) || null }));
+}
+
+const FREQUENCY_LABEL = { monthly: "ogni mese", bimonthly: "ogni 2 mesi", quarterly: "ogni 3 mesi" } as const;
+
+export function frequencyLabel(f: keyof typeof FREQUENCY_LABEL): string {
+  return FREQUENCY_LABEL[f];
+}
