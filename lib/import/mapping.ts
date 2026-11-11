@@ -92,12 +92,20 @@ export function mapRows(grid: Grid, mapping: ColumnMapping): MappedRows {
     const line = r + 1;
     if (row.every((c) => cellText(c) === "")) continue;
 
+    const failed = mapping.filters?.find((f) => !f.values.map(norm).includes(norm(cellText(row[f.column] ?? null))));
+    if (failed) {
+      skipped.push({ line, reason: failed.reason });
+      continue;
+    }
+
     const bookedOn = parseDate(row[mapping.date] ?? null, mapping.dateOrder);
     if (!bookedOn) {
       skipped.push({ line, reason: "Data non valida" });
       continue;
     }
-    const amountCents = rowAmount(row, mapping.amount);
+    const amount = rowAmount(row, mapping.amount);
+    // Fees reduce the balance whatever sign the export uses for them.
+    const amountCents = amount == null || mapping.fee == null ? amount : amount - Math.abs(parseAmount(row[mapping.fee] ?? null) ?? 0);
     if (amountCents == null) {
       skipped.push({ line, reason: "Importo non valido" });
       continue;

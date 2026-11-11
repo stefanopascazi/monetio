@@ -17,8 +17,20 @@ export interface ColumnMapping {
     | { mode: "signed"; column: number; invert?: boolean }
     | { mode: "split"; inflow: number; outflow: number };
   category?: number;
+  /** Fee column subtracted from the amount (e.g. Revolut "Costo"). */
+  fee?: number;
+  /** Rows are kept only when every filter matches (e.g. completed operations only). */
+  filters?: RowFilter[];
   /** Order of day and month in textual dates; ISO dates are always recognised. */
   dateOrder?: "dmy" | "mdy";
+}
+
+export interface RowFilter {
+  column: number;
+  /** Accepted values, compared normalised (case and accents ignored). */
+  values: string[];
+  /** Shown for the rows it discards. */
+  reason: string;
 }
 
 export interface ImportDraft {
