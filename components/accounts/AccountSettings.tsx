@@ -30,6 +30,9 @@ export function AccountSettings({ account, canMakePrivate }: { account: AccountW
               visibility: account.visibility,
               openingBalanceCents: account.openingBalanceCents,
               openingDate: account.openingDate,
+              ibanMasked: account.ibanMasked,
+              bic: account.bic,
+              cardLast4: account.cardLast4,
             }}
           />
           <Button

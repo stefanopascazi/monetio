@@ -7,6 +7,8 @@ export interface Movement {
   bookedOn: ISODate;
   amountCents: number;
   description: string;
+  /** Giroconto side created by importing the other account's statement (no import ref of its own). */
+  importedMirror?: boolean;
 }
 
 /** Lowercase, no accents, punctuation collapsed to single spaces. */

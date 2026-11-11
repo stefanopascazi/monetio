@@ -5,7 +5,13 @@ describe("mappers", () => {
   it("maps accounts with bigint strings", () => {
     expect(
       mapAccount({ id: "a", name: "Conto", institution: null, type: "checking", visibility: "shared", owner_member_id: null, opening_balance_cents: "390000", opening_date: "2022-01-31", sort_order: 0, archived_at: null }),
-    ).toEqual({ id: "a", name: "Conto", institution: null, type: "checking", visibility: "shared", ownerMemberId: null, openingBalanceCents: 390000, openingDate: "2022-01-31", sortOrder: 0, archived: false });
+    ).toEqual({ id: "a", name: "Conto", institution: null, type: "checking", visibility: "shared", ownerMemberId: null, openingBalanceCents: 390000, openingDate: "2022-01-31", sortOrder: 0, archived: false, ibanMasked: null, bic: null, cardLast4: [] });
+  });
+
+  it("masks the account IBAN and maps cards", () => {
+    const a = mapAccount({ id: "a", name: "C", type: "checking", visibility: "shared", opening_date: "2022-01-31", iban: "IT60X0542811101000000123456", bic: "BPMOIT22", card_last4: ["1234"] });
+    expect(a).toMatchObject({ ibanMasked: "IT60 •••• 3456", bic: "BPMOIT22", cardLast4: ["1234"] });
+    expect(JSON.stringify(a)).not.toContain("0542811101");
   });
 
   it("maps transactions", () => {

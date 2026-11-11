@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { getContext } from "@/lib/data/context";
+import { accountFieldError, identifierColumns } from "@/lib/data/account-rows";
 import { parseAccountForm } from "@/lib/forms/account";
 import { isUUID } from "@/lib/forms/parse";
 import { createClient } from "@/lib/supabase/server";
@@ -23,8 +24,12 @@ export async function createAccount(prev: ActionState, fd: FormData): Promise<Ac
     owner_member_id: ctx.me.id,
     opening_balance_cents: v.openingBalanceCents,
     opening_date: v.openingDate,
+    ...identifierColumns(v),
   });
-  if (error) return failure(dbErrorMessage(error));
+  if (error) {
+    const fields = accountFieldError(error);
+    return fields ? failure("Controlla i campi evidenziati.", fields) : failure(dbErrorMessage(error));
+  }
   refresh();
   return success("Conto creato.", prev);
 }
@@ -51,9 +56,13 @@ export async function updateAccount(id: string, prev: ActionState, fd: FormData)
       owner_member_id: current.owner_member_id ?? ctx.me.id,
       opening_balance_cents: v.openingBalanceCents,
       opening_date: v.openingDate,
+      ...identifierColumns(v),
     })
     .eq("id", id);
-  if (error) return failure(dbErrorMessage(error));
+  if (error) {
+    const fields = accountFieldError(error);
+    return fields ? failure("Controlla i campi evidenziati.", fields) : failure(dbErrorMessage(error));
+  }
   refresh();
   return success("Conto aggiornato.", prev);
 }

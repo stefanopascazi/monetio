@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Category } from "../domain/types";
-import { importRows, matchCategory } from "./rows";
+import { importRows, mirrorRows, matchCategory } from "./rows";
 
 const cat = (id: string, name: string, kind: Category["kind"], archived = false): Category => ({ id, name, kind, icon: null, colorIndex: 1, archived });
 const categories = [cat("spesa", "Spesa", "expense"), cat("stip", "Stipendio", "income"), cat("extra", "Extra", "both"), cat("old", "Vecchia", "expense", true)];
@@ -32,7 +32,7 @@ describe("importRows", () => {
   });
 
   it("books linked drafts as the transfer side of the existing movement", () => {
-    const link = { id: "t1", accountId: "cherry", accountName: "Cherry", bookedOn: "2025-01-02", amountCents: -800, description: "Ricarica", categoryId: "giro" };
+    const link = { accountId: "cherry", categoryId: "giro", existingId: "t1" };
     const rows = importRows(
       [
         { line: 2, bookedOn: "2025-01-02", amountCents: 800, description: "Ricarica di *3210", category: "Spesa" },
@@ -46,7 +46,7 @@ describe("importRows", () => {
   });
 
   it("uses the category picked in the preview over every other source", () => {
-    const link = { id: "t1", accountId: "cherry", accountName: "Cherry", bookedOn: "2025-01-02", amountCents: -800, description: "Ricarica", categoryId: "giro" };
+    const link = { accountId: "cherry", categoryId: "giro", existingId: "t1" };
     const rows = importRows(
       [
         { line: 2, bookedOn: "2025-01-02", amountCents: 800, description: "Ricarica", category: null },
@@ -55,5 +55,29 @@ describe("importRows", () => {
       { householdId: "h", accountId: "rev", categories, transfers: new Map([[2, link]]), categoryByLine: new Map([[2, "extra"], [3, null]]) },
     );
     expect(rows.map((r) => r.category_id)).toEqual(["extra", null]);
+  });
+
+  it("builds the created side of a giroconto on the named account", () => {
+    const [row] = mirrorRows([{ groupId: "g1", accountId: "cherry", amountCents: 800, bookedOn: "2025-01-02", description: "Ricarica", categoryId: null }], {
+      householdId: "h",
+      accountId: "rev",
+      batchId: "b1",
+    });
+    expect(row).toEqual({
+      household_id: "h",
+      account_id: "cherry",
+      counterpart_account_id: "rev",
+      category_id: null,
+      kind: "transfer",
+      transfer_group_id: "g1",
+      status: "booked",
+      source: "import",
+      amount_cents: -800,
+      booked_on: "2025-01-02",
+      description: "Ricarica",
+      import_ref: null,
+      import_batch_id: "b1",
+      created_by: null,
+    });
   });
 });

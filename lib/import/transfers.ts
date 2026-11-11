@@ -1,5 +1,7 @@
-// Transfer detection: a new draft whose opposite amount was booked on another household account a few days
-// apart is most likely the other side of a giroconto (e.g. Cherry -800 "Ricarica" / Revolut +800).
+// Transfer detection. A draft naming another household account (its IBAN or card digits in the
+// description) is a giroconto for sure; otherwise a new draft whose opposite amount was booked on another
+// household account a few days apart most likely is (e.g. Cherry -800 "Ricarica" / Revolut +800).
+import { extractCardLast4, extractIbans } from "../banking/identifiers";
 import { daysBetween } from "../domain/dates";
 import type { ISODate } from "../domain/types";
 import type { DraftStatus } from "./classify";
@@ -18,37 +20,104 @@ export interface TransferCandidate {
 
 export const TRANSFER_WINDOW_DAYS = 3;
 
-/** Upgrades "new" statuses to "transfer" when a candidate matches; each candidate is used once, nearest date first. */
+/** Household account named by a draft's description. */
+export interface IdentifiedAccount {
+  id: string;
+  name: string;
+  via: "iban" | "card";
+}
+
+/** Row of match_household_accounts: the account owning one of the identifiers searched. */
+export interface AccountMatch {
+  accountId: string;
+  iban: string | null;
+  card: string | null;
+}
+
+/** Identifiers to look up for the drafts, deduplicated. */
+export function draftIdentifiers(drafts: { description: string }[]): { ibans: string[]; cards: string[] } {
+  const ibans = new Set<string>();
+  const cards = new Set<string>();
+  for (const d of drafts) {
+    extractIbans(d.description).forEach((i) => ibans.add(i));
+    extractCardLast4(d.description).forEach((c) => cards.add(c));
+  }
+  return { ibans: [...ibans], cards: [...cards] };
+}
+
+/**
+ * Other household account named by each draft: an IBAN wins over card digits. The imported account's own
+ * IBAN (the debtor of a direct debit) is ignored, and card digits shared by several accounts are ambiguous.
+ */
+export function identifyAccounts(
+  drafts: { description: string }[],
+  ownAccountId: string,
+  matches: AccountMatch[],
+  names: ReadonlyMap<string, string>,
+): (IdentifiedAccount | null)[] {
+  const byIban = new Map<string, string>();
+  const byCard = new Map<string, Set<string>>();
+  for (const m of matches) {
+    if (m.accountId === ownAccountId) continue;
+    if (m.iban) byIban.set(m.iban, m.accountId);
+    if (m.card) byCard.set(m.card, (byCard.get(m.card) ?? new Set<string>()).add(m.accountId));
+  }
+  const named = (id: string, via: IdentifiedAccount["via"]): IdentifiedAccount => ({ id, name: names.get(id) ?? "Altro conto", via });
+  return drafts.map((d) => {
+    const iban = extractIbans(d.description).find((i) => byIban.has(i));
+    if (iban) return named(byIban.get(iban)!, "iban");
+    const card = extractCardLast4(d.description).find((c) => byCard.get(c)?.size === 1);
+    return card ? named([...byCard.get(card)!][0], "card") : null;
+  });
+}
+
+/** Nearest unused candidate with the opposite amount within the window, optionally on one account only. */
+function nearestCandidate(d: { bookedOn: ISODate; amountCents: number }, candidates: TransferCandidate[], used: Set<string>, windowDays: number, accountId?: string) {
+  let best: TransferCandidate | null = null;
+  let bestGap = Infinity;
+  for (const c of candidates) {
+    if (used.has(c.id) || c.amountCents !== -d.amountCents || (accountId && c.accountId !== accountId)) continue;
+    const gap = Math.abs(daysBetween(c.bookedOn, d.bookedOn));
+    if (gap <= windowDays && gap < bestGap) {
+      best = c;
+      bestGap = gap;
+    }
+  }
+  return best;
+}
+
+/**
+ * Upgrades "new" statuses to giroconti. Drafts naming another account go first: they pair with a movement
+ * on that account or, when none is booked yet, ask for its other side to be created. The rest pair by
+ * amount and date. Each candidate is used once, nearest date first.
+ */
 export function detectTransfers(
   drafts: { bookedOn: ISODate; amountCents: number }[],
   statuses: DraftStatus[],
   candidates: TransferCandidate[],
+  identified: (IdentifiedAccount | null)[] = [],
   windowDays = TRANSFER_WINDOW_DAYS,
 ): DraftStatus[] {
   const used = new Set<string>();
-  return statuses.map((status, i) => {
+  const byAccount = statuses.map((status, i): DraftStatus => {
+    const account = identified[i];
+    if (status.kind !== "new" || !account) return status;
+    const match = nearestCandidate(drafts[i], candidates, used, windowDays, account.id);
+    if (!match) return { kind: "transferNew", account: { id: account.id, name: account.name }, via: account.via };
+    used.add(match.id);
+    return { kind: "transfer", match, via: account.via };
+  });
+  return byAccount.map((status, i) => {
     if (status.kind !== "new") return status;
-    const d = drafts[i];
-    let best: TransferCandidate | null = null;
-    let bestGap = Infinity;
-    for (const c of candidates) {
-      if (used.has(c.id) || c.amountCents !== -d.amountCents) continue;
-      const gap = Math.abs(daysBetween(c.bookedOn, d.bookedOn));
-      if (gap <= windowDays && gap < bestGap) {
-        best = c;
-        bestGap = gap;
-      }
-    }
-    if (!best) return status;
-    used.add(best.id);
-    return { kind: "transfer", match: best };
+    const match = nearestCandidate(drafts[i], candidates, used, windowDays);
+    if (!match) return status;
+    used.add(match.id);
+    return { kind: "transfer", match };
   });
 }
 
-export interface TransferLink {
-  line: number;
-  transactionId: string;
-}
+/** Giroconto chosen in the browser: pair with an existing movement, or create the other side on an account. */
+export type TransferLink = { line: number; transactionId: string } | { line: number; accountId: string };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -58,23 +127,38 @@ export function parseLinks(input: unknown): TransferLink[] | null {
   if (!Array.isArray(input)) return null;
   const out: TransferLink[] = [];
   for (const v of input) {
-    const { line, transactionId } = (v ?? {}) as Record<string, unknown>;
-    if (!Number.isInteger(line) || typeof transactionId !== "string" || !UUID_RE.test(transactionId)) return null;
-    out.push({ line: line as number, transactionId });
+    const { line, transactionId, accountId } = (v ?? {}) as Record<string, unknown>;
+    if (!Number.isInteger(line)) return null;
+    if (typeof transactionId === "string" && UUID_RE.test(transactionId) && accountId === undefined) out.push({ line: line as number, transactionId });
+    else if (typeof accountId === "string" && UUID_RE.test(accountId) && transactionId === undefined) out.push({ line: line as number, accountId });
+    else return null;
   }
   return out;
 }
 
+/** Other side of an imported giroconto: an existing movement to link, or a new row to create on `accountId`. */
+export interface TransferTarget {
+  accountId: string;
+  categoryId: string | null;
+  existingId: string | null;
+}
+
 /**
- * Keeps only the links the server's own detection confirms (same line, same counterpart movement),
+ * Keeps only the links the server's own detection confirms (same line, same counterpart movement or account),
  * so a stale or forged link never turns a movement into a transfer.
  */
-export function confirmedLinks(links: TransferLink[], drafts: { line: number }[], statuses: DraftStatus[]): Map<number, TransferCandidate> {
-  const out = new Map<number, TransferCandidate>();
-  const wanted = new Map(links.map((l) => [l.line, l.transactionId]));
+export function confirmedLinks(links: TransferLink[], drafts: { line: number }[], statuses: DraftStatus[]): Map<number, TransferTarget> {
+  const out = new Map<number, TransferTarget>();
+  const wanted = new Map(links.map((l) => [l.line, l]));
   drafts.forEach((d, i) => {
     const s = statuses[i];
-    if (s.kind === "transfer" && wanted.get(d.line) === s.match.id) out.set(d.line, s.match);
+    const link = wanted.get(d.line);
+    if (!link) return;
+    if (s.kind === "transfer" && "transactionId" in link && link.transactionId === s.match.id) {
+      out.set(d.line, { accountId: s.match.accountId, categoryId: s.match.categoryId, existingId: s.match.id });
+    } else if (s.kind === "transferNew" && "accountId" in link && link.accountId === s.account.id) {
+      out.set(d.line, { accountId: s.account.id, categoryId: null, existingId: null });
+    }
   });
   return out;
 }

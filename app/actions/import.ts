@@ -2,7 +2,17 @@
 
 import { refresh } from "next/cache";
 import { getContext } from "@/lib/data/context";
-import { accountHistory, accountRules, categorisedHistory, linkTransferSides, loadImportAccount, movementsAround, transferCandidates } from "@/lib/data/import-db";
+import {
+  accountHistory,
+  accountRules,
+  categorisedHistory,
+  createTransferSides,
+  identifiedAccounts,
+  linkTransferSides,
+  loadImportAccount,
+  movementsAround,
+  transferCandidates,
+} from "@/lib/data/import-db";
 import { mapCategory } from "@/lib/data/mappers";
 import { todayISO } from "@/lib/domain/dates";
 import type { ISODate } from "@/lib/domain/types";
@@ -21,6 +31,7 @@ import { type ActionState, dbErrorMessage, failure, success } from "./state";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 const CHUNK = 500;
+const IMPORTABLE = new Set<DraftStatus["kind"]>(["new", "possible", "transfer", "transferNew"]);
 
 export type ReadStatementResult = { ok: true; grid: PlainCell[][] } | { ok: false; message: string };
 
@@ -33,8 +44,12 @@ export async function readStatementFile(fd: FormData): Promise<ReadStatementResu
 
 /** Duplicates and opening balance on the target account, then giroconti with the other accounts. */
 async function classify(supabase: Client, householdId: string, accountId: string, openingDate: ISODate, drafts: ImportDraft[]): Promise<DraftStatus[]> {
-  const [existing, candidates] = await Promise.all([movementsAround(supabase, accountId, drafts), transferCandidates(supabase, householdId, accountId, drafts)]);
-  return detectTransfers(drafts, classifyDrafts(drafts, existing, openingDate), candidates);
+  const [existing, candidates, identified] = await Promise.all([
+    movementsAround(supabase, accountId, drafts),
+    transferCandidates(supabase, householdId, accountId, drafts),
+    identifiedAccounts(supabase, householdId, accountId, drafts),
+  ]);
+  return detectTransfers(drafts, classifyDrafts(drafts, existing, openingDate), candidates, identified);
 }
 
 export type PreviewResult = ({ ok: true; statuses: DraftStatus[]; openingDate: ISODate } & ImportInsights) | { ok: false; message: string };
@@ -82,7 +97,7 @@ export async function importStatement(accountId: string, payload: unknown, metaI
   if (!account) return failure("Conto non trovato.");
 
   const statuses = await classify(supabase, ctx.householdId, account.id, account.openingDate, drafts);
-  const keep = drafts.filter((_, i) => statuses[i].kind === "new" || statuses[i].kind === "possible" || statuses[i].kind === "transfer");
+  const keep = drafts.filter((_, i) => IMPORTABLE.has(statuses[i].kind));
   if (!keep.length) return failure("Tutti i movimenti scelti sono già presenti.");
   const transfers = confirmedLinks(links, drafts, statuses);
 
@@ -100,31 +115,46 @@ export async function importStatement(accountId: string, payload: unknown, metaI
   const rows = importRows(keep, { householdId: ctx.householdId, accountId: account.id, categories, categoryByLine, batchId: String(batch.id), transfers });
   // Rows keep the order of `keep`, so each import ref maps back to its draft's link.
   const candidateByRef = new Map<string, string>();
+  const createByRef = new Map<string, string>();
   rows.forEach((r, i) => {
     const link = transfers.get(keep[i].line);
-    if (link) candidateByRef.set(r.import_ref, link.id);
+    if (link?.existingId) candidateByRef.set(r.import_ref, link.existingId);
+    else if (link) createByRef.set(r.import_ref, link.accountId);
   });
 
-  const inserted: { importRef: string; accountId: string; groupId: string | null; amountCents: number; bookedOn: string }[] = [];
+  const inserted: { importRef: string; accountId: string; groupId: string | null; amountCents: number; bookedOn: string; description: string; categoryId: string | null }[] = [];
   let failed: string | null = null;
   for (let i = 0; i < rows.length; i += CHUNK) {
     // Import refs are unique: rows already imported are skipped instead of failing the batch.
     const { data, error } = await supabase
       .from("transactions")
       .upsert(rows.slice(i, i + CHUNK), { onConflict: "import_ref", ignoreDuplicates: true })
-      .select("import_ref, transfer_group_id, amount_cents, booked_on");
+      .select("import_ref, transfer_group_id, amount_cents, booked_on, description, category_id");
     if (error) {
       failed = dbErrorMessage(error);
       break;
     }
     for (const r of data ?? [])
-      inserted.push({ importRef: String(r.import_ref), accountId: account.id, groupId: (r.transfer_group_id as string | null) ?? null, amountCents: Number(r.amount_cents), bookedOn: String(r.booked_on) });
+      inserted.push({
+        importRef: String(r.import_ref),
+        accountId: account.id,
+        groupId: (r.transfer_group_id as string | null) ?? null,
+        amountCents: Number(r.amount_cents),
+        bookedOn: String(r.booked_on),
+        description: String(r.description),
+        categoryId: (r.category_id as string | null) ?? null,
+      });
   }
-  const linked = await linkTransferSides(
+  const giroconti = inserted.filter((r): r is typeof r & { groupId: string } => r.groupId !== null);
+  const created = await createTransferSides(
     supabase,
-    inserted.filter((r): r is typeof r & { groupId: string } => r.groupId !== null),
-    candidateByRef,
+    giroconti.flatMap((r) => {
+      const target = createByRef.get(r.importRef);
+      return target ? [{ ...r, accountId: target }] : [];
+    }),
+    { householdId: ctx.householdId, accountId: account.id, batchId: String(batch.id) },
   );
+  const linked = created + (await linkTransferSides(supabase, giroconti, candidateByRef));
 
   // The batch records what actually went in, so undoing it removes exactly those rows.
   const stats = batchStats(inserted);

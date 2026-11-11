@@ -32,4 +32,11 @@ describe("classifyDrafts", () => {
     const res = classifyDrafts([m("2025-02-02", -100, "Caffè"), m("2025-02-01", -100, "Bar")], existing, "2025-01-01");
     expect(res.map((s) => s.kind)).toEqual(["new", "duplicate"]);
   });
+
+  it("treats the giroconto side created by the other statement as already present", () => {
+    const mirror = { ...m("2025-02-03", 80000, "Bonifico a Revolut"), importedMirror: true };
+    const res = classifyDrafts([m("2025-02-05", 80000, "Ricarica da Cherry"), m("2025-02-05", 80000, "Altra ricarica")], [mirror], "2025-01-01");
+    expect(res.map((s) => s.kind)).toEqual(["duplicate", "new"]);
+    expect(classifyDrafts([m("2025-02-07", 80000, "Tardiva")], [mirror], "2025-01-01")[0].kind).toBe("possible");
+  });
 });

@@ -39,7 +39,7 @@ export function ImportSummary({ summary, openingDate, checking, error }: ImportS
         </dl>
         {transfers > 0 && (
           <p className="text-sm text-ink-muted">
-            {transfers === 1 ? "1 movimento verrà collegato" : `${transfers} movimenti verranno collegati`} come giroconto a un movimento già registrato in un altro conto: non conta come entrata o uscita della famiglia.
+            {transfers === 1 ? "1 movimento verrà collegato" : `${transfers} movimenti verranno collegati`} come giroconto con un altro conto della famiglia: non conta come entrata o uscita.
           </p>
         )}
         {duplicates > 0 && <p className="text-sm text-ink-muted">{duplicates} movimenti sono già presenti e non verranno importati di nuovo.</p>}
