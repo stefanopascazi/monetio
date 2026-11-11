@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:local": "node scripts/dev/with-env.ts .env.stack next dev",
+    "dev": "node scripts/dev/with-env.ts .env.stack next dev",
     "stack:dev": "node scripts/docker/compose.ts -f docker-compose.dev.yml up -d",
     "stack:up": "node scripts/docker/compose.ts up -d --build",
     "stack:down": "node scripts/docker/compose.ts down",
@@ -18,12 +17,9 @@
     "worker:build": "node packages/worker/build.ts",
     "ds:tokens": "node packages/ui/scripts/build-tokens.ts",
     "ds:artifact": "node packages/ui/scripts/build-tokens.ts && node packages/ui/scripts/build-artifact.ts",
-    "db:migrate": "node --env-file=.env.local scripts/db/migrate.ts",
-    "db:migrate:local": "node --env-file=.env.stack scripts/db/migrate.ts",
-    "db:import": "node --env-file=.env.local scripts/import/run-import.ts",
-    "db:import:local": "node --env-file=.env.stack scripts/import/run-import.ts",
-    "auth:invite": "node --env-file=.env.local scripts/dev/invite.ts",
-    "auth:invite:local": "node --env-file=.env.stack scripts/dev/invite.ts"
+    "db:migrate": "node scripts/db/migrate.ts",
+    "db:import": "node scripts/import/run-import.ts",
+    "auth:invite": "node scripts/dev/invite.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^11.12.0",

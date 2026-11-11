@@ -4,6 +4,6 @@ import { cleanUrl, sslFor } from "./ssl.ts";
 /** Direct (non-pooled) connection for scripts; needs POSTGRES_URL_NON_POOLING. */
 export function connect() {
   const url = process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL;
-  if (!url) throw new Error("POSTGRES_URL_NON_POOLING is not set (run with --env-file=.env.local)");
+  if (!url) throw new Error("POSTGRES_URL_NON_POOLING is not set (local: start the Docker stack and keep .env.stack in the repo root)");
   return postgres(cleanUrl(url), { ssl: sslFor(url), max: 1, onnotice: () => {} });
 }
