@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DraftStatus } from "@/lib/import/classify";
-import { columnLetter, columnOptions, fallbackMapping, headerRowOptions, isSelected, summarize } from "./import-view";
+import { columnLetter, columnOptions, fallbackMapping, headerRowOptions, isLinked, isSelected, summarize, transferLinks } from "./import-view";
 
 describe("columnLetter", () => {
   it.each([
@@ -52,7 +52,32 @@ describe("selection", () => {
       { line: 5, bookedOn: "2025-01-04", amountCents: -3, description: "e", category: null },
     ];
     const statuses: DraftStatus[] = [fresh, fresh, possible, { kind: "beforeOpening" }, { kind: "duplicate" }];
-    expect(summarize(drafts, statuses, new Map())).toEqual({ count: 2, totalCents: 400, from: "2025-01-02", to: "2025-01-05", duplicates: 1, possible: 1, beforeOpening: 1 });
+    expect(summarize(drafts, statuses, new Map())).toEqual({ count: 2, totalCents: 400, from: "2025-01-02", to: "2025-01-05", duplicates: 1, possible: 1, beforeOpening: 1, transfers: 0 });
     expect(summarize(drafts, statuses, new Map([[3, true]])).count).toBe(3);
+  });
+});
+
+describe("giroconti", () => {
+  const match = { id: "t1", accountId: "cherry", accountName: "Cherry", bookedOn: "2025-01-02", amountCents: -800, description: "Ricarica", categoryId: null };
+  const transfer: DraftStatus = { kind: "transfer", match };
+  const drafts = [
+    { line: 1, bookedOn: "2025-01-02", amountCents: 800, description: "Ricarica di *3210", category: null },
+    { line: 2, bookedOn: "2025-01-03", amountCents: -5, description: "Bar", category: null },
+  ];
+  const statuses: DraftStatus[] = [transfer, { kind: "new" }];
+
+  it("selects and links giroconti by default", () => {
+    expect(isSelected(1, transfer, new Map())).toBe(true);
+    expect(isLinked(1, transfer, new Map(), new Set())).toBe(true);
+    expect(isLinked(1, transfer, new Map(), new Set([1]))).toBe(false);
+    expect(isLinked(1, transfer, new Map([[1, false]]), new Set())).toBe(false);
+    expect(isLinked(2, { kind: "new" }, new Map(), new Set())).toBe(false);
+  });
+
+  it("sends links only for selected, linked rows and counts them", () => {
+    expect(transferLinks(drafts, statuses, new Map(), new Set())).toEqual([{ line: 1, transactionId: "t1" }]);
+    expect(transferLinks(drafts, statuses, new Map(), new Set([1]))).toEqual([]);
+    expect(summarize(drafts, statuses, new Map()).transfers).toBe(1);
+    expect(summarize(drafts, statuses, new Map(), new Set([1]))).toMatchObject({ transfers: 0, count: 2 });
   });
 });

@@ -30,4 +30,18 @@ describe("importRows", () => {
     expect(importRows([], { householdId: "h", accountId: "a", categories })).toEqual([]);
     expect(importRows([{ line: 1, bookedOn: "2025-01-01", amountCents: -1, description: "x", category: null }], { householdId: "h", accountId: "a", categories })[0].import_batch_id).toBeNull();
   });
+
+  it("books linked drafts as the transfer side of the existing movement", () => {
+    const link = { id: "t1", accountId: "cherry", accountName: "Cherry", bookedOn: "2025-01-02", amountCents: -800, description: "Ricarica", categoryId: "giro" };
+    const rows = importRows(
+      [
+        { line: 2, bookedOn: "2025-01-02", amountCents: 800, description: "Ricarica di *3210", category: "Spesa" },
+        { line: 3, bookedOn: "2025-01-03", amountCents: -120, description: "Bar", category: null },
+      ],
+      { householdId: "h", accountId: "rev", categories, transfers: new Map([[2, link]]) },
+      () => "g1",
+    );
+    expect(rows[0]).toMatchObject({ kind: "transfer", counterpart_account_id: "cherry", transfer_group_id: "g1", category_id: "giro", amount_cents: 800 });
+    expect(rows[1]).toMatchObject({ kind: "expense", counterpart_account_id: null, transfer_group_id: null });
+  });
 });

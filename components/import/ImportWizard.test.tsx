@@ -82,6 +82,29 @@ describe("ImportWizard", () => {
     await waitFor(() => expect(actions.previewImport).toHaveBeenCalledWith("acc-2", expect.any(Array)));
   });
 
+  describe("giroconti", () => {
+    const match = { id: "11111111-1111-4111-8111-111111111111", accountId: "acc-2", accountName: "Revolut", bookedOn: "2025-01-05", amountCents: -150000, description: "Ricarica", categoryId: null };
+    beforeEach(() => {
+      actions.previewImport.mockResolvedValue({ ok: true, openingDate: "2024-12-31", statuses: [{ kind: "duplicate" }, { kind: "duplicate" }, { kind: "transfer", match }] });
+    });
+
+    it("are linked by default", async () => {
+      const user = await upload();
+      expect(await screen.findByText("Giroconto con Revolut")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Importa 1 movimento" }));
+      await waitFor(() => expect(actions.importStatement).toHaveBeenCalledTimes(1));
+      expect(actions.importStatement.mock.calls[0][3]).toEqual([{ line: 4, transactionId: match.id }]);
+    });
+
+    it("are imported plain once unlinked", async () => {
+      const user = await upload();
+      await user.click(await screen.findByRole("checkbox", { name: "Collega come giroconto" }));
+      await user.click(screen.getByRole("button", { name: "Importa 1 movimento" }));
+      await waitFor(() => expect(actions.importStatement).toHaveBeenCalledTimes(1));
+      expect(actions.importStatement.mock.calls[0][3]).toEqual([]);
+    });
+  });
+
   it("shows the reading error and stays on the file step", async () => {
     actions.readStatementFile.mockResolvedValue({ ok: false, message: "Il file è vuoto." });
     await upload();

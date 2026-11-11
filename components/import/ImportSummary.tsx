@@ -15,7 +15,7 @@ export interface ImportSummaryProps {
 export function ImportSummary({ summary, openingDate, checking, error }: ImportSummaryProps) {
   if (error) return <Alert tone="danger">{error}</Alert>;
   if (!summary) return <Card title="Riepilogo" subtitle={checking ? "Controllo dei movimenti già presenti…" : "Nessun movimento valido nel file."} />;
-  const { count, totalCents, from, to, duplicates, possible, beforeOpening } = summary;
+  const { count, totalCents, from, to, duplicates, possible, beforeOpening, transfers } = summary;
   return (
     <Card title="Riepilogo" tone="mint">
       <div className="flex flex-col gap-4">
@@ -37,6 +37,11 @@ export function ImportSummary({ summary, openingDate, checking, error }: ImportS
             </div>
           )}
         </dl>
+        {transfers > 0 && (
+          <p className="text-sm text-ink-muted">
+            {transfers === 1 ? "1 movimento verrà collegato" : `${transfers} movimenti verranno collegati`} come giroconto a un movimento già registrato in un altro conto: non conta come entrata o uscita della famiglia.
+          </p>
+        )}
         {duplicates > 0 && <p className="text-sm text-ink-muted">{duplicates} movimenti sono già presenti e non verranno importati di nuovo.</p>}
         {beforeOpening > 0 && openingDate && (
           <Alert tone="info">

@@ -30,7 +30,7 @@ export function ImportWizard({ accounts }: { accounts: SelectOption[] }) {
       </div>
       {flow.file && (
         <div className="flex flex-col gap-4">
-          <PreviewList drafts={flow.drafts} statuses={flow.statuses} choices={flow.choices} onToggle={flow.toggle} skipped={flow.skipped} />
+          <PreviewList drafts={flow.drafts} statuses={flow.statuses} choices={flow.choices} onToggle={flow.toggle} unlinked={flow.unlinked} onToggleLink={flow.toggleLink} skipped={flow.skipped} />
           <ImportActionBar summary={flow.summary} checking={flow.checking} importing={flow.importing} onConfirm={flow.confirm} />
         </div>
       )}

@@ -32,12 +32,25 @@ export function fallbackMapping(grid: Grid): ColumnMapping {
   return { headerRow: 0, date: 0, description: Math.min(1, last), amount: { mode: "signed", column: Math.min(2, last) } };
 }
 
-export const isSelectable = (s: DraftStatus | undefined) => s?.kind === "new" || s?.kind === "possible";
+export const isSelectable = (s: DraftStatus | undefined) => s?.kind === "new" || s?.kind === "possible" || s?.kind === "transfer";
 
-/** New rows start selected; possible duplicates wait for the user's choice. */
+/** New rows and giroconti start selected; possible duplicates wait for the user's choice. */
 export function isSelected(line: number, status: DraftStatus | undefined, choices: ReadonlyMap<number, boolean>): boolean {
   if (!isSelectable(status)) return false;
-  return choices.get(line) ?? status?.kind === "new";
+  return choices.get(line) ?? (status?.kind === "new" || status?.kind === "transfer");
+}
+
+/** A selected giroconto is linked to the other account unless the user opted out. */
+export function isLinked(line: number, status: DraftStatus | undefined, choices: ReadonlyMap<number, boolean>, unlinked: ReadonlySet<number>): boolean {
+  return status?.kind === "transfer" && isSelected(line, status, choices) && !unlinked.has(line);
+}
+
+/** Links to send with the import: line and the existing movement it pairs with. */
+export function transferLinks(drafts: ImportDraft[], statuses: DraftStatus[], choices: ReadonlyMap<number, boolean>, unlinked: ReadonlySet<number>) {
+  return drafts.flatMap((d, i) => {
+    const s = statuses[i];
+    return s?.kind === "transfer" && isLinked(d.line, s, choices, unlinked) ? [{ line: d.line, transactionId: s.match.id }] : [];
+  });
 }
 
 export interface SelectionSummary {
@@ -48,16 +61,19 @@ export interface SelectionSummary {
   duplicates: number;
   possible: number;
   beforeOpening: number;
+  /** Selected rows that will be linked as giroconti. */
+  transfers: number;
 }
 
-export function summarize(drafts: ImportDraft[], statuses: DraftStatus[], choices: ReadonlyMap<number, boolean>): SelectionSummary {
-  const s: SelectionSummary = { count: 0, totalCents: 0, from: null, to: null, duplicates: 0, possible: 0, beforeOpening: 0 };
+export function summarize(drafts: ImportDraft[], statuses: DraftStatus[], choices: ReadonlyMap<number, boolean>, unlinked: ReadonlySet<number> = new Set()): SelectionSummary {
+  const s: SelectionSummary = { count: 0, totalCents: 0, from: null, to: null, duplicates: 0, possible: 0, beforeOpening: 0, transfers: 0 };
   drafts.forEach((d, i) => {
     const status = statuses[i];
     if (status?.kind === "duplicate") s.duplicates++;
     if (status?.kind === "possible") s.possible++;
     if (status?.kind === "beforeOpening") s.beforeOpening++;
     if (!isSelected(d.line, status, choices)) return;
+    if (isLinked(d.line, status, choices, unlinked)) s.transfers++;
     s.count++;
     s.totalCents += d.amountCents;
     if (!s.from || d.bookedOn < s.from) s.from = d.bookedOn;

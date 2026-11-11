@@ -3,12 +3,15 @@
 import { daysBetween } from "../domain/dates";
 import type { ISODate } from "../domain/types";
 import { dedupKey, type Movement } from "./dedup";
+import type { TransferCandidate } from "./transfers";
 
 export type DraftStatus =
   | { kind: "new" }
   | { kind: "duplicate" }
   | { kind: "possible"; match: Movement }
-  | { kind: "beforeOpening" };
+  | { kind: "beforeOpening" }
+  /** Other side of a giroconto already booked on another account (set by detectTransfers). */
+  | { kind: "transfer"; match: TransferCandidate };
 
 /** Days around a draft where a same-amount movement counts as a possible duplicate. */
 export const POSSIBLE_WINDOW_DAYS = 4;

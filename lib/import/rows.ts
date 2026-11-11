@@ -1,6 +1,7 @@
 // Database rows for imported drafts.
 import type { Category } from "../domain/types";
 import { normalizeDescription, withImportRefs } from "./dedup";
+import type { TransferCandidate } from "./transfers";
 import type { ImportDraft } from "./types";
 
 /** Active category with the same (normalised) name and a compatible kind, if any. */
@@ -18,22 +19,30 @@ export interface ImportTarget {
   categories: Category[];
   /** Import batch the rows belong to (Storico import). */
   batchId?: string | null;
+  /** Drafts (by line) to book as the other side of an existing movement on another account. */
+  transfers?: ReadonlyMap<number, TransferCandidate>;
 }
 
-export function importRows(drafts: ImportDraft[], t: ImportTarget) {
-  return withImportRefs(t.accountId, drafts).map((d) => ({
-    household_id: t.householdId,
-    account_id: t.accountId,
-    category_id: matchCategory(d.category, d.amountCents, t.categories),
-    kind: d.amountCents > 0 ? "income" : "expense",
-    status: "booked",
-    source: "import",
-    amount_cents: d.amountCents,
-    booked_on: d.bookedOn,
-    description: d.description,
-    import_ref: d.importRef,
-    import_batch_id: t.batchId ?? null,
-    // Imports carry no author, like the sheet import.
-    created_by: null,
-  }));
+export function importRows(drafts: ImportDraft[], t: ImportTarget, newId: () => string = () => crypto.randomUUID()) {
+  return withImportRefs(t.accountId, drafts).map((d) => {
+    const link = t.transfers?.get(d.line);
+    return {
+      household_id: t.householdId,
+      account_id: t.accountId,
+      category_id: link ? link.categoryId : matchCategory(d.category, d.amountCents, t.categories),
+      kind: link ? "transfer" : d.amountCents > 0 ? "income" : "expense",
+      counterpart_account_id: link?.accountId ?? null,
+      // The existing side joins this group after the insert (linkTransferSides).
+      transfer_group_id: link ? newId() : null,
+      status: "booked",
+      source: "import",
+      amount_cents: d.amountCents,
+      booked_on: d.bookedOn,
+      description: d.description,
+      import_ref: d.importRef,
+      import_batch_id: t.batchId ?? null,
+      // Imports carry no author, like the sheet import.
+      created_by: null,
+    };
+  });
 }

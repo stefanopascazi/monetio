@@ -30,6 +30,8 @@ revoke all on import_batches from anon;
 grant select, insert, update on import_batches to authenticated;
 
 -- Deletes the movements of an import and marks it undone, atomically. Runs as the caller (RLS applies).
+-- Imported rows linked as giroconti to a movement that existed before keep that movement: it is first
+-- turned back into a plain income/expense, otherwise the transfer mirror trigger would delete it too.
 create or replace function undo_import(p_batch uuid) returns integer
 language plpgsql security invoker set search_path = public as $$
 declare
@@ -38,6 +40,14 @@ begin
   if not exists (select 1 from import_batches where id = p_batch and undone_at is null) then
     raise exception 'import not found';
   end if;
+  update transactions o set
+      kind = case when o.amount_cents > 0 then 'income'::transaction_kind else 'expense'::transaction_kind end,
+      counterpart_account_id = null,
+      transfer_group_id = null
+    from transactions i
+    where i.import_batch_id = p_batch and i.transfer_group_id is not null
+      and o.transfer_group_id = i.transfer_group_id and o.id <> i.id
+      and o.import_batch_id is distinct from p_batch and o.parent_transaction_id is null;
   delete from transactions where import_batch_id = p_batch;
   get diagnostics n = row_count;
   update import_batches set undone_at = now() where id = p_batch;

@@ -7,7 +7,7 @@ import type { DraftStatus } from "@/lib/import/classify";
 import { mapRows } from "@/lib/import/mapping";
 import { detectMapping } from "@/lib/import/presets";
 import type { ColumnMapping, Grid } from "@/lib/import/types";
-import { fallbackMapping, isSelected, summarize } from "./import-view";
+import { fallbackMapping, isSelected, summarize, transferLinks } from "./import-view";
 
 interface LoadedFile {
   name: string;
@@ -32,6 +32,8 @@ export function useImportFlow(defaultAccountId: string) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewError, setPreviewError] = useState<{ key: string; message: string } | null>(null);
   const [choices, setChoices] = useState<Map<number, boolean>>(new Map());
+  // Giroconti the user wants imported as plain income/expense instead.
+  const [unlinked, setUnlinked] = useState<Set<number>>(new Set());
   const [reading, startReading] = useTransition();
   const [importing, startImporting] = useTransition();
 
@@ -51,6 +53,7 @@ export function useImportFlow(defaultAccountId: string) {
       if (res.ok) setPreview({ key, statuses: res.statuses, openingDate: res.openingDate });
       else setPreviewError({ key, message: res.message });
       setChoices(new Map());
+      setUnlinked(new Set());
     }, PREVIEW_DELAY_MS);
     return () => {
       stale = true;
@@ -80,17 +83,26 @@ export function useImportFlow(defaultAccountId: string) {
     setBank(null);
     setPreview(null);
     setChoices(new Map());
+    setUnlinked(new Set());
   };
 
   const toggle = (line: number, value: boolean) => setChoices((prev) => new Map(prev).set(line, value));
+  const toggleLink = (line: number, link: boolean) =>
+    setUnlinked((prev) => {
+      const next = new Set(prev);
+      if (link) next.delete(line);
+      else next.add(line);
+      return next;
+    });
 
-  const summary = statuses ? summarize(drafts, statuses, choices) : null;
+  const summary = statuses ? summarize(drafts, statuses, choices, unlinked) : null;
 
   const confirm = () => {
     if (!statuses) return;
     const chosen = drafts.filter((d, i) => isSelected(d.line, statuses[i], choices));
     startImporting(async () => {
-      const res = await importStatement(accountId, chosen, { fileName: file?.name ?? "", bank });
+      const links = transferLinks(drafts, statuses, choices, unlinked);
+      const res = await importStatement(accountId, chosen, { fileName: file?.name ?? "", bank }, links);
       toast.show(res.message ?? "", { tone: res.ok ? "success" : "danger" });
       if (res.ok) reset();
     });
@@ -111,6 +123,8 @@ export function useImportFlow(defaultAccountId: string) {
     checking: !!key && !statuses && !error,
     choices,
     toggle,
+    unlinked,
+    toggleLink,
     summary,
     reading,
     importing,

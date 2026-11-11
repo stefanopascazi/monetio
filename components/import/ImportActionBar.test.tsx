@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ImportActionBar } from "./ImportActionBar";
 
-const summary = { count: 3, totalCents: -1500, from: "2025-01-01", to: "2025-01-03", duplicates: 0, possible: 0, beforeOpening: 0 };
+const summary = { count: 3, totalCents: -1500, from: "2025-01-01", to: "2025-01-03", duplicates: 0, possible: 0, beforeOpening: 0, transfers: 0 };
 
 describe("ImportActionBar", () => {
   it("confirms the selected rows", async () => {
