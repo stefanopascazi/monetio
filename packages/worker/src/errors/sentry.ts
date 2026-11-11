@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/node";
 import { DATA_COLLECTION } from "../../../../lib/observability/data-collection.ts";
+import { sendTestEvent } from "../../../../lib/observability/test-event.ts";
 import { scrubEvent } from "../../../../lib/observability/scrub-event.ts";
 import type { ErrorReporter } from "./reporter.ts";
 
@@ -16,5 +17,6 @@ export function createSentryReporter(dsn: string, release: string | undefined): 
   return {
     capture: (error, tags) => void Sentry.captureException(error, { tags }),
     flush: async (timeoutMs) => void (await Sentry.flush(timeoutMs)),
+    sendTest: () => sendTestEvent(Sentry, "MonetIO worker"),
   };
 }
