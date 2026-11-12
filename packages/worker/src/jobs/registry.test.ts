@@ -8,11 +8,11 @@ const vapid = { publicKey: "pub", privateKey: "priv", subject: "mailto:a@example
 
 describe("createJobs", () => {
   it("registers the backup only when configured", () => {
-    expect(createJobs(sql, base).map((j) => j.name)).toEqual(["db-ping"]);
-    expect(createJobs(sql, { ...base, backup: { remote: "r2:b", ageRecipient: "age1x" } }).map((j) => j.name)).toEqual(["db-ping", "backup"]);
+    expect(createJobs(sql, base).map((j) => j.name)).toEqual(["db-ping", "notify-events"]);
+    expect(createJobs(sql, { ...base, backup: { remote: "r2:b", ageRecipient: "age1x" } }).map((j) => j.name)).toEqual(["db-ping", "backup", "notify-events"]);
   });
 
   it("registers push delivery only when VAPID keys are configured", () => {
-    expect(createJobs(sql, { ...base, push: vapid }).map((j) => j.name)).toEqual(["db-ping", "push-deliver"]);
+    expect(createJobs(sql, { ...base, push: vapid }).map((j) => j.name)).toEqual(["db-ping", "push-deliver", "notify-events"]);
   });
 });
