@@ -86,10 +86,19 @@ describe("AccountCarousel", () => {
     fireEvent.pointerUp(window, { pointerType: "mouse" });
     expect(row).not.toHaveAttribute("data-dragging");
     expect(fireEvent.click(link)).toBe(false);
-    // A plain click afterwards still navigates.
+    // A plain click afterwards still navigates: record whether the app prevented it, then stop
+    // jsdom's own navigation (not implemented, it logs an error after the test).
+    let prevented: boolean | undefined;
+    const stopJsdomNavigation = (e: MouseEvent) => {
+      prevented = e.defaultPrevented;
+      e.preventDefault();
+    };
+    window.addEventListener("click", stopJsdomNavigation);
     fireEvent.pointerDown(row, { pointerType: "mouse", button: 0, clientX: 300 });
     fireEvent.pointerUp(window, { pointerType: "mouse" });
-    expect(fireEvent.click(link)).toBe(true);
+    fireEvent.click(link);
+    window.removeEventListener("click", stopJsdomNavigation);
+    expect(prevented).toBe(false);
   });
 
   it("includes the current account when archived", () => {
