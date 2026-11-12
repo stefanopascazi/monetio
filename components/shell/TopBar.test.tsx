@@ -17,6 +17,11 @@ describe("TopBar", () => {
     expect(screen.queryByRole("radiogroup")).toBeNull();
   });
 
+  it("renders the bell slot", () => {
+    render(<TopBar bell={<a href="/notifiche">Notifiche</a>} />);
+    expect(screen.getByRole("banner")).toContainElement(screen.getByRole("link", { name: "Notifiche" }));
+  });
+
   it("renders the quick-create slot", () => {
     render(<TopBar create={<button>Aggiungi</button>} />);
     expect(screen.getByRole("banner")).toContainElement(screen.getByRole("button", { name: "Aggiungi" }));

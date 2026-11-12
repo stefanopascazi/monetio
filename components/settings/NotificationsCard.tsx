@@ -1,6 +1,7 @@
 "use client";
 
 import { BellRing } from "lucide-react";
+import type { ReactNode } from "react";
 import { Alert, Button, Card, Switch } from "@monetio/ui";
 import { type PushStatus, usePushNotifications } from "@/hooks/usePushNotifications";
 
@@ -12,12 +13,12 @@ const BLOCKED_COPY: Partial<Record<PushStatus, { tone: "info" | "warning"; text:
   denied: { tone: "warning", text: "Hai bloccato le notifiche per MonetIO. Riattivale dalle impostazioni del browser, poi torna qui." },
 };
 
-/** Per-device push notifications toggle with a test button (#28). */
-export function NotificationsCard() {
+/** Per-device push notifications toggle with a test button (#28); preferences come as children. */
+export function NotificationsCard({ children }: { children?: ReactNode }) {
   const { status, subscribed, pending, setEnabled, sendTest } = usePushNotifications();
   const blocked = status ? BLOCKED_COPY[status] : undefined;
   return (
-    <Card title="Notifiche" subtitle="Avvisi su questo dispositivo">
+    <Card title="Notifiche" subtitle="Push su questo dispositivo e preferenze" className="lg:col-span-2">
       <div className="flex flex-col gap-4">
         {blocked ? (
           <Alert tone={blocked.tone}>{blocked.text}</Alert>
@@ -37,6 +38,7 @@ export function NotificationsCard() {
             </Button>
           </div>
         )}
+        {children}
       </div>
     </Card>
   );

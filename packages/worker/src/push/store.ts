@@ -11,8 +11,8 @@ export function createPostgresPushStore(sql: Sql): PushStore {
       return sql<OutboxRow[]>`
         select id, user_id as "userId", title, body, url, tag from push_outbox
         where sent_at is null and attempts < ${MAX_ATTEMPTS}
-          and created_at > now() - make_interval(hours => ${MAX_AGE_HOURS})
-        order by created_at limit ${limit}`;
+          and push_after <= now() and push_after > now() - make_interval(hours => ${MAX_AGE_HOURS})
+        order by push_after limit ${limit}`;
     },
     async subscriptionsFor(userIds) {
       if (userIds.length === 0) return [];
@@ -35,7 +35,7 @@ export function createPostgresPushStore(sql: Sql): PushStore {
     async purge(before) {
       const rows = await sql`
         delete from push_outbox where created_at < ${before}
-          and (sent_at is not null or attempts >= ${MAX_ATTEMPTS} or created_at < now() - make_interval(hours => ${MAX_AGE_HOURS}))`;
+          and (sent_at is not null or attempts >= ${MAX_ATTEMPTS} or push_after < now() - make_interval(hours => ${MAX_AGE_HOURS}))`;
       return rows.count;
     },
   };

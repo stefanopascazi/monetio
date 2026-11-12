@@ -43,6 +43,7 @@ const deps = {
   log,
   holder: `${hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`,
   shutdown: shutdown.signal,
+  bootedAt: Date.now(),
 };
 const scheduler = createScheduler({ jobs, queue, tickMs: config.tickMs, runJob: (job) => runJob(job, deps) });
 

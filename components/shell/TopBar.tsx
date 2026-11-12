@@ -5,10 +5,10 @@ import { BalancePrivacyToggle } from "./BalancePrivacyToggle";
 import { TOPBAR_ID, TOPBAR_SLOT_ID } from "./topbar-ids";
 
 /**
- * Sticky wordmark bar: page actions slot (filled via TopBarAction), quick-create "+", balance privacy
- * toggle and personal area link. Static itself: session data arrives through the `create` slot.
+ * Sticky wordmark bar: page actions slot (filled via TopBarAction), quick-create "+", notifications bell,
+ * balance privacy toggle and personal area link. Static itself: session data arrives through the slots.
  */
-export function TopBar({ create }: { create?: ReactNode }) {
+export function TopBar({ create, bell }: { create?: ReactNode; bell?: ReactNode }) {
   return (
     <header
       id={TOPBAR_ID}
@@ -20,6 +20,7 @@ export function TopBar({ create }: { create?: ReactNode }) {
       <div className="flex items-center gap-2">
         <div id={TOPBAR_SLOT_ID} className="flex items-center gap-2 empty:hidden" />
         {create}
+        {bell}
         <BalancePrivacyToggle />
         <Link
           href="/impostazioni"

@@ -15,9 +15,20 @@ export interface RunJobDeps {
   /** Aborted on shutdown. */
   shutdown: AbortSignal;
   now?: () => number;
+  /** Process start (ms): schema errors right after a deploy are tolerated, see SCHEMA_GRACE_MS. */
+  bootedAt?: number;
 }
 
 type Outcome = "done" | "not-due";
+
+/**
+ * The worker deploys in about 2 minutes, Vercel applies migrations at the end of a 4-minute build:
+ * right after a deploy a job may query a table or column that does not exist yet.
+ */
+export const SCHEMA_GRACE_MS = 15 * 60_000;
+const SCHEMA_NOT_READY = new Set(["42P01", "42703"]); // undefined_table, undefined_column
+
+export const isSchemaNotReady = (error: unknown) => SCHEMA_NOT_READY.has(String((error as { code?: unknown } | null)?.code));
 
 /** Runs one job under its lease with due check, heartbeat and logging; never throws. */
 export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
@@ -38,6 +49,9 @@ export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
     deps.log("info", "job done", { job: job.name, durationMs: now() - started });
     await deps.heartbeat.ping(job.name, "success");
   } catch (error) {
+    if (isSchemaNotReady(error) && deps.bootedAt !== undefined && now() - deps.bootedAt < SCHEMA_GRACE_MS) {
+      return deps.log("warn", "schema not ready, retrying", { job: job.name, error: errorMessage(error) });
+    }
     deps.log("error", "job failed", { job: job.name, durationMs: now() - started, error: errorMessage(error) });
     deps.reporter.capture(error, { job: job.name });
     await deps.heartbeat.ping(job.name, "fail", errorMessage(error));

@@ -8,12 +8,22 @@ on:
     paths:
       - "packages/worker/**"
       - "scripts/db/ssl.ts"
+      # Shared pure code bundled into the worker (notifications, projections).
+      - "lib/domain/**"
+      - "lib/data/**"
+      - "lib/notifications/**"
+      - "lib/banking/**"
       - "package-lock.json"
       - ".github/workflows/worker.yml"
   pull_request:
     paths:
       - "packages/worker/**"
       - "scripts/db/ssl.ts"
+      # Shared pure code bundled into the worker (notifications, projections).
+      - "lib/domain/**"
+      - "lib/data/**"
+      - "lib/notifications/**"
+      - "lib/banking/**"
       - ".github/workflows/worker.yml"
   workflow_dispatch:
 

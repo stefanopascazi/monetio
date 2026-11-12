@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { BellLink } from "@/components/notifications/BellLink";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { QuickCreateSection } from "@/components/quick-create/QuickCreateSection";
 import { AppNav, AppNavFallback } from "@/components/shell/AppNav";
 import { TopBar } from "@/components/shell/TopBar";
@@ -12,6 +14,11 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           create={
             <Suspense fallback={null}>
               <QuickCreateSection />
+            </Suspense>
+          }
+          bell={
+            <Suspense fallback={<BellLink unread={0} />}>
+              <NotificationBell />
             </Suspense>
           }
         />

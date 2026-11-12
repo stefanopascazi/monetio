@@ -60,3 +60,13 @@ Job `push-deliver`, ogni minuto. Le notifiche passano dalla tabella `push_outbox
 - Le righe consegnate o abbandonate vengono cancellate dopo 30 giorni.
 - Per attivarlo: genera le chiavi con `npx web-push generate-vapid-keys`, compila `VAPID_*` in `/etc/monetio-worker.env` e imposta su Vercel `NEXT_PUBLIC_VAPID_PUBLIC_KEY` con la stessa chiave pubblica. Serve un redeploy, perché la chiave viene inclusa nel build.
 - Il pulsante "Invia notifica di prova" in Impostazioni accoda una riga (al massimo una al minuto) e verifica tutto il percorso.
+
+### Eventi e campanella
+
+Job `notify-events`, giornaliero alle 07:00 UTC (08:00 o 09:00 in Italia). Per ogni membro e per ogni nucleo carica i dati come li vede quell'utente: le query girano con ruolo `authenticated` e i claim JWT dell'utente, quindi la RLS applica la stessa visibilità dell'app. Poi calcola gli eventi con `lib/notifications/events.ts` e li mette in `push_outbox`; la `dedup_key` evita i doppioni tra un giorno e l'altro.
+
+- Eventi: scadenza in arrivo (N giorni prima) e superata (solo entro 7 giorni), rimanenza di fine mese sotto soglia, conto senza movimenti da X giorni, stima mensile superata.
+- Ogni riga appare subito nella campanella (`/notifiche`). Il push rispetta l'orario silenzioso (`push_after`) e i tipi silenziati, che arrivano solo nella campanella.
+- Il job gira anche senza chiavi VAPID: la campanella funziona comunque.
+- Il worker include codice di `lib/` (calcoli condivisi con l'app): `worker.yml` lo ridistribuisce anche quando cambia `lib/domain`, `lib/data`, `lib/notifications` o `lib/banking`.
+- Subito dopo un deploy, gli errori "tabella/colonna inesistente" vengono tollerati per 15 minuti: Vercel applica le migration alla fine del build, dopo il deploy del worker.

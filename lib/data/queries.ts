@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { BookedRow } from "../domain/booked-month";
 import type { EstimateMovement } from "../domain/estimates";
-import type { Account, Category, ContributionRule, ISODate, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
+import type { Category, ContributionRule, ISODate, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
 import { createClient } from "../supabase/server";
 import { activeHouseholdId } from "./context";
 import { type MonthlyFlow, mapFlow } from "./flows";
@@ -11,10 +11,9 @@ import { attachFees, type ListTotals, mapAccount, mapCategory, mapContribution, 
 import { searchTerm } from "./params";
 import type { HiddenAccount } from "./transfer-targets";
 import { hiddenAccountName } from "./views";
+import type { AccountWithBalance } from "./projection-input";
 
-export interface AccountWithBalance extends Account {
-  balanceCents: number;
-}
+export type { AccountWithBalance } from "./projection-input";
 
 export const listAccounts = cache(async (): Promise<AccountWithBalance[]> => {
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
