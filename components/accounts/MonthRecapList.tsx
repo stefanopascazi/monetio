@@ -1,17 +1,12 @@
 import type { ReactNode } from "react";
-import { Amount, Badge, type BadgeTone } from "@monetio/ui";
+import { Amount } from "@monetio/ui";
 import { MobileFoldCard } from "@/components/common/MobileFoldCard";
-import { addMonthsToKey, dateLabel, monthLabel } from "@/lib/domain/dates";
+import { addMonthsToKey, monthLabel } from "@/lib/domain/dates";
 import type { MonthRecap, RecapItem, RecapTotals } from "@/lib/domain/month-recap";
 import { EstimateActions } from "./EstimateActions";
-
-const SOURCE: Record<RecapItem["source"], { label: string; tone: BadgeTone } | null> = {
-  booked: null,
-  rule: null,
-  estimate: { label: "stima", tone: "forecast" },
-  contribution: { label: "quota", tone: "transfer" },
-  planned: { label: "pianificato", tone: "neutral" },
-};
+import { EstimateUsageRow } from "./EstimateUsageRow";
+import { isUsedUp } from "./recap-source";
+import { RecapItemSummary } from "./RecapItemSummary";
 
 function Totals({ totals }: { totals: RecapTotals }) {
   return (
@@ -29,34 +24,24 @@ function Group({ title, period, items, totals, empty, today }: { title: string; 
         <p className="px-5 pb-4 text-sm text-ink-muted">{empty}</p>
       ) : (
         <ul className="divide-y divide-[var(--mio-border)]">
-          {items.map((x) => {
-            const src = SOURCE[x.source];
-            return (
-              <li key={x.key} className="flex flex-col gap-2 px-5 py-3">
+          {items.map((x) => (
+            <li key={x.key} className={x.usage ? "flex flex-col gap-2 px-1 py-1" : "flex flex-col gap-2 px-5 py-3"}>
+              {x.usage ? (
+                <EstimateUsageRow item={{ ...x, usage: x.usage }} />
+              ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-semibold">{x.label}</span>
-                    <span className="flex flex-wrap items-center gap-1.5 text-sm text-ink-muted">
-                      {x.overdue ? "In ritardo" : dateLabel(x.date)}
-                      {src && (
-                        <Badge size="sm" tone={src.tone}>
-                          {src.label}
-                        </Badge>
-                      )}
-                      {x.overdue && (
-                        <Badge size="sm" tone="expense">
-                          arretrato
-                        </Badge>
-                      )}
-                    </span>
-                  </span>
+                  <RecapItemSummary item={x} />
                   <Amount cents={x.amountCents} size="sm" showSign />
                 </div>
-                {/* Estimates of the current month: book the remainder or drop it. */}
-                {today && x.ref && <EstimateActions refKey={x.ref} amountCents={x.amountCents} today={today} />}
-              </li>
-            );
-          })}
+              )}
+              {/* Estimates of the current month: book the remainder or drop it (nothing left once used up). */}
+              {today && x.ref && !isUsedUp(x) && (
+                <div className={x.usage ? "px-4 pb-2" : undefined}>
+                  <EstimateActions refKey={x.ref} amountCents={x.amountCents} today={today} />
+                </div>
+              )}
+            </li>
+          ))}
         </ul>
       )}
     </MobileFoldCard>

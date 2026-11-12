@@ -79,6 +79,13 @@ describe("accountMonthRecap", () => {
     expect(r.due.map((x) => x.ref)).toEqual(["r:p|2026-11", undefined]);
   });
 
+  it("lists a used-up decreasing estimate at zero with its usage", () => {
+    const usage = { totalCents: 6500, usedCents: 6500, parts: [{ id: "t", description: "Visita", bookedOn: "2026-11-03", amountCents: -8000 }] };
+    const r = accountMonthRecap([mv("2026-11-15", 0, "Psicologa", "a", { source: "estimate", ref: "r:p|2026-11", usage })], [], "a", 0, today);
+    expect(r.due).toMatchObject([{ label: "Psicologa", amountCents: 0, usage }]);
+    expect(r.closingCents).toBe(0);
+  });
+
   it("returns the balance unchanged when nothing happens", () => {
     expect(accountMonthRecap([], [], "a", 500, today)).toMatchObject({ paid: [], due: [], closingCents: 500 });
   });

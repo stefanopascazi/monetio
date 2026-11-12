@@ -1,7 +1,7 @@
 import { feeDescription, feeSource } from "./fees";
 import { contributionAmount, contributionBase } from "./contribution";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
-import { type EstimateMovement, estimatePool } from "./estimates";
+import { type EstimateMovement, type EstimateUsage, estimatePool, isDecreasing } from "./estimates";
 import { occurrences } from "./recurrence";
 import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
 import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
@@ -57,6 +57,8 @@ export interface Movement {
   categoryId?: string | null;
   /** Transfers: the other account of the pair. */
   counterpartId?: string;
+  /** Decreasing estimates of the current month: booked movements that reduced them (kept even when used up). */
+  usage?: EstimateUsage;
 }
 
 
@@ -80,10 +82,11 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     source: MovementSource,
     ref?: string,
     categoryId: string | null = null,
+    usage?: EstimateUsage,
   ) => {
     const overdue = date < today;
     const d = overdue ? today : date;
-    out.push({ date: d, accountId, amountCents, label, source, overdue, ref, categoryId, ...(counterpart ? { counterpartId: counterpart } : {}) });
+    out.push({ date: d, accountId, amountCents, label, source, overdue, ref, categoryId, ...(counterpart ? { counterpartId: counterpart } : {}), ...(usage ? { usage } : {}) });
     if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref, categoryId, counterpartId: accountId });
   };
   const draw = estimatePool(input.estimateMovements ?? []);
@@ -98,13 +101,20 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
         // Booked as a movement, or closed from the month recap (zero amount).
         if (booked.has(key) || input.overrides?.get(key)?.amountCents === 0) continue;
         let amount = r.amountCents;
+        let usage: EstimateUsage | undefined;
         if (monthKey(d) === currentMonth) {
           const covered = input.cardAccountIds?.has(r.accountId) && input.estimateUsed(r, addMonthsToKey(currentMonth, -1)) > 0;
           // Fixed estimates count in full; decreasing ones lose what was booked in their categories.
           const full = Math.abs(r.amountCents);
-          amount = covered ? 0 : Math.sign(r.amountCents) * (full - draw(r, full));
+          if (covered) amount = 0;
+          else if (isDecreasing(r)) {
+            const { takenCents, parts } = draw(r, full);
+            amount = Math.sign(r.amountCents) * (full - takenCents) || 0;
+            usage = { totalCents: full, usedCents: takenCents, parts };
+          }
         }
-        if (amount) push(d, r.accountId, amount, counterpart, r.description, "estimate", key, r.categoryId);
+        // A used-up decreasing estimate stays listed at zero, to show what consumed it.
+        if (amount || usage) push(d, r.accountId, amount, counterpart, r.description, "estimate", key, r.categoryId, usage);
       }
       continue;
     }

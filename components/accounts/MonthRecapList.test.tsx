@@ -70,4 +70,21 @@ describe("MonthRecapList", () => {
     );
     expect(screen.queryByRole("button", { name: "Registra movimento" })).not.toBeInTheDocument();
   });
+
+  it("shows decreasing estimates as accordions and hides actions once used up", () => {
+    const usage = { totalCents: 6500, usedCents: 6500, parts: [{ id: "t", description: "Visita", bookedOn: "2026-11-03", amountCents: -8000 }] };
+    const due = [
+      { key: "1", date: "2026-11-15", label: "Psicologa", source: "estimate" as const, amountCents: 0, overdue: false, ref: "r:p|2026-11", usage },
+      { key: "2", date: "2026-11-20", label: "Spesa", source: "estimate" as const, amountCents: -4800, overdue: false, ref: "r:s|2026-11", usage: { ...usage, usedCents: 1700 } },
+    ];
+    render(
+      <ToastProvider>
+        <MonthRecapList current today="2026-11-08" recap={{ ...empty, due, dueTotals: { outCents: 4800, inCents: 0 } }} />
+      </ToastProvider>,
+    );
+    expect(screen.getByRole("button", { name: /Psicologa/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("esaurita")).toBeInTheDocument();
+    // Only the estimate with something left can still be booked.
+    expect(screen.getAllByRole("button", { name: "Registra movimento" })).toHaveLength(1);
+  });
 });

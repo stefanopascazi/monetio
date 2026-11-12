@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contribution, rule, txn } from "./fixtures";
-import { type ProjectionInput, projectBalances } from "./projection";
+import { type ProjectionInput, projectBalances, projectedMovements } from "./projection";
 import { overrideMap, ruleKey } from "./schedule";
 
 const base: ProjectionInput = {
@@ -70,10 +70,21 @@ describe("projectBalances", () => {
 
   it("reduces a decreasing estimate by its categories this month only", () => {
     const psicologa = rule({ id: "p", accountId: "joint", categoryId: "salute", amountCents: -6500, schedule: "estimate", dayOfMonth: 15, decrementCategoryIds: ["salute"] });
-    const estimateMovements = [{ accountId: "joint", categoryId: "salute", amountCents: -1700 }];
+    const estimateMovements = [{ id: "t1", accountId: "joint", categoryId: "salute", amountCents: -1700, description: "Farmacia", bookedOn: "2026-11-03" }];
     const res = projectBalances({ ...base, months: 2, rules: [psicologa], estimateMovements });
     // November: 65 - 17; December starts again from the full 65, nothing carried over.
     expect(res.map((p) => p.byAccount.joint)).toEqual([95200, 88700]);
+    const [nov, dec] = projectedMovements({ ...base, months: 2, rules: [psicologa], estimateMovements });
+    expect(nov.usage).toEqual({ totalCents: 6500, usedCents: 1700, parts: [{ id: "t1", description: "Farmacia", bookedOn: "2026-11-03", amountCents: -1700 }] });
+    expect(dec.usage).toBeUndefined();
+  });
+
+  it("keeps a used-up decreasing estimate at zero with what consumed it", () => {
+    const psicologa = rule({ id: "p", accountId: "joint", amountCents: -6500, schedule: "estimate", dayOfMonth: 15, decrementCategoryIds: ["salute"] });
+    const estimateMovements = [{ id: "t1", accountId: "joint", categoryId: "salute", amountCents: -8000, description: "Visita", bookedOn: "2026-11-03" }];
+    const [nov] = projectedMovements({ ...base, months: 1, rules: [psicologa], estimateMovements });
+    expect(nov).toMatchObject({ amountCents: 0, source: "estimate", usage: { totalCents: 6500, usedCents: 6500 } });
+    expect(projectBalances({ ...base, months: 1, rules: [psicologa], estimateMovements })[0].byAccount.joint).toBe(100000);
   });
 
   it("drops estimate occurrences booked or closed from the recap", () => {
