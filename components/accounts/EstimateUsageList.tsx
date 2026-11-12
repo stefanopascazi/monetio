@@ -19,7 +19,11 @@ export function EstimateUsageList({ usage }: { usage: EstimateUsage }) {
                 <span className="truncate">{p.description || "Movimento"}</span>
                 <span className="text-ink-muted">{dateLabel(p.bookedOn)}</span>
               </span>
-              <Amount cents={p.amountCents} size="sm" showSign />
+              <span className="flex shrink-0 flex-col items-end">
+                <Amount cents={p.amountCents} size="sm" showSign />
+                {/* Only part of the movement went into this estimate. */}
+                {p.amountCents !== p.movementCents && <span className="text-ink-muted">di {formatMoney(p.movementCents)}</span>}
+              </span>
             </li>
           ))}
         </ul>

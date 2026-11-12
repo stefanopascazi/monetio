@@ -19,6 +19,8 @@ export interface EstimatePart {
   description: string;
   bookedOn: ISODate;
   amountCents: number;
+  /** Whole movement (signed), when only part of it went into the estimate. */
+  movementCents: number;
 }
 
 /** What a decreasing estimate has consumed so far in its month. */
@@ -49,7 +51,7 @@ export function estimatePool(movements: EstimateMovement[]) {
   return (rule: Pick<RecurringRule, "accountId" | "amountCents" | "decrementCategoryIds">, cents: number): { takenCents: number; parts: EstimatePart[] } => {
     const sign = Math.sign(rule.amountCents) || -1;
     const parts: EstimatePart[] = [];
-    const add = (m: EstimateMovement, amountCents: number) => parts.push({ id: m.id, description: m.description, bookedOn: m.bookedOn, amountCents });
+    const add = (m: EstimateMovement, amountCents: number) => parts.push({ id: m.id, description: m.description, bookedOn: m.bookedOn, amountCents, movementCents: m.amountCents });
     let taken = 0;
     for (const c of rule.decrementCategoryIds) {
       if (taken >= cents) break;

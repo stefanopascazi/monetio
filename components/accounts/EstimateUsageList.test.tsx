@@ -10,8 +10,8 @@ describe("EstimateUsageList", () => {
           totalCents: 6500,
           usedCents: 2500,
           parts: [
-            { id: "a", description: "Farmacia", bookedOn: "2026-11-03", amountCents: -3000 },
-            { id: "b", description: "Rimborso", bookedOn: "2026-11-04", amountCents: 500 },
+            { id: "a", description: "Farmacia", bookedOn: "2026-11-03", amountCents: -3000, movementCents: -3000 },
+            { id: "b", description: "Rimborso", bookedOn: "2026-11-04", amountCents: 500, movementCents: 500 },
           ],
         }}
       />,
@@ -20,6 +20,11 @@ describe("EstimateUsageList", () => {
     const list = screen.getByRole("list", { name: "Movimenti della stima" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     expect(within(list).getByText("Rimborso")).toBeInTheDocument();
+  });
+
+  it("shows the whole movement when only part of it went into the estimate", () => {
+    render(<EstimateUsageList usage={{ totalCents: 30000, usedCents: 30000, parts: [{ id: "a", description: "Revisione", bookedOn: "2026-11-09", amountCents: -30000, movementCents: -40000 }] }} />);
+    expect(screen.getByText(/^di .*400,00/)).toBeInTheDocument();
   });
 
   it("says when nothing reduced it yet", () => {

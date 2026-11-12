@@ -44,8 +44,8 @@ describe("estimatePool", () => {
 
   it("splits a movement between two estimates sharing a category", () => {
     const draw = estimatePool([mv("asha", "terapia", -8000, "2026-11-02", "Seduta")]);
-    expect(draw(psicologa, 6500).parts.map((p) => p.amountCents)).toEqual([-6500]);
-    expect(draw(psicologa, 6500).parts.map((p) => [p.description, p.amountCents])).toEqual([["Seduta", -1500]]);
+    expect(draw(psicologa, 6500).parts.map((p) => [p.amountCents, p.movementCents])).toEqual([[-6500, -8000]]);
+    expect(draw(psicologa, 6500).parts.map((p) => [p.description, p.amountCents, p.movementCents])).toEqual([["Seduta", -1500, -8000]]);
   });
 
   it("tells decreasing estimates apart", () => {

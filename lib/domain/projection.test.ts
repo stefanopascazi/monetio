@@ -75,7 +75,7 @@ describe("projectBalances", () => {
     // November: 65 - 17; December starts again from the full 65, nothing carried over.
     expect(res.map((p) => p.byAccount.joint)).toEqual([95200, 88700]);
     const [nov, dec] = projectedMovements({ ...base, months: 2, rules: [psicologa], estimateMovements });
-    expect(nov.usage).toEqual({ totalCents: 6500, usedCents: 1700, parts: [{ id: "t1", description: "Farmacia", bookedOn: "2026-11-03", amountCents: -1700 }] });
+    expect(nov.usage).toEqual({ totalCents: 6500, usedCents: 1700, parts: [{ id: "t1", description: "Farmacia", bookedOn: "2026-11-03", amountCents: -1700, movementCents: -1700 }] });
     expect(dec.usage).toBeUndefined();
   });
 
