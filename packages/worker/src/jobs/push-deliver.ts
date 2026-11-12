@@ -27,6 +27,14 @@ export function createPushDeliverJob(store: PushStore, sender: PushSender): Job 
   };
 }
 
+export function pushServiceHost(endpoint: string): string {
+  try {
+    return new URL(endpoint).host;
+  } catch {
+    return "invalid";
+  }
+}
+
 async function deliver(row: OutboxRow, subs: PushSubscriptionRow[], store: PushStore, sender: PushSender, ctx: JobContext, gone: Set<string>) {
   if (subs.length === 0) return store.markSent(row.id, "no subscription");
   const payload = { title: row.title, body: row.body, url: row.url, ...(row.tag ? { tag: row.tag } : {}) };
@@ -34,14 +42,19 @@ async function deliver(row: OutboxRow, subs: PushSubscriptionRow[], store: PushS
   const errors: string[] = [];
   for (const sub of subs) {
     const result = await sender.send(sub, payload, ctx.signal);
+    // Push service host only: endpoints are bearer URLs.
+    const fields = { outbox: row.id, subscription: sub.id, service: pushServiceHost(sub.endpoint) };
     if (result.status === "sent") {
       sent++;
+      ctx.log("info", "push sent", fields);
       await store.touchSubscription(sub.id);
     } else if (result.status === "gone") {
       gone.add(sub.id);
+      ctx.log("info", "push subscription expired", fields);
       await store.deleteSubscription(sub.id);
     } else {
       errors.push(result.message);
+      ctx.log("warn", "push failed", { ...fields, error: result.message });
     }
   }
   // Retry only when nothing reached the user and some failure is transient.

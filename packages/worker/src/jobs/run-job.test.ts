@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Heartbeat } from "../heartbeat.ts";
 import type { LockStore } from "./lock.ts";
-import { runJob } from "./run-job.ts";
+import { runJob, SCHEMA_GRACE_MS } from "./run-job.ts";
 import type { Job } from "./types.ts";
 
 function setup({ acquired = true, lastSuccess = null as Date | null } = {}) {
@@ -88,5 +88,29 @@ describe("runJob", () => {
     );
     controller.abort();
     expect(seen?.aborted).toBe(true);
+  });
+
+  describe("schema not ready after a deploy", () => {
+    const missingTable = Object.assign(new Error('relation "push_outbox" does not exist'), { code: "42P01" });
+
+    it("logs a warning without reporting during the grace period", async () => {
+      const { deps, reporter, heartbeat, log } = setup();
+      await runJob(job(async () => Promise.reject(missingTable)), { ...deps, bootedAt: 0 });
+      expect(log).toHaveBeenCalledWith("warn", "schema not ready, retrying", expect.objectContaining({ job: "demo" }));
+      expect(reporter.capture).not.toHaveBeenCalled();
+      expect(heartbeat.ping.mock.calls.map((c) => c[1])).toEqual(["start"]);
+    });
+
+    it("reports it once the grace period is over", async () => {
+      const { deps, reporter } = setup();
+      await runJob(job(async () => Promise.reject(missingTable)), { ...deps, bootedAt: 1_000 - SCHEMA_GRACE_MS });
+      expect(reporter.capture).toHaveBeenCalled();
+    });
+
+    it("reports other database errors at once", async () => {
+      const { deps, reporter } = setup();
+      await runJob(job(async () => Promise.reject(Object.assign(new Error("deadlock"), { code: "40P01" }))), { ...deps, bootedAt: 0 });
+      expect(reporter.capture).toHaveBeenCalled();
+    });
   });
 });

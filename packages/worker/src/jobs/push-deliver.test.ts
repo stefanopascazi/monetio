@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { OutboxRow, PushSender, PushStore, PushSubscriptionRow, SendResult } from "../push/types.ts";
-import { createPushDeliverJob } from "./push-deliver.ts";
+import { createPushDeliverJob, pushServiceHost } from "./push-deliver.ts";
 
 const row = (id: string, userId = "u1"): OutboxRow => ({ id, userId, title: "T", body: "B", url: "/", tag: null });
 const sub = (id: string, userId = "u1"): PushSubscriptionRow => ({ id, userId, endpoint: "https://push.example/" + id, p256dh: "k", auth: "a" });
@@ -70,6 +70,19 @@ describe("createPushDeliverJob", () => {
     const store = fakeStore([row("o1")], [sub("s1"), sub("s2")]);
     await createPushDeliverJob(store, senderBy({ s1: { status: "error", message: "HTTP 500" } })).run(ctx());
     expect(store.markSent).toHaveBeenCalledWith("o1", null);
+  });
+
+  it("logs each delivery outcome with the push service host only", async () => {
+    const store = fakeStore([row("o1")], [sub("s1"), sub("s2")]);
+    const c = ctx();
+    await createPushDeliverJob(store, senderBy({ s2: { status: "error", message: "HTTP 500" } })).run(c);
+    expect(c.log).toHaveBeenCalledWith("info", "push sent", { outbox: "o1", subscription: "s1", service: "push.example" });
+    expect(c.log).toHaveBeenCalledWith("warn", "push failed", { outbox: "o1", subscription: "s2", service: "push.example", error: "HTTP 500" });
+  });
+
+  it("extracts the push service host", () => {
+    expect(pushServiceHost("https://fcm.googleapis.com/fcm/send/abc")).toBe("fcm.googleapis.com");
+    expect(pushServiceHost("nope")).toBe("invalid");
   });
 
   it("purges rows older than 30 days on every run", async () => {
