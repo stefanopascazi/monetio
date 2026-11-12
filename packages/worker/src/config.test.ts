@@ -11,7 +11,7 @@ describe("heartbeatEnvName", () => {
 describe("parseConfig", () => {
   it("prefers the non-pooled URL and applies defaults", () => {
     const config = parseConfig({ POSTGRES_URL: "pooled", POSTGRES_URL_NON_POOLING: "direct" });
-    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {}, backup: null, sentryDsn: null });
+    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {}, backup: null, push: null, sentryDsn: null });
   });
 
   it("falls back to the pooled URL", () => {
@@ -46,5 +46,22 @@ describe("parseConfig", () => {
   it("collects non-empty heartbeat URLs", () => {
     const config = parseConfig({ POSTGRES_URL: "x", HEALTHCHECK_URL_DB_PING: "https://hc/1", HEALTHCHECK_URL_EMPTY: "", OTHER: "y" });
     expect(config.heartbeatUrls).toEqual({ HEALTHCHECK_URL_DB_PING: "https://hc/1" });
+  });
+});
+
+describe("parseConfig push", () => {
+  const env = { POSTGRES_URL: "x", VAPID_PUBLIC_KEY: "pub", VAPID_PRIVATE_KEY: "priv", VAPID_SUBJECT: "mailto:a@example.com" };
+
+  it("reads the VAPID keys", () => {
+    expect(parseConfig(env).push).toEqual({ publicKey: "pub", privateKey: "priv", subject: "mailto:a@example.com" });
+  });
+
+  it("requires all three keys together", () => {
+    expect(() => parseConfig({ POSTGRES_URL: "x", VAPID_PUBLIC_KEY: "pub" })).toThrow(/must be set together/);
+  });
+
+  it("accepts https subjects and rejects others", () => {
+    expect(parseConfig({ ...env, VAPID_SUBJECT: "https://monetio.example" }).push?.subject).toBe("https://monetio.example");
+    expect(() => parseConfig({ ...env, VAPID_SUBJECT: "a@example.com" })).toThrow(/VAPID_SUBJECT must start/);
   });
 });
