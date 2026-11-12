@@ -10,6 +10,7 @@ import { HouseholdExit, RenameHouseholdForm } from "./HouseholdActions";
 import { HouseholdSwitcher } from "./HouseholdSwitcher";
 import { InviteForm } from "./InviteForm";
 import { MemberList } from "./MemberList";
+import { NotificationsCard } from "./NotificationsCard";
 import { CategoryManager, ProfileForm } from "./SettingsForms";
 
 export async function SettingsView() {
@@ -54,6 +55,7 @@ export async function SettingsView() {
         <Card title="Aspetto">
           <ThemeSwitcher showLabels />
         </Card>
+        <NotificationsCard />
         <Card title="Sessione">
           <form action={signOut}>
             <Button type="submit" variant="secondary" iconStart={<LogOut />}>

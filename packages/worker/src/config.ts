@@ -1,3 +1,5 @@
+import type { VapidConfig } from "./push/sender.ts";
+
 export interface WorkerConfig {
   databaseUrl: string;
   /** How often the scheduler checks for due jobs. */
@@ -6,6 +8,8 @@ export interface WorkerConfig {
   heartbeatUrls: Record<string, string>;
   /** Off-site backup target; null keeps the backup job disabled. */
   backup: { remote: string; ageRecipient: string } | null;
+  /** Web push keys; null keeps the push-deliver job disabled. */
+  push: VapidConfig | null;
   /** Sentry DSN; null keeps error reporting off. */
   sentryDsn: string | null;
 }
@@ -28,7 +32,7 @@ export function parseConfig(env: Record<string, string | undefined>): WorkerConf
   for (const [key, value] of Object.entries(env)) {
     if (key.startsWith(HEARTBEAT_PREFIX) && value) heartbeatUrls[key] = value;
   }
-  return { databaseUrl, tickMs, heartbeatUrls, backup: parseBackup(env), sentryDsn: env.SENTRY_DSN || null };
+  return { databaseUrl, tickMs, heartbeatUrls, backup: parseBackup(env), push: parsePush(env), sentryDsn: env.SENTRY_DSN || null };
 }
 
 function parseBackup(env: Record<string, string | undefined>): WorkerConfig["backup"] {
@@ -38,4 +42,14 @@ function parseBackup(env: Record<string, string | undefined>): WorkerConfig["bac
   if (!remote || !ageRecipient) throw new Error("BACKUP_REMOTE and BACKUP_AGE_RECIPIENT must be set together");
   if (!ageRecipient.startsWith("age1")) throw new Error("BACKUP_AGE_RECIPIENT must be an age public key (age1...)");
   return { remote: remote.replace(/\/$/, ""), ageRecipient };
+}
+
+function parsePush(env: Record<string, string | undefined>): WorkerConfig["push"] {
+  const publicKey = env.VAPID_PUBLIC_KEY;
+  const privateKey = env.VAPID_PRIVATE_KEY;
+  const subject = env.VAPID_SUBJECT;
+  if (!publicKey && !privateKey && !subject) return null;
+  if (!publicKey || !privateKey || !subject) throw new Error("VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT must be set together");
+  if (!/^(mailto:|https:\/\/)/.test(subject)) throw new Error("VAPID_SUBJECT must start with mailto: or https://");
+  return { publicKey, privateKey, subject };
 }

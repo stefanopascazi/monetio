@@ -51,3 +51,12 @@ Verifica della consegna, da lanciare a mano sulla VPS:
 ```bash
 sudo systemd-run --pipe --wait -p User=monetio -p EnvironmentFile=/etc/monetio-worker.env /opt/node24/bin/node /opt/monetio-worker/current/worker.mjs --sentry-test
 ```
+
+## Notifiche push (#28)
+
+Job `push-deliver`, ogni minuto. Le notifiche passano dalla tabella `push_outbox` (migrazione 0023): chi le produce inserisce una riga (con `dedup_key` per non duplicarle), il worker la invia a tutte le `push_subscriptions` dell'utente con `web-push` e segna `sent_at`.
+
+- Una subscription che risponde 404/410 viene cancellata. Gli altri errori vengono ritentati: al massimo 5 tentativi entro 24 ore.
+- Le righe consegnate o abbandonate vengono cancellate dopo 30 giorni.
+- Per attivarlo: genera le chiavi con `npx web-push generate-vapid-keys`, compila `VAPID_*` in `/etc/monetio-worker.env` e imposta su Vercel `NEXT_PUBLIC_VAPID_PUBLIC_KEY` con la stessa chiave pubblica. Serve un redeploy, perché la chiave viene inclusa nel build.
+- Il pulsante "Invia notifica di prova" in Impostazioni accoda una riga (al massimo una al minuto) e verifica tutto il percorso.
