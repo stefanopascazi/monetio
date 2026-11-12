@@ -84,8 +84,9 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     categoryId: string | null = null,
     usage?: EstimateUsage,
   ) => {
-    const overdue = date < today;
-    const d = overdue ? today : date;
+    // An estimate is a budget for its whole month, never late: an earlier day only moves it to today.
+    const overdue = date < today && source !== "estimate";
+    const d = date < today ? today : date;
     out.push({ date: d, accountId, amountCents, label, source, overdue, ref, categoryId, ...(counterpart ? { counterpartId: counterpart } : {}), ...(usage ? { usage } : {}) });
     if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref, categoryId, counterpartId: accountId });
   };

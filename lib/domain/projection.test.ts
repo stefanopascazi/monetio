@@ -97,6 +97,14 @@ describe("projectBalances", () => {
     expect(f.usage).toMatchObject({ usedCents: 1000, overCents: 0 });
   });
 
+  it("never marks an estimate overdue: an earlier day of the month moves it to today", () => {
+    const spese = rule({ id: "m", accountId: "joint", amountCents: -28000, schedule: "estimate", dayOfMonth: 1, startDate: "2026-11-01" });
+    const bill = rule({ id: "b", accountId: "joint", amountCents: -5000, schedule: "due", dayOfMonth: 2, startDate: "2026-11-01" });
+    const [estimate, late] = projectedMovements({ ...base, months: 1, rules: [spese, bill] });
+    expect(estimate).toMatchObject({ date: "2026-11-05", overdue: false, source: "estimate" });
+    expect(late).toMatchObject({ date: "2026-11-05", overdue: true, source: "rule" });
+  });
+
   it("drops estimate occurrences booked or closed from the recap", () => {
     const spesa = rule({ id: "s", accountId: "joint", amountCents: -10000, schedule: "estimate", dayOfMonth: 28 });
     const closed = overrideMap([{ ruleId: "s", period: "2026-12", amountCents: 0, dueDate: "2026-12-28", note: null }]);
