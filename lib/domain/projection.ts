@@ -1,7 +1,7 @@
 import { feeDescription, feeSource } from "./fees";
 import { contributionAmount, contributionBase } from "./contribution";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
-import { type EstimateMovement, type EstimateUsage, estimatePool, isDecreasing } from "./estimates";
+import { type EstimateMovement, type EstimateUsage, estimatePool, isDecreasing, mergeParts } from "./estimates";
 import { occurrences } from "./recurrence";
 import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
 import type { ContributionRule, ISODate, RecurringRule, Transaction } from "./types";
@@ -90,6 +90,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref, categoryId, counterpartId: accountId });
   };
   const draw = estimatePool(input.estimateMovements ?? []);
+  const decreasing: { rule: RecurringRule; usage: EstimateUsage }[] = [];
 
   for (const r of rules) {
     if (!r.active) continue;
@@ -110,7 +111,8 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
           else if (isDecreasing(r)) {
             const { takenCents, parts } = draw(r, full);
             amount = Math.sign(r.amountCents) * (full - takenCents) || 0;
-            usage = { totalCents: full, usedCents: takenCents, parts };
+            usage = { totalCents: full, usedCents: takenCents, overCents: 0, parts };
+            decreasing.push({ rule: r, usage });
           }
         }
         // A used-up decreasing estimate stays listed at zero, to show what consumed it.
@@ -127,6 +129,13 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       const source = feeSource(r.kind, r.paymentMethod);
       if (source && r.feeCents) push(o?.dueDate ?? d, r.accountId, -r.feeCents, null, feeDescription(source, r.description), "rule");
     }
+  }
+
+  // Overflow: what is left in an estimate's categories once every estimate took its share.
+  for (const { rule, usage } of decreasing) {
+    const extra = draw(rule, Number.MAX_SAFE_INTEGER);
+    usage.overCents = extra.takenCents;
+    usage.parts = mergeParts(usage.parts, extra.parts);
   }
 
   for (const c of contributions) {

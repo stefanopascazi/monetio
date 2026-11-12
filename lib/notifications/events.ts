@@ -2,10 +2,9 @@
 // the same agenda and projection input the app builds, and stores one outbox row per event.
 // Planning-only content (see docs/ai-advisor.md): reminders and facts, never financial advice.
 import { addDays, daysBetween, monthKey } from "../domain/dates";
-import { estimatePool, type EstimateMovement, isDecreasing, occurrenceOfPeriod } from "../domain/estimates";
-import { projectBalances } from "../domain/projection";
+import { isDecreasing, spentCents } from "../domain/estimates";
+import { projectBalances, projectedMovements } from "../domain/projection";
 import type { DueEntry } from "../domain/schedule";
-import { estimateUsedFrom, type MonthlyFlow } from "../data/flow-math";
 import type { Agenda, buildProjectionInput } from "../data/projection-input";
 import { ownsRule } from "../data/rule-visibility";
 import type { NotificationKind, NotificationPrefs } from "./prefs";
@@ -27,8 +26,6 @@ export interface EventSnapshot {
   prefs: NotificationPrefs;
   agenda: Agenda;
   projection: ReturnType<typeof buildProjectionInput>;
-  monthFlows: MonthlyFlow[];
-  estimateMovements: EstimateMovement[];
   /** Latest booked movement per visible account. */
   lastBooked: Record<string, string | null>;
 }
@@ -38,6 +35,9 @@ export const OVERDUE_WINDOW_DAYS = 7;
 
 const money = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 export const formatEuro = (cents: number) => money.format(cents / 100);
+
+/** Account name for a notification text (visible accounts only, else a generic word). */
+export const accountName = (s: Pick<EventSnapshot, "projection">, id: string) => s.projection.active.find((a) => a.id === id)?.name ?? "conto";
 
 const suffix = (s: EventSnapshot) => (s.householdLabel ? ` · ${s.householdLabel}` : "");
 const key = (s: EventSnapshot, ...parts: string[]) => [parts[0], s.userId, s.householdId, ...parts.slice(1)].join(":");
@@ -57,7 +57,7 @@ export function dueEvents(s: EventSnapshot): NotificationEvent[] {
   // Nothing to pay (e.g. an empty card statement): no reminder.
   for (const e of s.agenda.due.filter((d) => mine(d) && d.amountCents !== 0)) {
     const days = daysBetween(today, e.date);
-    const what = `${e.description} · ${formatEuro(Math.abs(e.amountCents))}${e.estimated ? " (stimato)" : ""}`;
+    const what = `${e.description} · ${accountName(s, e.accountId)} · ${formatEuro(Math.abs(e.amountCents))}${e.estimated ? " (stimato)" : ""}`;
     if (e.overdue && days >= -OVERDUE_WINDOW_DAYS) {
       events.push({ kind: "overdue", dedupKey: key(s, "overdue", e.key), title: "Scadenza superata", body: what + suffix(s), url: "/scadenze" });
     } else if (!e.overdue && days >= 0 && days <= s.prefs.dueDays) {
@@ -103,26 +103,26 @@ export function staleAccountEvents(s: EventSnapshot): NotificationEvent[] {
   });
 }
 
-/** Monthly expense estimates of the user's accounts already exceeded this month. */
+/**
+ * Decreasing expense estimates whose categories went beyond them this month. Read from the
+ * projection's estimate usage, the same figure the account page shows; fixed estimates track no spending.
+ */
 export function budgetEvents(s: EventSnapshot): NotificationEvent[] {
   const month = monthKey(s.agenda.today);
   const visible = s.projection.ids;
-  const used = estimateUsedFrom(s.monthFlows);
-  const draw = estimatePool(s.estimateMovements);
+  const movements = projectedMovements(s.projection.input).filter((m) => m.source === "estimate" && m.usage && monthKey(m.date) === month);
   return s.agenda.rules
-    .filter((r) => r.active && r.schedule === "estimate" && r.frequency === "monthly" && r.amountCents < 0 && ownsRule(r, visible))
-    .filter((r) => occurrenceOfPeriod(r, month) !== null)
+    .filter((r) => r.active && isDecreasing(r) && r.amountCents < 0 && ownsRule(r, visible))
     .flatMap((r) => {
-      const budget = Math.abs(s.agenda.overrides.get(`r:${r.id}|${month}`)?.amountCents ?? r.amountCents);
-      const spent = isDecreasing(r) ? draw(r, Number.MAX_SAFE_INTEGER).takenCents : used(r, month);
-      if (budget === 0 || spent <= budget) return [];
+      const usage = movements.find((m) => m.accountId === r.accountId && m.ref?.startsWith(`r:${r.id}|`))?.usage;
+      if (!usage || usage.overCents <= 0) return [];
       return [
         {
           kind: "budget_exceeded" as const,
           dedupKey: key(s, "budget_exceeded", r.id, month),
           title: "Stima superata",
-          body: `${r.description}: ${formatEuro(spent)} su ${formatEuro(budget)} previsti questo mese${suffix(s)}`,
-          url: "/analisi/proiezioni",
+          body: `${r.description} · ${accountName(s, r.accountId)}: ${formatEuro(spentCents(usage))} su ${formatEuro(usage.totalCents)} previsti questo mese${suffix(s)}`,
+          url: `/conti/${r.accountId}`,
         },
       ];
     });

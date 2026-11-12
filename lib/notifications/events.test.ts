@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { rule } from "../domain/fixtures";
+import type { EstimateMovement } from "../domain/estimates";
+import { spentCents } from "../domain/estimates";
+import { projectedMovements } from "../domain/projection";
 import type { RecurringRule } from "../domain/types";
 import type { MonthlyFlow } from "../data/flow-math";
 import { type AccountWithBalance, buildAgenda, buildProjectionInput } from "../data/projection-input";
-import { budgetEvents, dueEvents, type EventSnapshot, formatEuro, lowBalanceEvents, selectEvents, staleAccountEvents } from "./events";
+import { accountName, budgetEvents, dueEvents, type EventSnapshot, formatEuro, lowBalanceEvents, selectEvents, staleAccountEvents } from "./events";
 import { DEFAULT_PREFS, type NotificationPrefs } from "./prefs";
 
 const today = "2026-11-12";
@@ -31,12 +34,13 @@ interface Setup {
   accounts?: AccountWithBalance[];
   prefs?: Partial<NotificationPrefs>;
   monthFlows?: MonthlyFlow[];
+  estimateMovements?: EstimateMovement[];
   lastBooked?: Record<string, string | null>;
   householdLabel?: string | null;
   occurrences?: { recurringRuleId: string; contributionRuleId: null; occurrenceDate: string }[];
 }
 
-function snapshot({ rules = [], accounts = [account("a1")], prefs = {}, monthFlows = [], lastBooked = { a1: today }, householdLabel = null, occurrences = [] }: Setup = {}): EventSnapshot {
+function snapshot({ rules = [], accounts = [account("a1")], prefs = {}, monthFlows = [], estimateMovements = [], lastBooked = { a1: today }, householdLabel = null, occurrences = [] }: Setup = {}): EventSnapshot {
   const agenda = buildAgenda({ today, rules, contributions: [], occurrences, flows: monthFlows, overrides: [] });
   return {
     userId: "u1",
@@ -44,9 +48,7 @@ function snapshot({ rules = [], accounts = [account("a1")], prefs = {}, monthFlo
     householdLabel,
     prefs: { ...DEFAULT_PREFS, ...prefs },
     agenda,
-    projection: buildProjectionInput(agenda, { accounts, planned: [], monthFlows, estimateMovements: [] }, 1),
-    monthFlows,
-    estimateMovements: [],
+    projection: buildProjectionInput(agenda, { accounts, planned: [], monthFlows, estimateMovements }, 1),
     lastBooked,
   };
 }
@@ -59,7 +61,7 @@ describe("dueEvents", () => {
     const events = dueEvents(snapshot({ rules: [dueRule(14), dueRule(20)] }));
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ kind: "due_soon", title: "Scadenza tra 2 giorni", url: "/scadenze" });
-    expect(events[0].body).toBe(`Bolletta luce · ${formatEuro(8_550)}`);
+    expect(events[0].body).toBe(`Bolletta luce · Conto comune · ${formatEuro(8_550)}`);
     expect(events[0].dedupKey).toMatch(/^due_soon:u1:h1:/);
   });
 
@@ -123,18 +125,41 @@ describe("staleAccountEvents", () => {
 });
 
 describe("budgetEvents", () => {
-  const groceries = rule({ id: "food", description: "Spesa", amountCents: -40_000, schedule: "estimate", categoryId: "food", startDate: "2026-01-01" });
-  const flow = (totalCents: number): MonthlyFlow => ({ accountId: "a1", month: "2026-11", categoryId: "food", kind: "expense", counterpartAccountId: null, totalCents });
+  // Decreasing estimate: booked movements in its categories reduce it (the account page shows the same usage).
+  const monthly = rule({ id: "est", description: "Spese mensili", amountCents: -28_000, schedule: "estimate", dayOfMonth: 1, startDate: "2026-11-01", decrementCategoryIds: ["cash", "misc"] });
+  const mv = (id: string, categoryId: string, amountCents: number): EstimateMovement => ({ id, accountId: "a1", categoryId, amountCents, description: id, bookedOn: "2026-11-04" });
+  const spent = [mv("prelievo", "cash", -80_000), mv("tabaccaio", "misc", -20_729)];
 
-  it("flags monthly expense estimates already exceeded", () => {
-    const events = budgetEvents(snapshot({ rules: [groceries], monthFlows: [flow(-45_000)] }));
+  it("flags decreasing estimates gone beyond, naming the account", () => {
+    const events = budgetEvents(snapshot({ rules: [monthly], estimateMovements: spent }));
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ kind: "budget_exceeded", url: "/analisi/proiezioni", dedupKey: "budget_exceeded:u1:h1:food:2026-11" });
-    expect(events[0].body).toBe(`Spesa: ${formatEuro(45_000)} su ${formatEuro(40_000)} previsti questo mese`);
+    expect(events[0]).toMatchObject({ kind: "budget_exceeded", url: "/conti/a1", dedupKey: "budget_exceeded:u1:h1:est:2026-11" });
+    expect(events[0].body).toBe(`Spese mensili · Conto comune: ${formatEuro(100_729)} su ${formatEuro(28_000)} previsti questo mese`);
+  });
+
+  it("reports the same figure as the projection's estimate usage", () => {
+    const s = snapshot({ rules: [monthly], estimateMovements: spent });
+    const usage = projectedMovements(s.projection.input).find((m) => m.ref?.startsWith("r:est|"))?.usage;
+    expect(usage).toMatchObject({ usedCents: 28_000, overCents: 72_729 });
+    expect(budgetEvents(s)[0].body).toContain(formatEuro(spentCents(usage!)));
   });
 
   it("stays quiet within the estimate", () => {
-    expect(budgetEvents(snapshot({ rules: [groceries], monthFlows: [flow(-40_000)] }))).toEqual([]);
+    expect(budgetEvents(snapshot({ rules: [monthly], estimateMovements: [mv("x", "cash", -28_000)] }))).toEqual([]);
+  });
+
+  it("ignores fixed estimates, which track no spending", () => {
+    const fixed = rule({ id: "fixed", description: "Spese mensili", amountCents: -28_000, schedule: "estimate", categoryId: null, startDate: "2026-11-01" });
+    const rent: MonthlyFlow = { accountId: "a1", month: "2026-11", categoryId: "home", kind: "expense", counterpartAccountId: null, totalCents: -150_000 };
+    expect(budgetEvents(snapshot({ rules: [fixed], monthFlows: [rent] }))).toEqual([]);
+  });
+});
+
+describe("accountName", () => {
+  it("names visible accounts and falls back for the others", () => {
+    const s = snapshot();
+    expect(accountName(s, "a1")).toBe("Conto comune");
+    expect(accountName(s, "hidden")).toBe("conto");
   });
 });
 

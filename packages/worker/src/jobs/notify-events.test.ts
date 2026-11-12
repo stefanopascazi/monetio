@@ -37,8 +37,6 @@ function snapshot(userId: string, prefs = DEFAULT_PREFS): EventSnapshot {
     prefs,
     agenda,
     projection: buildProjectionInput(agenda, { accounts, planned: [], monthFlows: [], estimateMovements: [] }, 1),
-    monthFlows: [],
-    estimateMovements: [],
     lastBooked: { a1: today },
   };
 }

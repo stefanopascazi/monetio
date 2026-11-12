@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimatePool, isDecreasing, occurrenceOfPeriod } from "./estimates";
+import { estimatePool, isDecreasing, mergeParts, occurrenceOfPeriod, spentCents } from "./estimates";
 import { rule } from "./fixtures";
 
 describe("estimatePool", () => {
@@ -52,6 +52,20 @@ describe("estimatePool", () => {
     expect(isDecreasing(psicologa)).toBe(true);
     expect(isDecreasing({ ...psicologa, decrementCategoryIds: [] })).toBe(false);
     expect(isDecreasing({ ...psicologa, schedule: "due" })).toBe(false);
+  });
+});
+
+describe("mergeParts", () => {
+  const part = (id: string, amountCents: number, bookedOn: string) => ({ id, description: id, bookedOn, amountCents, movementCents: -8000 });
+
+  it("sums a movement split in two and keeps date order", () => {
+    expect(mergeParts([part("b", -6500, "2026-11-05")], [part("a", -300, "2026-11-01"), part("b", -1500, "2026-11-05")])).toEqual([part("a", -300, "2026-11-01"), part("b", -8000, "2026-11-05")]);
+  });
+});
+
+describe("spentCents", () => {
+  it("adds the overflow to what the estimate used", () => {
+    expect(spentCents({ usedCents: 28000, overCents: 72729 })).toBe(100729);
   });
 });
 
