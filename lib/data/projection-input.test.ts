@@ -63,7 +63,7 @@ describe("buildProjectionInput", () => {
 
   it("marks card accounts", () => {
     const { input } = buildProjectionInput(agenda, { accounts: [account("c", { type: "card" })], planned: [], monthFlows: [], estimateMovements: [] }, 1);
-    expect([...input.cardAccountIds]).toEqual(["c"]);
+    expect([...(input.cardAccountIds ?? [])]).toEqual(["c"]);
   });
 });
 

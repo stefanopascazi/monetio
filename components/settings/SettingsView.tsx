@@ -3,6 +3,7 @@ import { Button, Card, PageHeader, ThemeSwitcher } from "@monetio/ui";
 import { signOut } from "@/app/actions/auth";
 import { Onboarding } from "@/components/auth/Onboarding";
 import { getContext } from "@/lib/data/context";
+import { getNotificationPrefs } from "@/lib/data/notifications";
 import { listAccounts, listCategories } from "@/lib/data/queries";
 import { isAdmin, isLastAdmin } from "@/lib/domain/household";
 import { ArchivedAccounts } from "./ArchivedAccounts";
@@ -10,12 +11,13 @@ import { HouseholdExit, RenameHouseholdForm } from "./HouseholdActions";
 import { HouseholdSwitcher } from "./HouseholdSwitcher";
 import { InviteForm } from "./InviteForm";
 import { MemberList } from "./MemberList";
+import { NotificationPrefsForm } from "./NotificationPrefsForm";
 import { NotificationsCard } from "./NotificationsCard";
 import { CategoryManager, ProfileForm } from "./SettingsForms";
 
 export async function SettingsView() {
   const ctx = await getContext();
-  const [categories, accounts] = await Promise.all([listCategories(), listAccounts()]);
+  const [categories, accounts, notificationPrefs] = await Promise.all([listCategories(), listAccounts(), getNotificationPrefs()]);
   const archived = accounts.filter((a) => a.archived).map(({ id, name, institution, balanceCents }) => ({ id, name, institution, balanceCents }));
   const admin = isAdmin(ctx.me);
   return (
@@ -55,7 +57,9 @@ export async function SettingsView() {
         <Card title="Aspetto">
           <ThemeSwitcher showLabels />
         </Card>
-        <NotificationsCard />
+        <NotificationsCard>
+          <NotificationPrefsForm prefs={notificationPrefs} accounts={accounts.filter((a) => !a.archived && a.type !== "card").map(({ id, name }) => ({ id, name }))} />
+        </NotificationsCard>
         <Card title="Sessione">
           <form action={signOut}>
             <Button type="submit" variant="secondary" iconStart={<LogOut />}>
