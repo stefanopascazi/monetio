@@ -96,4 +96,11 @@ describe("createNotifyEventsJob", () => {
     expect(d.insert).toHaveBeenCalledTimes(1);
     expect(c.log).toHaveBeenCalledWith("error", "notify recipient failed", expect.objectContaining({ household: "h1" }));
   });
+
+  it("rethrows a missing table as is, so the deploy grace can recognise it", async () => {
+    const missing = Object.assign(new Error('column "kind" does not exist'), { code: "42703" });
+    const d = deps({ loadSnapshot: vi.fn(async () => Promise.reject(missing)) });
+    await expect(createNotifyEventsJob(d).run(ctx())).rejects.toBe(missing);
+    expect(d.insert).not.toHaveBeenCalled();
+  });
 });

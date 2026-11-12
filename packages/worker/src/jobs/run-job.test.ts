@@ -107,6 +107,23 @@ describe("runJob", () => {
       expect(reporter.capture).toHaveBeenCalled();
     });
 
+    it("waits, without lock, run or ping, while the schema gate is closed", async () => {
+      const { deps, locks, heartbeat, reporter } = setup();
+      const run = vi.fn(async () => {});
+      await runJob(job(run), { ...deps, schemaReady: async () => false });
+      expect(locks.acquire).not.toHaveBeenCalled();
+      expect(run).not.toHaveBeenCalled();
+      expect(heartbeat.ping).not.toHaveBeenCalled();
+      expect(reporter.capture).not.toHaveBeenCalled();
+    });
+
+    it("runs once the schema gate opens", async () => {
+      const { deps } = setup();
+      const run = vi.fn(async () => {});
+      await runJob(job(run), { ...deps, schemaReady: async () => true });
+      expect(run).toHaveBeenCalled();
+    });
+
     it("reports other database errors at once", async () => {
       const { deps, reporter } = setup();
       await runJob(job(async () => Promise.reject(Object.assign(new Error("deadlock"), { code: "40P01" }))), { ...deps, bootedAt: 0 });

@@ -1,6 +1,7 @@
 import type { ErrorReporter } from "../errors/reporter.ts";
 import type { Heartbeat } from "../heartbeat.ts";
 import { errorMessage, type Logger } from "../logger.ts";
+import { isSchemaNotReady } from "../schema.ts";
 import type { LockStore } from "./lock.ts";
 import { withJobLock } from "./lock.ts";
 import type { Job } from "./types.ts";
@@ -17,18 +18,18 @@ export interface RunJobDeps {
   now?: () => number;
   /** Process start (ms): schema errors right after a deploy are tolerated, see SCHEMA_GRACE_MS. */
   bootedAt?: number;
+  /** False while the migration this bundle needs is not applied yet: jobs wait, nothing is reported. */
+  schemaReady?: () => Promise<boolean>;
 }
 
 type Outcome = "done" | "not-due";
 
 /**
- * The worker deploys in about 2 minutes, Vercel applies migrations at the end of a 4-minute build:
- * right after a deploy a job may query a table or column that does not exist yet.
+ * Fallback to the schema gate (main.ts): right after a deploy a job may still query a table or
+ * column that does not exist yet.
  */
 export const SCHEMA_GRACE_MS = 15 * 60_000;
-const SCHEMA_NOT_READY = new Set(["42P01", "42703"]); // undefined_table, undefined_column
-
-export const isSchemaNotReady = (error: unknown) => SCHEMA_NOT_READY.has(String((error as { code?: unknown } | null)?.code));
+export { isSchemaNotReady };
 
 /** Runs one job under its lease with due check, heartbeat and logging; never throws. */
 export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
@@ -36,6 +37,7 @@ export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
   const started = now();
   const signal = AbortSignal.any([deps.shutdown, AbortSignal.timeout(job.timeoutMs)]);
   try {
+    if (deps.schemaReady && !(await deps.schemaReady())) return;
     const result = await withJobLock(deps.locks, job.name, deps.holder, job.timeoutMs, async (): Promise<Outcome> => {
       if (job.isDue && !job.isDue(await deps.locks.lastSuccess(job.name), new Date(started))) return "not-due";
       await deps.heartbeat.ping(job.name, "start");

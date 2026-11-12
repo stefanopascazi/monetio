@@ -12,6 +12,7 @@ import { createPostgresLockStore } from "./jobs/lock.ts";
 import { createJobs } from "./jobs/registry.ts";
 import { runJob } from "./jobs/run-job.ts";
 import { createLogger, errorMessage } from "./logger.ts";
+import { createSchemaGate, migrationApplied, REQUIRED_MIGRATION } from "./schema.ts";
 import { createSerialQueue } from "./scheduler/queue.ts";
 import { createScheduler } from "./scheduler/scheduler.ts";
 
@@ -44,6 +45,7 @@ const deps = {
   holder: `${hostname()}:${process.pid}:${randomUUID().slice(0, 8)}`,
   shutdown: shutdown.signal,
   bootedAt: Date.now(),
+  schemaReady: createSchemaGate(REQUIRED_MIGRATION, migrationApplied(sql), log),
 };
 const scheduler = createScheduler({ jobs, queue, tickMs: config.tickMs, runJob: (job) => runJob(job, deps) });
 
@@ -59,5 +61,5 @@ async function stop(signal: string) {
 process.once("SIGTERM", () => void stop("SIGTERM"));
 process.once("SIGINT", () => void stop("SIGINT"));
 
-log("info", "worker started", { jobs: jobs.map((j) => j.name), holder: deps.holder });
+log("info", "worker started", { jobs: jobs.map((j) => j.name), holder: deps.holder, migration: REQUIRED_MIGRATION });
 scheduler.start();

@@ -69,4 +69,4 @@ Job `notify-events`, giornaliero alle 07:00 UTC (08:00 o 09:00 in Italia). Per o
 - Ogni riga appare subito nella campanella (`/notifiche`). Il push rispetta l'orario silenzioso (`push_after`) e i tipi silenziati, che arrivano solo nella campanella.
 - Il job gira anche senza chiavi VAPID: la campanella funziona comunque.
 - Il worker include codice di `lib/` (calcoli condivisi con l'app): `worker.yml` lo ridistribuisce anche quando cambia `lib/domain`, `lib/data`, `lib/notifications` o `lib/banking`.
-- Subito dopo un deploy, gli errori "tabella/colonna inesistente" vengono tollerati per 15 minuti: Vercel applica le migration alla fine del build, dopo il deploy del worker.
+- Vercel applica le migration alla fine del build, dopo il deploy del worker: il bundle contiene il nome dell'ultima migration e i job restano in pausa (log `waiting for migration, jobs paused`) finché non risulta in `_migrations`. Come rete di sicurezza, gli errori "tabella/colonna inesistente" sono tollerati per 15 minuti dall'avvio.
