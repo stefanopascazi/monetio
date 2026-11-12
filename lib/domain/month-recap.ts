@@ -1,6 +1,7 @@
 // Everything happening on one account in a month: what is booked and what is still expected.
 import { endOfMonth, monthKey, startOfMonth } from "./dates";
 import type { Movement, MovementSource } from "./projection";
+import type { EstimateUsage } from "./estimates";
 import type { ISODate, Transaction } from "./types";
 
 export interface RecapItem {
@@ -14,6 +15,8 @@ export interface RecapItem {
   overdue: boolean;
   /** Estimates: occurrence key, to close the remainder or book it as a movement. */
   ref?: string;
+  /** Decreasing estimates: booked movements that reduced them this month. */
+  usage?: EstimateUsage;
 }
 
 export interface RecapTotals {
@@ -58,7 +61,7 @@ export function accountMonthRecap(
 ): MonthRecap {
   const first = startOfMonth(month);
   const last = endOfMonth(month);
-  const own = movements.filter((m) => m.accountId === accountId && m.amountCents !== 0);
+  const own = movements.filter((m) => m.accountId === accountId && (m.amountCents !== 0 || m.usage));
   // Booked rows are already in the balance: only earlier projected movements move the opening.
   const openingCents = balanceCents + own.filter((m) => m.date < first).reduce((s, m) => s + m.amountCents, 0);
   const paid = booked
@@ -67,7 +70,7 @@ export function accountMonthRecap(
     .sort((a, b) => b.date.localeCompare(a.date));
   const due = own
     .filter((m) => m.date >= first && m.date <= last)
-    .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false, ...(m.ref ? { ref: m.ref } : {}) }))
+    .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false, ...(m.ref ? { ref: m.ref } : {}), ...(m.usage ? { usage: m.usage } : {}) }))
     .sort((a, b) => a.date.localeCompare(b.date) || Number(b.overdue) - Number(a.overdue) || a.amountCents - b.amountCents);
   const dueTotals = totals(due);
   return { month, openingCents, paid, due, paidTotals: totals(paid), dueTotals, closingCents: openingCents - dueTotals.outCents + dueTotals.inCents };

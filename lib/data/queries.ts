@@ -195,7 +195,7 @@ export const listEstimateMovements = cache(async (from: ISODate, to: ISODate, ca
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const { data, error } = await supabase
     .from("transactions")
-    .select("account_id, category_id, amount_cents")
+    .select("id, account_id, category_id, amount_cents, description, booked_on")
     .eq("household_id", hh)
     .eq("status", "booked")
     .eq("skip_estimates", false)
@@ -205,7 +205,14 @@ export const listEstimateMovements = cache(async (from: ISODate, to: ISODate, ca
     .lte("booked_on", to)
     .limit(5000);
   if (error) throw error;
-  return (data ?? []).map((r) => ({ accountId: String(r.account_id), categoryId: String(r.category_id), amountCents: Number(r.amount_cents) }));
+  return (data ?? []).map((r) => ({
+    id: String(r.id),
+    accountId: String(r.account_id),
+    categoryId: String(r.category_id),
+    amountCents: Number(r.amount_cents),
+    description: String(r.description ?? ""),
+    bookedOn: String(r.booked_on),
+  }));
 });
 
 export const listBookedOccurrences = cache(async (since: ISODate) => {
