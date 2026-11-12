@@ -1,13 +1,14 @@
 import { Amount, formatMoney } from "@monetio/ui";
 import { dateLabel } from "@/lib/domain/dates";
-import type { EstimateUsage } from "@/lib/domain/estimates";
+import { type EstimateUsage, spentCents } from "@/lib/domain/estimates";
 
-/** Booked movements that reduced a decreasing estimate this month. */
+/** Booked movements that reduced a decreasing estimate this month, overflow included. */
 export function EstimateUsageList({ usage }: { usage: EstimateUsage }) {
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="text-ink-muted">
-        Usati {formatMoney(usage.usedCents)} di {formatMoney(usage.totalCents)}
+        Usati {formatMoney(spentCents(usage))} di {formatMoney(usage.totalCents)}
+        {usage.overCents > 0 && <span className="text-danger"> · oltre la stima di {formatMoney(usage.overCents)}</span>}
       </p>
       {usage.parts.length === 0 ? (
         <p className="text-ink-muted">Nessun movimento ha ancora ridotto la stima.</p>

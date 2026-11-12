@@ -1,7 +1,7 @@
 import { Badge } from "@monetio/ui";
 import { dateLabel } from "@/lib/domain/dates";
 import type { RecapItem } from "@/lib/domain/month-recap";
-import { isUsedUp, RECAP_SOURCE } from "./recap-source";
+import { isExceeded, isUsedUp, RECAP_SOURCE } from "./recap-source";
 
 /** Label, date and badges of a recap item. */
 export function RecapItemSummary({ item }: { item: RecapItem }) {
@@ -18,7 +18,7 @@ export function RecapItemSummary({ item }: { item: RecapItem }) {
         )}
         {isUsedUp(item) && (
           <Badge size="sm" tone="expense">
-            esaurita
+            {isExceeded(item) ? "superata" : "esaurita"}
           </Badge>
         )}
         {item.overdue && (

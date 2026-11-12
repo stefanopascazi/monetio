@@ -75,7 +75,7 @@ describe("projectBalances", () => {
     // November: 65 - 17; December starts again from the full 65, nothing carried over.
     expect(res.map((p) => p.byAccount.joint)).toEqual([95200, 88700]);
     const [nov, dec] = projectedMovements({ ...base, months: 2, rules: [psicologa], estimateMovements });
-    expect(nov.usage).toEqual({ totalCents: 6500, usedCents: 1700, parts: [{ id: "t1", description: "Farmacia", bookedOn: "2026-11-03", amountCents: -1700, movementCents: -1700 }] });
+    expect(nov.usage).toEqual({ totalCents: 6500, usedCents: 1700, overCents: 0, parts: [{ id: "t1", description: "Farmacia", bookedOn: "2026-11-03", amountCents: -1700, movementCents: -1700 }] });
     expect(dec.usage).toBeUndefined();
   });
 
@@ -85,6 +85,24 @@ describe("projectBalances", () => {
     const [nov] = projectedMovements({ ...base, months: 1, rules: [psicologa], estimateMovements });
     expect(nov).toMatchObject({ amountCents: 0, source: "estimate", usage: { totalCents: 6500, usedCents: 6500 } });
     expect(projectBalances({ ...base, months: 1, rules: [psicologa], estimateMovements })[0].byAccount.joint).toBe(100000);
+  });
+
+  it("reports what went beyond a decreasing estimate once every estimate took its share", () => {
+    const visite = rule({ id: "v", accountId: "joint", amountCents: -6500, schedule: "estimate", dayOfMonth: 15, decrementCategoryIds: ["salute"] });
+    const farmacia = rule({ id: "f", accountId: "joint", amountCents: -1000, schedule: "estimate", dayOfMonth: 15, decrementCategoryIds: ["salute"] });
+    const estimateMovements = [{ id: "t1", accountId: "joint", categoryId: "salute", amountCents: -8000, description: "Visita", bookedOn: "2026-11-03" }];
+    const [v, f] = projectedMovements({ ...base, months: 1, rules: [visite, farmacia], estimateMovements });
+    // 80 booked: 65 to the first estimate, 10 to the second, 5 beyond.
+    expect(v.usage).toMatchObject({ usedCents: 6500, overCents: 500, parts: [{ id: "t1", amountCents: -7000 }] });
+    expect(f.usage).toMatchObject({ usedCents: 1000, overCents: 0 });
+  });
+
+  it("never marks an estimate overdue: an earlier day of the month moves it to today", () => {
+    const spese = rule({ id: "m", accountId: "joint", amountCents: -28000, schedule: "estimate", dayOfMonth: 1, startDate: "2026-11-01" });
+    const bill = rule({ id: "b", accountId: "joint", amountCents: -5000, schedule: "due", dayOfMonth: 2, startDate: "2026-11-01" });
+    const [estimate, late] = projectedMovements({ ...base, months: 1, rules: [spese, bill] });
+    expect(estimate).toMatchObject({ date: "2026-11-05", overdue: false, source: "estimate" });
+    expect(late).toMatchObject({ date: "2026-11-05", overdue: true, source: "rule" });
   });
 
   it("drops estimate occurrences booked or closed from the recap", () => {

@@ -29,7 +29,23 @@ export interface EstimateUsage {
   totalCents: number;
   /** Booked so far towards it (positive cents, at most `totalCents`). */
   usedCents: number;
+  /** Booked in its categories beyond `totalCents`, once every estimate took its share (positive cents). */
+  overCents: number;
+  /** Movements that reduced it, then those beyond it (a movement split across both appears once, summed). */
   parts: EstimatePart[];
+}
+
+/** Total booked towards a decreasing estimate, overflow included (positive cents). */
+export const spentCents = (u: Pick<EstimateUsage, "usedCents" | "overCents">) => u.usedCents + u.overCents;
+
+/** Merges two part lists by movement, summing what each took, oldest first. */
+export function mergeParts(a: EstimatePart[], b: EstimatePart[]): EstimatePart[] {
+  const byId = new Map<string, EstimatePart>();
+  for (const p of [...a, ...b]) {
+    const prev = byId.get(p.id);
+    byId.set(p.id, prev ? { ...prev, amountCents: prev.amountCents + p.amountCents } : p);
+  }
+  return [...byId.values()].sort((x, y) => x.bookedOn.localeCompare(y.bookedOn));
 }
 
 export const isDecreasing = (r: Pick<RecurringRule, "schedule" | "decrementCategoryIds">) => r.schedule === "estimate" && r.decrementCategoryIds.length > 0;

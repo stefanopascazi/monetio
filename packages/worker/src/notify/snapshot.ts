@@ -141,8 +141,6 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
       prefs: mapPrefs(prefsRow ?? null),
       agenda,
       projection,
-      monthFlows,
-      estimateMovements,
       lastBooked,
     };
   });

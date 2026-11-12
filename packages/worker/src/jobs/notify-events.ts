@@ -4,6 +4,7 @@ import type { NotificationPrefs } from "../../../../lib/notifications/prefs.ts";
 import { pushAfter } from "../../../../lib/notifications/quiet-hours.ts";
 import { errorMessage } from "../logger.ts";
 import type { Recipient } from "../notify/snapshot.ts";
+import { isSchemaNotReady } from "../schema.ts";
 import { dailyDue } from "./schedule.ts";
 import type { Job } from "./types.ts";
 
@@ -58,6 +59,8 @@ export function createNotifyEventsJob(deps: NotifyDeps): Job {
           const snapshot = await deps.loadSnapshot(r, today);
           queued += await deps.insert(toInserts(snapshot, selectEvents(snapshot), ctx.now));
         } catch (error) {
+          // Missing table or column (deploy in progress): the original error reaches runJob, which tolerates it.
+          if (isSchemaNotReady(error)) throw error;
           // One broken household must not stop the others; the run still fails at the end.
           failures.push(errorMessage(error));
           ctx.log("error", "notify recipient failed", { household: r.householdId, error: errorMessage(error) });

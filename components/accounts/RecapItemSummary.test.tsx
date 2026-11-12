@@ -13,9 +13,15 @@ describe("RecapItemSummary", () => {
   });
 
   it("flags a used-up estimate and an overdue item", () => {
-    render(<RecapItemSummary item={{ ...item, overdue: true, usage: { totalCents: 6500, usedCents: 6500, parts: [] } }} />);
+    render(<RecapItemSummary item={{ ...item, overdue: true, usage: { totalCents: 6500, usedCents: 6500, overCents: 0, parts: [] } }} />);
     expect(screen.getByText("esaurita")).toBeInTheDocument();
     expect(screen.getByText("In ritardo")).toBeInTheDocument();
     expect(screen.getByText("arretrato")).toBeInTheDocument();
+  });
+
+  it("flags an exceeded estimate", () => {
+    render(<RecapItemSummary item={{ ...item, usage: { totalCents: 6500, usedCents: 6500, overCents: 1500, parts: [] } }} />);
+    expect(screen.getByText("superata")).toBeInTheDocument();
+    expect(screen.queryByText("esaurita")).not.toBeInTheDocument();
   });
 });
