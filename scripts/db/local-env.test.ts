@@ -10,4 +10,8 @@ describe("shouldLoadLocalEnv", () => {
     expect(shouldLoadLocalEnv({ VERCEL: "1" }, true)).toBe(false);
     expect(shouldLoadLocalEnv({}, false)).toBe(false);
   });
+
+  it("skips it when an explicit env file was loaded", () => {
+    expect(shouldLoadLocalEnv({ MONETIO_ENV_FILE: ".env.prod" }, true)).toBe(false);
+  });
 });

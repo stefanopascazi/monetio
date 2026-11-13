@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev/with-env.ts .env.stack next dev",
+    "dev": "next dev",
     "stack:dev": "node scripts/docker/compose.ts -f docker-compose.dev.yml up -d",
     "stack:up": "node scripts/docker/compose.ts up -d --build",
     "stack:down": "node scripts/docker/compose.ts down",
