@@ -11,15 +11,16 @@ import { recapMonth } from "@/lib/data/recap-month";
 import { statementPeriod } from "@/lib/data/statement-period";
 import { todayISO } from "@/lib/domain/dates";
 import { accountHref, adjacentAccounts, switcherAccounts } from "@/lib/navigation/account-nav";
+import { AccountPanes } from "./AccountPanes";
 import { BalanceHistoryCard } from "./sections/BalanceHistoryCard";
 import { MonthRecapCard } from "./sections/MonthRecapCard";
 import { PlannedCard } from "./sections/PlannedCard";
 import { StatementCard } from "./sections/StatementCard";
-import { StatementEntry } from "./sections/StatementEntry";
 
 /**
  * Account page body: name, balance and colour live in the carousel card above (conti layout),
- * the settings gear sits in the top bar. Statement, form, chart and planned rows stream on their own.
+ * the settings gear sits in the top bar. Statement, recap, chart and planned rows stream on their own.
+ * New movements come from the top bar "+".
  */
 export async function StatementView({ id, searchParams }: { id: string; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const [ctx, accounts, sp] = await Promise.all([getContext(), listAccounts(), searchParams]);
@@ -43,25 +44,26 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
         <AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />
       </TopBarAction>
       <SwipeArea prevHref={prevHref} nextHref={nextHref}>
-        <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-          <div className="flex flex-col gap-4">
-            <StreamBlock height={120}>
-              <StatementEntry accountId={id} today={today} />
+        <AccountPanes
+          side={
+            <>
+              <StreamBlock height={160}>
+                <MonthRecapCard accountId={id} balanceCents={account.balanceCents} today={today} month={recapMonth(sp.proiezione, today)} sp={sp} />
+              </StreamBlock>
+              <Suspense fallback={null}>
+                <BalanceHistoryCard accountId={id} accountName={account.name} year={year} />
+              </Suspense>
+              <Suspense fallback={null}>
+                <PlannedCard accountId={id} />
+              </Suspense>
+            </>
+          }
+          statement={
+            <StreamBlock height={480}>
+              <StatementCard accountId={id} openingDate={account.openingDate} period={period} today={today} />
             </StreamBlock>
-            <StreamBlock height={160}>
-              <MonthRecapCard accountId={id} balanceCents={account.balanceCents} today={today} month={recapMonth(sp.proiezione, today)} sp={sp} />
-            </StreamBlock>
-            <Suspense fallback={null}>
-              <BalanceHistoryCard accountId={id} accountName={account.name} year={year} />
-            </Suspense>
-            <Suspense fallback={null}>
-              <PlannedCard accountId={id} />
-            </Suspense>
-          </div>
-          <StreamBlock height={480}>
-            <StatementCard accountId={id} openingDate={account.openingDate} period={period} today={today} />
-          </StreamBlock>
-        </section>
+          }
+        />
       </SwipeArea>
     </>
   );

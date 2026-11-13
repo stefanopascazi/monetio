@@ -8,6 +8,7 @@ import { loadStatementRows } from "@/lib/data/statement-rows";
 import { toTxnView } from "@/lib/data/views";
 import { monthKey } from "@/lib/domain/dates";
 import { loadStatementRefs } from "../data";
+import { FiltersFold, FiltersPanel, FiltersToggle } from "../FiltersFold";
 import { StatementFilters } from "../StatementFilters";
 import { StatementMonths } from "../StatementMonths";
 
@@ -26,33 +27,34 @@ export async function StatementCard({ accountId, openingDate, period, today }: {
   const label = periodLabel(period);
   const nav = period.kind === "month" ? adjacentMonths(period.month, monthKey(openingDate), monthKey(today)) : null;
   return (
-    <Card
-      title="Estratto conto"
-      subtitle={openingCents === null ? label : `${label} · saldo iniziale ${eur.format(openingCents / 100)}`}
-      action={
-        nav && (
-          <PeriodNav
-            label={label}
-            prevHref={nav.prev ? withQuery(basePath, { mese: nav.prev }) : null}
-            nextHref={nav.next ? withQuery(basePath, { mese: nav.next }) : null}
-          />
-        )
-      }
-      padding="none"
-    >
-      <StatementFilters basePath={basePath} period={period} />
-      <StatementMonths rows={rows} views={views} accounts={refs} categories={catRefs} emptyTitle={period.kind === "recent" ? "Nessun movimento" : `Nessun movimento: ${label.toLowerCase()}`} />
-      {hasMore && (
-        <div className="flex justify-center border-t border-border p-4">
-          <Link
-            href={withQuery(basePath, { ...periodQuery(period), n: period.limit + RECENT_LIMIT })}
-            scroll={false}
-            className="rounded-full bg-surface-sunken px-5 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-soft"
-          >
-            Mostra altri ({totals.count - rows.length})
-          </Link>
-        </div>
-      )}
-    </Card>
+    <FiltersFold defaultOpen={period.kind === "range"}>
+      <Card
+        title="Estratto conto"
+        subtitle={openingCents === null ? label : `${label} · saldo iniziale ${eur.format(openingCents / 100)}`}
+        action={
+          <div className="flex items-center gap-2">
+            {nav && <PeriodNav label={label} prevHref={nav.prev ? withQuery(basePath, { mese: nav.prev }) : null} nextHref={nav.next ? withQuery(basePath, { mese: nav.next }) : null} />}
+            <FiltersToggle />
+          </div>
+        }
+        padding="none"
+      >
+        <FiltersPanel>
+          <StatementFilters basePath={basePath} period={period} />
+        </FiltersPanel>
+        <StatementMonths rows={rows} views={views} accounts={refs} categories={catRefs} emptyTitle={period.kind === "recent" ? "Nessun movimento" : `Nessun movimento: ${label.toLowerCase()}`} />
+        {hasMore && (
+          <div className="flex justify-center border-t border-border p-4">
+            <Link
+              href={withQuery(basePath, { ...periodQuery(period), n: period.limit + RECENT_LIMIT })}
+              scroll={false}
+              className="rounded-full bg-surface-sunken px-5 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-soft"
+            >
+              Mostra altri ({totals.count - rows.length})
+            </Link>
+          </div>
+        )}
+      </Card>
+    </FiltersFold>
   );
 }
