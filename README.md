@@ -45,8 +45,17 @@ docker compose up -d --build
 
 ### Local development (always against the Docker stack)
 
-`.env.stack` (committed, local-only values) points the app and the DB scripts at the Docker stack.
-`npm run dev` loads it on top of everything else, so a `.env.local` with production values is never used in dev.
+Env files:
+
+| File | In git | Used by | Content |
+| --- | --- | --- | --- |
+| `.env.example` | yes | template | Docker stack values (local-only demo secrets) and empty placeholders |
+| `.env.local` | no | `npm run dev` (Next) and the DB scripts | copy of `.env.example` plus your dev keys (e.g. `ANTHROPIC_API_KEY`) |
+| `.env.prod` | no | only when named explicitly | production Supabase/Postgres values |
+
+First setup: `cp .env.example .env.local`, then fill in the keys you need. Never put production values in `.env.local`.
+To run a command against production on purpose: `node scripts/dev/with-env.ts .env.prod <command>`; the DB scripts then
+skip `.env.local`, and a warning lists names `.env.prod` lacks (Next would take them from `.env.local`).
 
 ```bash
 npm run stack:dev     # docker-compose.dev.yml: Supabase services only (no app, no cron)
@@ -57,8 +66,8 @@ npm run dev           # Next dev on http://localhost:3000
 First login: `npm run db:import -- spese.xlsx --ste-email you@example.com` (optional sample data), then
 `npm run auth:invite -- you@example.com --link` prints a one-time link to choose the password.
 
-`db:migrate`, `db:import` and `auth:invite` read `.env.stack` only for variables not already set, and never on
-Vercel, where the project variables point them at the production database.
+`db:migrate`, `db:import` and `auth:invite` read `.env.local` only for variables not already set, never on Vercel
+(the project variables point them at the production database) and never with an explicit env file.
 
 Production migrations run in the Vercel build (`buildCommand` in `vercel.json`: tests, build, then `db:migrate`).
 Preview deployments share the production database, so `db:migrate` skips them; concurrent runs wait on an advisory lock.

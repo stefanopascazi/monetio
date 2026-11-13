@@ -28,3 +28,8 @@ body {
 :root[data-hide-balances] .mio-balances .mio-amount > * { display: none; }
 :root[data-hide-balances] .mio-balances.mio-amount::after,
 :root[data-hide-balances] .mio-balances .mio-amount::after { content: "••••••"; color: var(--mio-ink-subtle); letter-spacing: 0.1em; }
+
+/* Advisor side panel (desktop): the page keeps working beside it, so the content makes room. */
+@media (min-width: 960px) {
+  body:has([data-advisor-panel]) .app-shell { padding-right: 424px; }
+}

@@ -34,7 +34,7 @@ export const loadAgenda = cache(async () => {
 });
 
 /** Projection input for the visible, non-archived accounts over `months` month ends. */
-const loadProjectionInput = cache(async (months: number) => {
+export const loadProjectionInput = cache(async (months: number) => {
   const agenda = await loadAgenda();
   const current = monthKey(agenda.today);
   const [accounts, planned, monthFlows, estimateMovements] = await Promise.all([

@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
 import { runPipeline } from "../backup/pipeline.ts";
 import type { WorkerConfig } from "../config.ts";
+import { createAdvisorPurgeJob, createPostgresAdvisorPurgeStore } from "./advisor-purge.ts";
 import { createBackupJob } from "./backup.ts";
 import { createDbPingJob } from "./db-ping.ts";
 import { createPushDeliverJob } from "./push-deliver.ts";
@@ -24,5 +25,6 @@ export function createJobs(sql: Sql, config: WorkerConfig): Job[] {
       insert: createOutboxWriter(sql),
     }),
   );
+  jobs.push(createAdvisorPurgeJob(createPostgresAdvisorPurgeStore(sql)));
   return jobs;
 }
