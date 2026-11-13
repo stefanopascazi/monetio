@@ -157,7 +157,15 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
 
 /** Month-end balances per account from the current month on. */
 export function projectBalances(input: ProjectionInput): ProjectionMonth[] {
-  const movements = projectedMovements(input).sort((a, b) => a.date.localeCompare(b.date));
+  return balancesFromMovements(input, projectedMovements(input));
+}
+
+/** Month-end balances from a given set of movements (e.g. altered by a what-if scenario). */
+export function balancesFromMovements(
+  input: Pick<ProjectionInput, "today" | "months" | "balances">,
+  movements: Movement[],
+): ProjectionMonth[] {
+  movements = [...movements].sort((a, b) => a.date.localeCompare(b.date));
   const running = { ...input.balances };
   const result: ProjectionMonth[] = [];
   let i = 0;
