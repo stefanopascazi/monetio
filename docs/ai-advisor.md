@@ -1,6 +1,6 @@
 # Assistente IA (premium) - progetto e perimetro
 
-Stato: fase 1 in corso (motore what-if in `lib/domain/scenario.ts`, verdetto con leve in `lib/domain/verdict.ts`). Data: 2026-11-13.
+Stato: sperimentazione in uso familiare (fasi 1 e 3; gating premium rimandato alla #40). Data: 2026-11-13.
 
 Funzionalità premium: un assistente che analizza i movimenti del nucleo e risponde a domande di pianificazione
 ("Possiamo permetterci una vacanza di 3000 € ad agosto 2027?") con un verdetto e un percorso per raggiungere l'obiettivo.
@@ -81,3 +81,27 @@ Ogni nuova funzionalità IA va verificata contro questa sezione. In caso di dubb
 2. Gating premium e quote.
 3. Route IA con tool, system prompt con i vincoli della sezione 1, eval fuori perimetro, UI chat in `proiezioni`.
 4. Tabella `goals` e creazione della regola dal piano proposto.
+
+## 6. Sperimentazione in uso familiare (2026-11-13)
+
+Obiettivo: capire con l'uso reale se le risposte sono utili e quanto costano, prima di decidere premium e prezzi (#40).
+
+- **Dove**: scheda Analisi > Chiedi (`/analisi/chiedi`), domanda singola senza cronologia.
+- **Attivazione**: solo con `ANTHROPIC_API_KEY` sul server; `ADVISOR_MODEL` (default `claude-opus-5-5`) e `ADVISOR_DAILY_LIMIT` (default 20 domande per utente in 24 ore) facoltativi. Senza chiave la scheda mostra "Assistente non attivo".
+- **Codice**: `lib/advisor/` (system prompt e perimetro, tool, ciclo, prezzi, vista del verdetto), `lib/data/advisor.ts`, `app/actions/advisor.ts`, `components/advisor/`.
+- **Numeri**: il riquadro "Verdetto calcolato" mostra il risultato di `assessGoal`, non il testo del modello.
+- **Dati inviati al modello**: nomi e tipi dei conti visibili all'utente, saldi, nomi delle categorie di spesa, proiezioni aggregate e affidabilità. Mai IBAN, carte, note, descrizioni dei movimenti o nomi dei membri.
+- **Registro** (`advisor_requests`, migration 0025): domanda, risposta, verdetto, modello, token (input, output, cache), costo stimato in micro-dollari, durata, numero di tool, voto utile/da migliorare. Ogni utente vede e cancella solo le proprie righe; dopo l'inserimento si può cambiare solo il voto.
+- **Test di perimetro dal vivo**: `ADVISOR_EVAL=1 npx vitest run lib/advisor/perimeter.eval` (costa, va lanciato a mano).
+- **Prima del lancio pubblico restano**: consenso esplicito e revocabile, conservazione limitata del registro, DPA e informativa (#49), gating premium (#40), validazione legale del perimetro.
+
+Query utili sul registro:
+
+```sql
+-- Costo e qualità per settimana
+select date_trunc('week', created_at) as settimana, count(*) as domande,
+       round(sum(cost_micro_usd) / 1e6, 4) as costo_usd,
+       round(avg(cost_micro_usd) / 1e6, 4) as costo_medio_usd,
+       count(*) filter (where rating = 1) as utili, count(*) filter (where rating = -1) as da_migliorare
+from advisor_requests group by 1 order by 1 desc;
+```
