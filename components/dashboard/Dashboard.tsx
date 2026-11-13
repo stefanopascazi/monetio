@@ -5,7 +5,6 @@ import { CashflowCard } from "./sections/CashflowCard";
 import { CategoryCard } from "./sections/CategoryCard";
 import { MonthStats } from "./sections/MonthStats";
 import { ProjectionCard } from "./sections/ProjectionCard";
-import { QuickEntry } from "./sections/QuickEntry";
 import { RecentTransactions } from "./sections/RecentTransactions";
 import { UpcomingDue } from "./sections/UpcomingDue";
 
@@ -29,14 +28,9 @@ export function Dashboard() {
         <AccountsSection />
       </StreamBlock>
 
-      <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <StreamBlock height={120}>
-          <QuickEntry />
-        </StreamBlock>
-        <StreamBlock height={280}>
-          <UpcomingDue />
-        </StreamBlock>
-      </section>
+      <StreamBlock height={280}>
+        <UpcomingDue />
+      </StreamBlock>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <StreamBlock height={320}>

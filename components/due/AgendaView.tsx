@@ -1,8 +1,5 @@
 import { Card, PageHeader, Tabs } from "@monetio/ui";
-import { createContribution, createRule } from "@/app/actions/rules";
-import { ContributionForm } from "@/components/rules/ContributionForm";
 import { ContributionList } from "@/components/rules/ContributionList";
-import { RuleForm } from "@/components/rules/RuleForm";
 import { RuleList } from "@/components/rules/RuleList";
 import { loadAgenda } from "@/lib/data/agenda";
 import { contributionSpendingFrom } from "@/lib/data/flows";
@@ -50,7 +47,6 @@ export async function AgendaView() {
             count: rules.filter((r) => r.active).length,
             content: (
               <section className="flex flex-col gap-4 pt-4">
-                <RuleForm action={createRule} accounts={refs} categories={catRefs} transferTargets={targets} today={agenda.today} />
                 <RuleList rules={rules} accounts={refs} categories={catRefs} transferTargets={targets} today={agenda.today} />
               </section>
             ),
@@ -61,7 +57,6 @@ export async function AgendaView() {
             count: contributions.length,
             content: (
               <section className="flex flex-col gap-4 pt-4">
-                <ContributionForm action={createContribution} accounts={refs} categories={catRefs} />
                 <ContributionList items={contributions} accounts={refs} categories={catRefs} />
               </section>
             ),
