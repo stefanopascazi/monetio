@@ -49,11 +49,12 @@ export async function runAdvisor(question: string, ctx: AdvisorContext, client: 
     const response = await client.beta.messages.create({
       model,
       max_tokens: 16000,
-      system: ADVISOR_SYSTEM_PROMPT,
+      // Fixed breakpoint on tools + system prompt: identical for every question, so later questions read it.
+      system: [{ type: "text", text: ADVISOR_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       tools: ADVISOR_TOOLS,
       messages,
       output_config: { effort: "medium" },
-      // Caches tools + system prompt + the growing conversation across the loop.
+      // Moving breakpoint on the conversation: tool rounds of the same question reuse what came before.
       cache_control: { type: "ephemeral" },
       // On a safety decline the API retries on a fallback model inside the same call.
       betas: ["server-side-fallback-2026-07-01"],

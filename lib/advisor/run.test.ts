@@ -44,7 +44,13 @@ describe("runAdvisor", () => {
     expect(run.costMicroUsd).toBe(3 * 8600);
 
     const last = create.mock.calls[2][0];
-    expect(last).toMatchObject({ model: "claude-opus-5-5", system: ADVISOR_SYSTEM_PROMPT, fallbacks: "default", betas: ["server-side-fallback-2026-07-01"] });
+    expect(last).toMatchObject({
+      model: "claude-opus-5-5",
+      system: [{ type: "text", text: ADVISOR_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      cache_control: { type: "ephemeral" },
+      fallbacks: "default",
+      betas: ["server-side-fallback-2026-07-01"],
+    });
     // The tool result goes back to the model in the matching slot.
     const results = last.messages[4].content as Anthropic.Beta.BetaToolResultBlockParam[];
     expect(results[0]).toMatchObject({ type: "tool_result", tool_use_id: "t2" });
