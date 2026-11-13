@@ -1,6 +1,6 @@
 # Assistente IA (premium) - progetto e perimetro
 
-Stato: fase 1 in corso (motore what-if in `lib/domain/scenario.ts`). Data: 2026-11-13.
+Stato: fase 1 in corso (motore what-if in `lib/domain/scenario.ts`, verdetto con leve in `lib/domain/verdict.ts`). Data: 2026-11-13.
 
 Funzionalità premium: un assistente che analizza i movimenti del nucleo e risponde a domande di pianificazione
 ("Possiamo permetterci una vacanza di 3000 € ad agosto 2027?") con un verdetto e un percorso per raggiungere l'obiettivo.
@@ -67,7 +67,7 @@ Ogni nuova funzionalità IA va verificata contro questa sezione. In caso di dubb
   - `get_projection(until)`: saldo previsto con le regole ricorrenti;
   - `simulate_scenario({ oneOffExpenses, categoryCuts, savingPlans })`: proiezione what-if su `simulateScenario` (`lib/domain/scenario.ts`), con punto minimo e ammanco rispetto a una soglia;
   - `get_upcoming_dues()`: scadenze note nel periodo.
-- **Output strutturato**: verdetto, saldo minimo previsto, piano a tappe mensili, leve proposte, disclaimer.
+- **Output strutturato**: verdetto (`assessGoal`: sì / no / sì se si rimanda, si spende meno o si taglia una categoria), saldo minimo previsto, piano a tappe mensili, leve proposte, disclaimer.
 - **Azioni**: la creazione di una regola dal piano usa `InlineConfirm` (UI senza modali).
 
 ## 4. Premium e costi
