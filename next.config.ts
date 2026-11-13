@@ -13,7 +13,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   // Proiezioni moved under Analisi; the query string (e.g. ?mesi=36) is passed through.
   async redirects() {
-    return [{ source: "/proiezioni", destination: "/analisi/proiezioni", permanent: true }];
+    return [
+      { source: "/proiezioni", destination: "/analisi/proiezioni", permanent: true },
+      // The advisor left the Analisi tabs for the global chat (#39).
+      { source: "/analisi/chiedi", destination: "/chiedi", permanent: true },
+    ];
   },
   partialPrefetching: true,
   turbopack: {

@@ -65,6 +65,8 @@ export async function rateAdvisorRequest(id: string, rating: 1 | -1): Promise<bo
 }
 
 export interface AdvisorLogEntry {
+  conversationId: string | null;
+  turn: number;
   question: string;
   run: AdvisorRun | null;
   model: string;
@@ -80,6 +82,8 @@ export async function logAdvisorRequest(e: AdvisorLogEntry): Promise<string | nu
     .insert({
       household_id: ctx.householdId,
       user_id: ctx.userId,
+      conversation_id: e.conversationId,
+      turn: e.turn,
       question: e.question,
       answer: e.run?.text ?? null,
       verdict: e.run?.verdict ?? null,

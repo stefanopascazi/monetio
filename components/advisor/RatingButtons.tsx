@@ -6,8 +6,8 @@ import { Button } from "@monetio/ui";
 import { rateAdvisorAnswer } from "@/app/actions/advisor";
 
 /** Thumbs up/down on an answer: the feedback that tells whether the experiment works. */
-export function RatingButtons({ requestId }: { requestId: string }) {
-  const [rating, setRating] = useState<1 | -1 | null>(null);
+export function RatingButtons({ requestId, initial = null }: { requestId: string; initial?: 1 | -1 | null }) {
+  const [rating, setRating] = useState<1 | -1 | null>(initial);
   const [failed, setFailed] = useState(false);
   const [pending, start] = useTransition();
   const rate = (value: 1 | -1) =>

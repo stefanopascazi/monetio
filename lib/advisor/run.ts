@@ -36,8 +36,17 @@ function usageOf(m: Anthropic.Beta.BetaMessage): AdvisorUsage {
   };
 }
 
-export async function runAdvisor(question: string, ctx: AdvisorContext, client: AdvisorClient, model = DEFAULT_ADVISOR_MODEL): Promise<AdvisorRun> {
-  const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: question }];
+export interface AdvisorRunOptions {
+  model?: string;
+  /** Earlier exchanges of the same conversation, oldest first (see historyMessages). */
+  history?: Anthropic.Beta.BetaMessageParam[];
+  /** Called before each tool runs, to stream progress to the user. */
+  onTool?: (name: string) => void;
+}
+
+export async function runAdvisor(question: string, ctx: AdvisorContext, client: AdvisorClient, options: AdvisorRunOptions = {}): Promise<AdvisorRun> {
+  const { model = DEFAULT_ADVISOR_MODEL, history = [], onTool } = options;
+  const messages: Anthropic.Beta.BetaMessageParam[] = [...history, { role: "user", content: question }];
   let usage = EMPTY_USAGE;
   let cost: number | null = 0;
   let verdict: AdvisorVerdict | null = null;
@@ -78,6 +87,7 @@ export async function runAdvisor(question: string, ctx: AdvisorContext, client: 
     for (const block of response.content) {
       if (block.type !== "tool_use") continue;
       toolCalls++;
+      onTool?.(block.name);
       const outcome = runAdvisorTool(block.name, block.input, ctx);
       if (outcome.verdict) verdict = outcome.verdict;
       if (outcome.paymentPlan) paymentPlan = true;

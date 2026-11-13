@@ -26,7 +26,7 @@ function tracingClient(): AdvisorClient {
 }
 
 async function ask(question: string, ctx = advisorContext()) {
-  const run = await runAdvisor(question, ctx, tracingClient(), process.env.ADVISOR_MODEL || undefined);
+  const run = await runAdvisor(question, ctx, tracingClient(), { model: process.env.ADVISOR_MODEL || undefined });
   totalMicroUsd += run.costMicroUsd ?? 0;
   console.log(`\nQ: ${question}\nA (${run.toolCalls} tool, ${run.stopReason}): ${run.text}`);
   console.log(`   ${run.model} · tokens ${JSON.stringify(run.usage)} · ~${((run.costMicroUsd ?? 0) / 1e6).toFixed(4)} $`);

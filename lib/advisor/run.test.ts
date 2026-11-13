@@ -56,6 +56,19 @@ describe("runAdvisor", () => {
     expect(results[0]).toMatchObject({ type: "tool_result", tool_use_id: "t2" });
   });
 
+  it("puts the conversation history before the question and reports each tool", async () => {
+    const { client, create } = fakeClient([message("tool_use", [toolUse("t1", "get_household_overview", {})]), message("end_turn", [text("Ok")])]);
+    const tools: string[] = [];
+    const history = [
+      { role: "user" as const, content: "Prima?" },
+      { role: "assistant" as const, content: "Sì." },
+    ];
+    await runAdvisor("E poi?", advisorContext(), client, { history, onTool: (n) => tools.push(n) });
+    // The loop appends to the same array afterwards: check the opening messages only.
+    expect(create.mock.calls[0][0].messages.slice(0, 3)).toEqual([...history, { role: "user", content: "E poi?" }]);
+    expect(tools).toEqual(["get_household_overview"]);
+  });
+
   it("sends bad tool input back as an error result", async () => {
     const { client, create } = fakeClient([message("tool_use", [toolUse("t1", "assess_goal", { ...goal, account_id: "x" })]), message("end_turn", [text("Ok")])]);
     await runAdvisor("?", advisorContext(), client);

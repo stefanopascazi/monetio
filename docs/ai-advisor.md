@@ -86,7 +86,9 @@ Ogni nuova funzionalità IA va verificata contro questa sezione. In caso di dubb
 
 Obiettivo: capire con l'uso reale se le risposte sono utili e quanto costano, prima di decidere premium e prezzi (#40).
 
-- **Dove**: scheda Analisi > Chiedi (`/analisi/chiedi`), domanda singola senza cronologia.
+- **Dove**: chat sempre disponibile da una bolla in basso a destra su ogni pagina. Su desktop si apre un pannello laterale non modale (la pagina resta usabile, Esc chiude); su telefono la pagina `/chiedi`. Le domande suggerite dipendono dalla pagina aperta, che viene indicata anche al modello.
+- **Conversazioni**: titolo dalla prima domanda, elenco nella cronologia, "Nuova conversazione". Il modello riceve le ultime 6 domande e risposte della stessa conversazione (non i calcoli interni); i numeri sono sempre ricalcolati. Massimo 10 scambi per conversazione. Risposta in streaming (`/api/advisor`, eventi SSE) con lo stato dei calcoli.
+- **Conservazione**: conversazioni private per utente. Il job `advisor-purge` del worker, una volta al giorno, cancella testi e verdetti delle richieste più vecchie di 30 giorni e le conversazioni ferme da 30 giorni; token, costi e voti restano. L'utente può eliminare una conversazione o tutte (`delete_advisor_conversations`), con lo stesso effetto.
 - **Attivazione**: solo con `ANTHROPIC_API_KEY` sul server; `ADVISOR_MODEL` (default `claude-opus-5-5`) e `ADVISOR_DAILY_LIMIT` (default 20 domande per utente in 24 ore) facoltativi. Senza chiave la scheda mostra "Assistente non attivo".
 - **Codice**: `lib/advisor/` (system prompt e perimetro, tool, ciclo, prezzi, vista del verdetto), `lib/data/advisor.ts`, `app/actions/advisor.ts`, `components/advisor/`.
 - **Numeri**: il riquadro "Verdetto calcolato" mostra il risultato di `assessGoal`, non il testo del modello.
@@ -94,9 +96,9 @@ Obiettivo: capire con l'uso reale se le risposte sono utili e quanto costano, pr
 - **Proposte di pagamento dell'utente** (decisione del 2026-11-13, da validare legalmente): l'IA non propone mai finanziamenti, rate, leasing o prodotti finanziari e non giudica convenienza o tassi. Se è l'utente a descrivere un piano che sta valutando (anticipo, rate, maxi rata), l'IA misura solo quelle uscite sul bilancio (`simulate_scenario` con `user_payment_plan`) e risponde Sì / No / Sì, se…, con leve di budget (risparmio extra, tagli, rinvio, Risparmi oltre la riserva), mai cambiando le condizioni dell'offerta. L'app mostra sempre l'avviso `ADVISOR_PLAN_DISCLAIMER` (stima ipotetica, non una valutazione del finanziamento, confrontarsi con un professionista) e il registro segna `payment_plan`.
 - **Fondo di emergenza**: quando il piano include i Risparmi, la soglia minima è di 3 mesi di spesa media (`RESERVE_MONTHS`).
 - **Dati inviati al modello**: nomi e tipi dei conti visibili all'utente, saldi, nomi delle categorie di spesa, proiezioni aggregate e affidabilità. Mai IBAN, carte, note, descrizioni dei movimenti o nomi dei membri.
-- **Registro** (`advisor_requests`, migration 0025): domanda, risposta, verdetto, modello, token (input, output, cache), costo stimato in micro-dollari, durata, numero di tool, voto utile/da migliorare. Ogni utente vede e cancella solo le proprie righe; dopo l'inserimento si può cambiare solo il voto.
+- **Registro** (`advisor_requests` e `advisor_conversations`, migration 0025): domanda, risposta, verdetto, modello, token (input, output, cache), costo stimato in micro-dollari, durata, numero di tool, voto utile/da migliorare. Ogni utente vede e cancella solo le proprie righe; dopo l'inserimento si può cambiare solo il voto.
 - **Test di perimetro dal vivo**: `ADVISOR_EVAL=1 npx vitest run lib/advisor/perimeter.eval` (costa, va lanciato a mano).
-- **Prima del lancio pubblico restano**: consenso esplicito e revocabile, conservazione limitata del registro, DPA e informativa (#49), gating premium (#40), validazione legale del perimetro.
+- **Prima del lancio pubblico restano**: consenso esplicito e revocabile, DPA e informativa (#49), gating premium (#40), validazione legale del perimetro.
 
 Query utili sul registro:
 
