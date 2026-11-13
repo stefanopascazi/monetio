@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const data = vi.hoisted(() => ({ rateAdvisorRequest: vi.fn(async () => true) }));
+const data = vi.hoisted(() => ({ advisorEnabled: vi.fn(() => true), loadAdvisorQuota: vi.fn(async () => ({ leftToday: 5, leftMonth: 30 })), rateAdvisorRequest: vi.fn(async () => true) }));
 const conv = vi.hoisted(() => ({ deleteConversations: vi.fn(async () => 1), listConversations: vi.fn(async () => []), loadConversation: vi.fn(async () => null) }));
 vi.mock("@/lib/data/advisor", () => data);
 vi.mock("@/lib/data/advisor-conversations", () => conv);
 
-const { deleteAdvisorConversation, openAdvisorConversation, rateAdvisorAnswer } = await import("./advisor");
+const { deleteAdvisorConversation, getAdvisorQuota, openAdvisorConversation, rateAdvisorAnswer } = await import("./advisor");
 const ID = "11111111-2222-3333-4444-555555555555";
 
 beforeEach(() => vi.clearAllMocks());
@@ -30,5 +30,11 @@ describe("advisor actions", () => {
     expect(await deleteAdvisorConversation(null)).toEqual({ ok: true });
     expect(conv.deleteConversations.mock.calls).toEqual([[ID], [null]]);
     expect(await deleteAdvisorConversation("x")).toEqual({ ok: false });
+  });
+
+  it("loads the quota only while the assistant is on", async () => {
+    expect(await getAdvisorQuota()).toEqual({ leftToday: 5, leftMonth: 30 });
+    data.advisorEnabled.mockReturnValueOnce(false);
+    expect(await getAdvisorQuota()).toBeNull();
   });
 });

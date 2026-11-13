@@ -1,11 +1,12 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { canContinue, conversationTitle, historyMessages, MAX_TURNS, questionWithPage, toolStatus } from "../advisor/conversation";
+import { afterQuestion, quotaBlock } from "../advisor/quota";
 import { DEFAULT_ADVISOR_MODEL, runAdvisor } from "../advisor/run";
 import type { AdvisorEvent } from "../advisor/sse";
 import { turnViews } from "../advisor/turns";
 import { parseAdvisorQuestion } from "../forms/advisor";
-import { advisorClient, advisorDailyLimit, advisorEnabled, advisorModel, countRecentRequests, loadAdvisorContext, logAdvisorRequest } from "./advisor";
+import { advisorClient, advisorEnabled, advisorModel, loadAdvisorContext, loadAdvisorQuota, logAdvisorRequest } from "./advisor";
 import { createConversation, loadConversationRows, touchConversation } from "./advisor-conversations";
 
 export interface ChatRequest {
@@ -31,8 +32,12 @@ export async function answerChat(req: ChatRequest, emit: (e: AdvisorEvent) => vo
   if (!parsed.ok) return emit({ type: "error", message: parsed.errors.question ?? "Controlla la domanda." });
   const question = parsed.value;
   const page = typeof req.page === "string" ? req.page : null;
-  const limit = advisorDailyLimit();
-  if ((await countRecentRequests()) >= limit) return emit({ type: "error", message: `Hai raggiunto il limite di ${limit} domande nelle ultime 24 ore.` });
+  const quota = await loadAdvisorQuota();
+  const blocked = quotaBlock(quota);
+  if (blocked) {
+    emit({ type: "quota", quota });
+    return emit({ type: "error", message: blocked });
+  }
 
   let conversationId = typeof req.conversationId === "string" && req.conversationId ? req.conversationId : null;
   let rows: Awaited<ReturnType<typeof loadConversationRows>> = null;
@@ -63,6 +68,7 @@ export async function answerChat(req: ChatRequest, emit: (e: AdvisorEvent) => vo
       ctx,
     );
     emit({ type: "done", turn: { ...view, requestId } });
+    emit({ type: "quota", quota: afterQuestion(quota) });
   } catch (e) {
     const name = e instanceof Error ? e.constructor.name : "UnknownError";
     console.error("[advisor] request failed", name, e instanceof Anthropic.APIError ? e.status : undefined);

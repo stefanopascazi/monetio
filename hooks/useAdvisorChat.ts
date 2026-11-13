@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { openAdvisorConversation } from "@/app/actions/advisor";
+import { getAdvisorQuota, openAdvisorConversation } from "@/app/actions/advisor";
+import type { AdvisorQuota } from "@/lib/advisor/quota";
 import { type AdvisorEvent, decodeEvents } from "@/lib/advisor/sse";
 import type { AdvisorTurnView } from "@/lib/advisor/turns";
 
@@ -16,9 +17,11 @@ export interface AdvisorChat {
   turns: AdvisorTurnView[];
   pending: PendingTurn | null;
   error: string | null;
+  quota: AdvisorQuota | null;
   ask: (question: string, page: string | null) => Promise<void>;
   open: (id: string) => Promise<void>;
   reset: () => void;
+  loadQuota: () => Promise<void>;
 }
 
 const UNREACHABLE = "Assistente non raggiungibile. Controlla la connessione e riprova.";
@@ -30,6 +33,8 @@ export function useAdvisorChat(): AdvisorChat {
   const [turns, setTurns] = useState<AdvisorTurnView[]>([]);
   const [pending, setPending] = useState<PendingTurn | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Questions left; null until loaded. Kept across conversations: it belongs to the user, not the chat.
+  const [quota, setQuota] = useState<AdvisorQuota | null>(null);
   // Ignores the stream of a conversation the user has left.
   const session = useRef(0);
 
@@ -39,6 +44,7 @@ export function useAdvisorChat(): AdvisorChat {
       setConversationId(e.id);
       setTitle(e.title);
     } else if (e.type === "status") setPending({ question, status: e.label });
+    else if (e.type === "quota") setQuota(e.quota);
     else if (e.type === "done") {
       setTurns((t) => [...t, e.turn]);
       setPending(null);
@@ -100,5 +106,10 @@ export function useAdvisorChat(): AdvisorChat {
     [reset],
   );
 
-  return { conversationId, title, turns, pending, error, ask, open, reset };
+  const loadQuota = useCallback(async () => {
+    // The counter is a hint: if it cannot load, the server still enforces the limits.
+    setQuota(await getAdvisorQuota().catch(() => null));
+  }, []);
+
+  return { conversationId, title, turns, pending, error, quota, ask, open, reset, loadQuota };
 }

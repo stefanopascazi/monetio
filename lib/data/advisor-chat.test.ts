@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { advisorContext } from "../advisor/fixtures";
+import { advisorQuota, DEFAULT_LIMITS } from "../advisor/quota";
 import type { AdvisorEvent } from "../advisor/sse";
+
+const quota = (userToday: number, householdMonth: number) => advisorQuota({ userToday, householdMonth }, DEFAULT_LIMITS);
 
 vi.mock("server-only", () => ({}));
 const data = vi.hoisted(() => ({
   advisorClient: vi.fn(() => ({})),
   advisorEnabled: vi.fn(() => true),
   advisorModel: vi.fn(() => undefined),
-  advisorDailyLimit: vi.fn(() => 20),
-  countRecentRequests: vi.fn(async () => 0),
+  loadAdvisorQuota: vi.fn(async () => quota(0, 0)),
   loadAdvisorContext: vi.fn(),
   logAdvisorRequest: vi.fn(async () => "req-1"),
 }));
@@ -37,7 +39,7 @@ async function ask(req: Parameters<typeof answerChat>[0]) {
 beforeEach(() => {
   vi.clearAllMocks();
   data.advisorEnabled.mockReturnValue(true);
-  data.countRecentRequests.mockResolvedValue(0);
+  data.loadAdvisorQuota.mockResolvedValue(quota(2, 10));
   data.loadAdvisorContext.mockResolvedValue(advisorContext());
   runAdvisor.mockImplementation(async (_q, _ctx, _client, options) => {
     options.onTool?.("simulate_scenario");
@@ -52,6 +54,7 @@ describe("answerChat", () => {
       { type: "conversation", id: "conv-new", title: QUESTION },
       { type: "status", label: "Simulo lo scenario…" },
       { type: "done", turn: { requestId: "req-1", question: QUESTION, text: "Sì.", refused: false, verdict: null, paymentPlan: false, rating: null } },
+      { type: "quota", quota: quota(3, 11) },
     ]);
     expect(runAdvisor.mock.calls[0][0]).toBe(`[Pagina aperta: Proiezioni]\n${QUESTION}`);
     expect(data.logAdvisorRequest).toHaveBeenCalledWith(expect.objectContaining({ conversationId: "conv-new", turn: 1, question: QUESTION }));
@@ -79,10 +82,15 @@ describe("answerChat", () => {
     expect(runAdvisor).not.toHaveBeenCalled();
   });
 
-  it("checks the switch, the question and the daily limit first", async () => {
+  it("checks the switch, the question and the quota first", async () => {
     expect(await ask({ question: "ciao" })).toEqual([{ type: "error", message: "Scrivi una domanda." }]);
-    data.countRecentRequests.mockResolvedValue(20);
-    expect(await ask({ question: QUESTION })).toEqual([{ type: "error", message: "Hai raggiunto il limite di 20 domande nelle ultime 24 ore." }]);
+    data.loadAdvisorQuota.mockResolvedValue(quota(10, 20));
+    expect(await ask({ question: QUESTION })).toEqual([
+      { type: "quota", quota: quota(10, 20) },
+      { type: "error", message: "Hai usato le 10 domande di oggi: riprova domani." },
+    ]);
+    data.loadAdvisorQuota.mockResolvedValue(quota(0, 50));
+    expect((await ask({ question: QUESTION })).at(-1)).toEqual({ type: "error", message: "Avete usato le 50 domande di questo mese: tornano disponibili dal 1° del mese prossimo." });
     data.advisorEnabled.mockReturnValue(false);
     expect(await ask({ question: QUESTION })).toEqual([{ type: "error", message: "L'assistente non è attivo." }]);
     expect(runAdvisor).not.toHaveBeenCalled();

@@ -1,10 +1,12 @@
 // Server-sent events between /api/advisor and the chat: progress while tools run, then the answer.
+import type { AdvisorQuota } from "./quota";
 import type { AdvisorTurnView } from "./turns";
 
 export type AdvisorEvent =
   | { type: "conversation"; id: string; title: string }
   | { type: "status"; label: string }
   | { type: "done"; turn: AdvisorTurnView }
+  | { type: "quota"; quota: AdvisorQuota }
   | { type: "error"; message: string };
 
 export function encodeEvent(e: AdvisorEvent): string {

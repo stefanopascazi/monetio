@@ -1,7 +1,7 @@
 "use client";
 
 import { History, MessageSquarePlus, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button } from "@monetio/ui";
 import { AdvisorComposer } from "./AdvisorComposer";
 import { AdvisorHistory } from "./AdvisorHistory";
@@ -12,6 +12,11 @@ import { AdvisorThread } from "./AdvisorThread";
 export function AdvisorChatView({ onClose }: { onClose?: () => void }) {
   const { chat } = useAdvisor();
   const [showHistory, setShowHistory] = useState(false);
+  const { loadQuota } = chat;
+  // Fresh counter each time the chat opens: other members may have asked meanwhile.
+  useEffect(() => {
+    void loadQuota();
+  }, [loadQuota]);
   const fresh = () => {
     chat.reset();
     setShowHistory(false);
@@ -55,7 +60,13 @@ export function AdvisorChatView({ onClose }: { onClose?: () => void }) {
       {!showHistory && (
         <footer className="flex flex-col gap-3 border-t border-border px-4 py-3">
           {chat.error && <Alert tone="danger">{chat.error}</Alert>}
-          <AdvisorComposer turns={chat.turns.length} busy={Boolean(chat.pending)} onAsk={(q, page) => void chat.ask(q, page)} onNew={fresh} />
+          <AdvisorComposer
+            turns={chat.turns.length}
+            busy={Boolean(chat.pending)}
+            quota={chat.quota}
+            onAsk={(q, page) => void chat.ask(q, page)}
+            onNew={fresh}
+          />
         </footer>
       )}
     </div>

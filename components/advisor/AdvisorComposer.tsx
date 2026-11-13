@@ -5,17 +5,20 @@ import { usePathname } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button, Chip, TextField } from "@monetio/ui";
 import { canContinue, MAX_TURNS, pageContext } from "@/lib/advisor/conversation";
+import { type AdvisorQuota, quotaBlock, quotaLabel } from "@/lib/advisor/quota";
 import { QUESTION_MAX } from "@/lib/forms/advisor";
 
 interface Props {
   turns: number;
   busy: boolean;
+  /** Questions left; null while loading (no counter, nothing blocked). */
+  quota: AdvisorQuota | null;
   onAsk: (question: string, page: string | null) => void;
   onNew: () => void;
 }
 
 /** Question box; suggestions from the current page while the conversation is empty. */
-export function AdvisorComposer({ turns, busy, onAsk, onNew }: Props) {
+export function AdvisorComposer({ turns, busy, quota, onAsk, onNew }: Props) {
   const pathname = usePathname();
   const [question, setQuestion] = useState("");
   const submit = (e: FormEvent) => {
@@ -25,6 +28,9 @@ export function AdvisorComposer({ turns, busy, onAsk, onNew }: Props) {
     onAsk(q, pathname);
     setQuestion("");
   };
+
+  const blocked = quota && quotaBlock(quota);
+  if (blocked) return <p className="text-sm text-ink-muted">{blocked}</p>;
 
   if (!canContinue(turns)) {
     return (
@@ -62,6 +68,11 @@ export function AdvisorComposer({ turns, busy, onAsk, onNew }: Props) {
         />
         <Button type="submit" iconOnly aria-label="Invia" loading={busy} iconStart={<SendHorizontal aria-hidden="true" className="size-4" />} />
       </div>
+      {quota && (
+        <p className="text-xs text-ink-muted" aria-live="polite">
+          {quotaLabel(quota)}
+        </p>
+      )}
     </form>
   );
 }

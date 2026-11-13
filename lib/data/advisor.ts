@@ -1,6 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import type { AdvisorContext } from "../advisor/context";
+import { type AdvisorLimits, type AdvisorQuota, advisorQuota, DEFAULT_LIMITS, limitFrom } from "../advisor/quota";
 import type { AdvisorClient, AdvisorRun } from "../advisor/run";
 import { loadProjectionInput } from "./agenda";
 import { getContext } from "./context";
@@ -34,22 +35,21 @@ export async function loadAdvisorContext(): Promise<AdvisorContext> {
   };
 }
 
-/** Questions per user per day: a cost guard while the experiment runs. */
-export function advisorDailyLimit(): number {
-  return Number(process.env.ADVISOR_DAILY_LIMIT) || 20;
+/** Questions per user per day and per household per month, from the environment. */
+export function advisorLimits(): AdvisorLimits {
+  return {
+    daily: limitFrom(process.env.ADVISOR_DAILY_LIMIT, DEFAULT_LIMITS.daily),
+    monthly: limitFrom(process.env.ADVISOR_MONTHLY_LIMIT, DEFAULT_LIMITS.monthly),
+  };
 }
 
-/** Questions asked by the current user in the last 24 hours. */
-export async function countRecentRequests(): Promise<number> {
+/** Questions left today for the user and this month for the household (Europe/Rome). */
+export async function loadAdvisorQuota(): Promise<AdvisorQuota> {
   const [ctx, supabase] = await Promise.all([getContext(), createClient()]);
-  const since = new Date(Date.now() - 86_400_000).toISOString();
-  const { count, error } = await supabase
-    .from("advisor_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", ctx.userId)
-    .gte("created_at", since);
+  const { data, error } = await supabase.rpc("advisor_usage", { household: ctx.householdId });
   if (error) throw error;
-  return count ?? 0;
+  const row = (data as { user_today: number; household_month: number }[] | null)?.[0];
+  return advisorQuota({ userToday: row?.user_today ?? 0, householdMonth: row?.household_month ?? 0 }, advisorLimits());
 }
 
 /** Saves the author's feedback on an answer. */
