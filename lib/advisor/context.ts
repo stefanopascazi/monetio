@@ -29,3 +29,11 @@ const LIQUID: AccountType[] = ["checking", "card", "cash"];
 export function liquidAccountIds(ctx: AdvisorContext): string[] {
   return ctx.accounts.filter((a) => LIQUID.includes(a.type)).map((a) => a.id);
 }
+
+/** Accounts a purchase must never push below zero: cards run negative until the statement by design. */
+export function nonNegativeAccountIds(ctx: AdvisorContext): string[] {
+  return ctx.accounts.filter((a) => a.type !== "card").map((a) => a.id);
+}
+
+/** Months of spending kept aside as an emergency fund when a plan dips into savings. */
+export const RESERVE_MONTHS = 3;

@@ -23,10 +23,15 @@ export function verdictView(v: AdvisorVerdict, ctx: Pick<AdvisorContext, "accoun
   const lines: string[] = [];
   lines.push(`Punto più basso previsto: ${formatMoney(v.lowest.cents)} a fine ${monthLabel(v.lowest.month, true)}.`);
   if (v.shortfallCents > 0) lines.push(`Mancano ${formatMoney(v.shortfallCents)}.`);
+  for (const n of v.negativeAccounts) {
+    const name = ctx.accounts.find((a) => a.id === n.accountId)?.name ?? "Un conto";
+    lines.push(`${name} andrebbe a ${formatMoney(n.lowest.cents)} a fine ${monthLabel(n.lowest.month, true)}.`);
+  }
   if (v.tight) lines.push("Margine stretto: con dati incompleti il risultato può cambiare.");
   for (const l of v.levers) {
     if (l.kind === "postpone") lines.push(`Rimandando al ${dateLabel(l.date)}.`);
     else if (l.kind === "reduce") lines.push(`Spendendo al massimo ${formatMoney(l.amountCents, { whole: true })}.`);
+    else if (l.kind === "save") lines.push(`Risparmiando ${formatMoney(l.monthlyCents, { whole: true })} in più al mese da oggi.`);
     else lines.push(`Tagliando ${category(l.categoryId)} del ${l.percent}% da oggi.`);
   }
   return {

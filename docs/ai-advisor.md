@@ -90,6 +90,8 @@ Obiettivo: capire con l'uso reale se le risposte sono utili e quanto costano, pr
 - **Attivazione**: solo con `ANTHROPIC_API_KEY` sul server; `ADVISOR_MODEL` (default `claude-opus-5-5`) e `ADVISOR_DAILY_LIMIT` (default 20 domande per utente in 24 ore) facoltativi. Senza chiave la scheda mostra "Assistente non attivo".
 - **Codice**: `lib/advisor/` (system prompt e perimetro, tool, ciclo, prezzi, vista del verdetto), `lib/data/advisor.ts`, `app/actions/advisor.ts`, `components/advisor/`.
 - **Numeri**: il riquadro "Verdetto calcolato" mostra il risultato di `assessGoal`, non il testo del modello.
+- **Leve calcolate**: rimandare, spendere meno, risparmiare X € in più al mese, tagliare una categoria (`assessGoal`); importo massimo e "comodo" per data, anche con risparmio extra (`affordableAmount`, tool `affordable_amounts`). Nessuna leva può portare sotto zero un conto non carta, anche fuori dal perimetro scelto.
+- **Fondo di emergenza**: quando il piano include i Risparmi, la soglia minima è di 3 mesi di spesa media (`RESERVE_MONTHS`).
 - **Dati inviati al modello**: nomi e tipi dei conti visibili all'utente, saldi, nomi delle categorie di spesa, proiezioni aggregate e affidabilità. Mai IBAN, carte, note, descrizioni dei movimenti o nomi dei membri.
 - **Registro** (`advisor_requests`, migration 0025): domanda, risposta, verdetto, modello, token (input, output, cache), costo stimato in micro-dollari, durata, numero di tool, voto utile/da migliorare. Ogni utente vede e cancella solo le proprie righe; dopo l'inserimento si può cambiare solo il voto.
 - **Test di perimetro dal vivo**: `ADVISOR_EVAL=1 npx vitest run lib/advisor/perimeter.eval` (costa, va lanciato a mano).

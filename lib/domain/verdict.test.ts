@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rule } from "./fixtures";
 import type { ProjectionInput } from "./projection";
-import { assessGoal } from "./verdict";
+import { affordableAmount, assessGoal } from "./verdict";
 
 // Joint account: +2000 € salary, -600 € food, -1000 € mortgage per month = +400 € net.
 const base: ProjectionInput = {
@@ -45,6 +45,8 @@ describe("assessGoal", () => {
     expect(v.levers).toEqual([
       { kind: "postpone", date: "2027-02-05" },
       { kind: "reduce", amountCents: 420000 },
+      // 100 € left unspent at the end of November, December and January.
+      { kind: "save", monthlyCents: 10000 },
       // 17% of 600 € over November–January saves 306 €; 16% only 288 €.
       { kind: "cut", categoryId: "food", percent: 17 },
     ]);
@@ -63,5 +65,37 @@ describe("assessGoal", () => {
   it("extends the horizon to include the goal month", () => {
     const v = assessGoal({ ...base, months: 1 }, holiday(100000, "2027-03-10"));
     expect(v.result.scenario.map((m) => m.month)).toEqual(["2026-11", "2026-12", "2027-01", "2027-02", "2027-03"]);
+  });
+});
+
+describe("assessGoal with accounts outside the scope", () => {
+  it("fails a goal that empties an account kept non-negative", () => {
+    const ctx = { ...base, balances: { joint: 300000, savings: 100000 } };
+    const fromSavings = { label: "Auto", accountId: "savings", amountCents: 150000, date: "2027-01-05" };
+    expect(assessGoal(ctx, fromSavings, { accountIds: ["joint"] }).outcome).toBe("yes");
+    const v = assessGoal(ctx, fromSavings, { accountIds: ["joint"], nonNegativeAccountIds: ["joint", "savings"] });
+    expect(v.result.negativeAccounts).toEqual([{ accountId: "savings", lowest: { month: "2027-01", cents: -50000 } }]);
+    expect(v.outcome).toBe("yes_if");
+    expect(v.levers).toContainEqual({ kind: "reduce", amountCents: 100000 });
+  });
+});
+
+describe("affordableAmount", () => {
+  it("returns the largest and the comfortable amount on a date", () => {
+    // January: 4200 € at month end, nothing lower afterwards; 500 € of margin for the comfortable one.
+    expect(affordableAmount(base, { accountId: "joint", date: "2027-01-05" }, { accountIds: ["joint"], uncertaintyCents: 50000 })).toEqual({
+      maxCents: 420000,
+      comfortableCents: 370000,
+    });
+  });
+
+  it("grows with extra monthly savings", () => {
+    const extra = affordableAmount(base, { accountId: "joint", date: "2027-01-05" }, { accountIds: ["joint"], extraSavings: [{ accountId: "joint", monthlyCents: 10000 }] });
+    // Nov, Dec and Jan month ends: +300 €.
+    expect(extra.maxCents).toBe(450000);
+  });
+
+  it("is null when the balance is already below the floor", () => {
+    expect(affordableAmount(base, { accountId: "joint", date: "2027-01-05" }, { accountIds: ["joint"], floorCents: 10_000_000 })).toEqual({ maxCents: null, comfortableCents: null });
   });
 });

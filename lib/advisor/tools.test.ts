@@ -36,6 +36,12 @@ describe("runAdvisorTool", () => {
     expect(json.accounts).toContainEqual({ id: "joint", name: "Conto comune", type: "checking", balance_euros: 3000 });
     expect(json.spending_account_ids).toEqual(["joint"]);
     expect(json.reliability.level).toBe("high");
+    expect(json.expected_monthly_by_category).toEqual([
+      { category_id: "home", name: "Mutuo", monthly_euros: 1000 },
+      { category_id: "food", name: "Ristoranti", monthly_euros: 600 },
+    ]);
+    // 3 months of the joint account's average spending.
+    expect(json).toMatchObject({ avg_monthly_spending_euros: 1600, emergency_reserve_euros: 4800 });
   });
 
   it("projects the spending accounts by default", () => {
@@ -52,6 +58,7 @@ describe("runAdvisorTool", () => {
       levers: [
         { kind: "postpone", date: "2027-02-05" },
         { kind: "reduce", max_amount_euros: 4200 },
+        { kind: "save", extra_monthly_savings_euros: 100 },
         { kind: "cut", categoryId: "food", percent: 17 },
       ],
     });
@@ -91,6 +98,35 @@ describe("runAdvisorTool", () => {
       { month: "2026-12", total_euros: 4000, current_euros: 3800 },
     ]);
     expect(json.feasible).toBe(true);
+  });
+
+  it("lists the affordable amount per date and extra monthly saving", () => {
+    const { json } = run("affordable_amounts", { dates: ["2027-01-05"], account_id: "joint", extra_monthly_savings_euros: [0, 100], scope_account_ids: ["joint"], floor_euros: 0 });
+    // Uncertainty in January ≈ 277 €: the comfortable amount keeps it as margin, rounded down to 100 €.
+    expect(json.rows).toEqual([
+      { date: "2027-01-05", extra_monthly_savings_euros: 0, max_euros: 4200, comfortable_euros: 3900 },
+      { date: "2027-01-05", extra_monthly_savings_euros: 100, max_euros: 4500, comfortable_euros: 4200 },
+    ]);
+  });
+
+  it("rejects affordable dates in the past", () => {
+    expect(runAdvisorTool("affordable_amounts", { dates: ["2026-01-01"], account_id: "joint", extra_monthly_savings_euros: [0], scope_account_ids: [], floor_euros: 0 }, ctx)).toEqual({
+      content: "dates: must not be in the past",
+      isError: true,
+    });
+  });
+
+  it("flags an account outside the scope that would go below zero", () => {
+    const { json } = run("simulate_scenario", {
+      one_off_expenses: [{ label: "Auto", amount_euros: 6000, date: "2027-01-10", account_id: "savings" }],
+      category_cuts: [],
+      saving_plans: [],
+      months: 3,
+      scope_account_ids: ["joint"],
+      floor_euros: 0,
+    });
+    expect(json.feasible).toBe(false);
+    expect(json.accounts_below_zero).toEqual([{ account_id: "savings", name: "Risparmi", lowest: { month: "2027-01", total_euros: -1000 } }]);
   });
 
   it("reports an unknown tool as an error", () => {

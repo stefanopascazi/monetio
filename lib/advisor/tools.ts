@@ -2,10 +2,11 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { monthKey, monthsBetween } from "../domain/dates";
 import type { ProjectionMonth } from "../domain/projection";
+import { FREQUENCY_MONTHS } from "../domain/recurrence";
 import { combinedUncertainty } from "../domain/reliability";
-import { type CategoryCut, type LowestPoint, type SavingPlan, type OneOffExpense, simulateScenario } from "../domain/scenario";
-import { assessGoal, type Lever, type VerdictOutcome } from "../domain/verdict";
-import { type AdvisorContext, liquidAccountIds } from "./context";
+import { type CategoryCut, type LowestPoint, type NegativeAccount, type OneOffExpense, type SavingPlan, simulateScenario } from "../domain/scenario";
+import { affordableAmount, assessGoal, type Lever, type VerdictOutcome } from "../domain/verdict";
+import { type AdvisorContext, liquidAccountIds, nonNegativeAccountIds, RESERVE_MONTHS } from "./context";
 
 /** Default horizon of projections and simulations, in month ends. */
 const DEFAULT_MONTHS = 12;
@@ -17,6 +18,7 @@ export interface AdvisorVerdict {
   goal: { label: string; amountCents: number; date: string; accountId: string };
   lowest: LowestPoint;
   shortfallCents: number;
+  negativeAccounts: NegativeAccount[];
   tight: boolean;
   levers: Lever[];
 }
@@ -69,6 +71,24 @@ export const ADVISOR_TOOLS: Anthropic.Beta.BetaTool[] = [
         floor_euros: floor,
       },
       required: ["label", "amount_euros", "date", "account_id", "cut_category_ids", "scope_account_ids", "floor_euros"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "affordable_amounts",
+    description:
+      "Largest purchase the household could pay on each date, and the comfortable one that keeps a safety margin, also with extra monthly savings (money not spent from now on). Use it for questions like how much can we spend, and to show how saving more raises the amount.",
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        dates: { type: "array", items: { ...str, description: "YYYY-MM-DD" }, description: "1-6 candidate purchase dates." },
+        account_id: { ...str, description: "Account the purchase is paid from." },
+        extra_monthly_savings_euros: { type: "array", items: num, description: "Extra savings per month to compare, e.g. [0, 100, 200]; 0 = as today." },
+        scope_account_ids: scope,
+        floor_euros: floor,
+      },
+      required: ["dates", "account_id", "extra_monthly_savings_euros", "scope_account_ids", "floor_euros"],
       additionalProperties: false,
     },
   },
@@ -155,6 +175,30 @@ function scopeIds(ctx: AdvisorContext, value: unknown): string[] {
   return list.length ? list : liquidAccountIds(ctx);
 }
 
+const accountName = (ctx: AdvisorContext, id: string) => ctx.accounts.find((a) => a.id === id)?.name ?? id;
+const negativeEuros = (ctx: AdvisorContext, list: NegativeAccount[]) =>
+  list.map((n) => ({ account_id: n.accountId, name: accountName(ctx, n.accountId), lowest: lowestEuros(n.lowest) }));
+
+/** Expected monthly spending per expense category, from active recurring rules and estimates. */
+function monthlyByCategory(ctx: AdvisorContext) {
+  const totals = new Map<string, number>();
+  for (const r of ctx.input.rules) {
+    if (!r.active || r.amountCents >= 0 || r.kind !== "expense" || !r.categoryId) continue;
+    if (r.endDate && r.endDate < ctx.input.today) continue;
+    const months = r.frequency === "weekly" ? 12 / 52 : FREQUENCY_MONTHS[r.frequency];
+    totals.set(r.categoryId, (totals.get(r.categoryId) ?? 0) + Math.abs(r.amountCents) / months);
+  }
+  return ctx.categories
+    .filter((c) => totals.has(c.id))
+    .map((c) => ({ category_id: c.id, name: c.name, monthly_euros: euros(totals.get(c.id)!) }))
+    .sort((a, b) => b.monthly_euros - a.monthly_euros);
+}
+
+/** Average monthly spending of the spending accounts (positive cents). */
+function avgMonthlySpending(ctx: AdvisorContext): number {
+  return liquidAccountIds(ctx).reduce((s, id) => s + (ctx.bands[id]?.avgMonthlyExpenseCents ?? 0), 0);
+}
+
 const scopeTotals = (months: ProjectionMonth[], ids: string[]) =>
   months.map((m) => ({ month: m.month, total_euros: euros(ids.reduce((s, id) => s + (m.byAccount[id] ?? 0), 0)) }));
 const lowestEuros = (p: LowestPoint) => ({ month: p.month, total_euros: euros(p.cents) });
@@ -166,6 +210,9 @@ function overview(ctx: AdvisorContext) {
     accounts: ctx.accounts.map((a) => ({ id: a.id, name: a.name, type: a.type, balance_euros: euros(balances[a.id] ?? 0) })),
     spending_account_ids: liquidAccountIds(ctx),
     expense_categories: ctx.categories,
+    expected_monthly_by_category: monthlyByCategory(ctx),
+    avg_monthly_spending_euros: euros(avgMonthlySpending(ctx)),
+    emergency_reserve_euros: euros(avgMonthlySpending(ctx) * RESERVE_MONTHS),
     reliability: ctx.reliability,
   };
 }
@@ -191,14 +238,25 @@ function goal(ctx: AdvisorContext, input: Record<string, unknown>): ToolOutcome 
   const v = assessGoal({ ...ctx.input, months: DEFAULT_MONTHS }, g, {
     accountIds: ids,
     floorCents,
+    nonNegativeAccountIds: nonNegativeAccountIds(ctx),
     cutCategoryIds: cutIds,
     uncertaintyCents: combinedUncertainty(ctx.bands, ids, ahead),
     reliability: ctx.reliability.level,
   });
-  const verdict: AdvisorVerdict = { outcome: v.outcome, goal: g, lowest: v.result.lowest, shortfallCents: v.result.shortfallCents, tight: v.tight, levers: v.levers };
-  const levers = v.levers.map((l) =>
-    l.kind === "postpone" ? { kind: l.kind, date: l.date } : l.kind === "reduce" ? { kind: l.kind, max_amount_euros: euros(l.amountCents) } : l,
-  );
+  const verdict: AdvisorVerdict = {
+    outcome: v.outcome,
+    goal: g,
+    lowest: v.result.lowest,
+    shortfallCents: v.result.shortfallCents,
+    negativeAccounts: v.result.negativeAccounts,
+    tight: v.tight,
+    levers: v.levers,
+  };
+  const levers = v.levers.map((l) => {
+    if (l.kind === "reduce") return { kind: l.kind, max_amount_euros: euros(l.amountCents) };
+    if (l.kind === "save") return { kind: l.kind, extra_monthly_savings_euros: euros(l.monthlyCents) };
+    return l;
+  });
   const content = {
     outcome: v.outcome,
     tight: v.tight,
@@ -207,6 +265,7 @@ function goal(ctx: AdvisorContext, input: Record<string, unknown>): ToolOutcome 
     lowest_with_goal: lowestEuros(v.result.lowest),
     lowest_without_goal: lowestEuros(v.result.baselineLowest),
     shortfall_euros: euros(v.result.shortfallCents),
+    accounts_below_zero: negativeEuros(ctx, v.result.negativeAccounts),
     levers,
   };
   return { content: JSON.stringify(content), verdict };
@@ -238,17 +297,51 @@ function scenario(ctx: AdvisorContext, input: Record<string, unknown>) {
   const r = simulateScenario(
     { ...ctx.input, months: months(input.months) },
     { oneOffExpenses, categoryCuts, savingPlans },
-    { accountIds: ids, floorCents: cents(input.floor_euros ?? 0, "floor_euros", true) },
+    { accountIds: ids, floorCents: cents(input.floor_euros ?? 0, "floor_euros", true), nonNegativeAccountIds: nonNegativeAccountIds(ctx) },
   );
   const base = scopeTotals(r.baseline, ids);
   return {
     scope_account_ids: ids,
     feasible: r.feasible,
     shortfall_euros: euros(r.shortfallCents),
+    accounts_below_zero: negativeEuros(ctx, r.negativeAccounts),
     lowest_current: lowestEuros(r.baselineLowest),
     lowest_scenario: lowestEuros(r.lowest),
     month_ends: scopeTotals(r.scenario, ids).map((m, i) => ({ ...m, current_euros: base[i].total_euros })),
   };
+}
+
+function affordable(ctx: AdvisorContext, input: Record<string, unknown>) {
+  const ids = scopeIds(ctx, input.scope_account_ids);
+  const accountId = account(ctx, input.account_id, "account_id");
+  const dates = (Array.isArray(input.dates) ? input.dates : []).slice(0, 6).map((d, i) => date(d, `dates[${i}]`));
+  if (!dates.length) throw new InvalidInput("dates: at least one date");
+  if (dates.some((d) => d < ctx.input.today)) throw new InvalidInput("dates: must not be in the past");
+  const listed = Array.isArray(input.extra_monthly_savings_euros) ? input.extra_monthly_savings_euros.slice(0, 4) : [];
+  const extras = (listed.length ? listed : [0]).map((e, i) => cents(e, `extra_monthly_savings_euros[${i}]`, true));
+  const floorCents = cents(input.floor_euros ?? 0, "floor_euros", true);
+  const rows = dates.flatMap((d) => {
+    const ahead = monthsBetween(monthKey(ctx.input.today), monthKey(d)) + 1;
+    const uncertaintyCents = combinedUncertainty(ctx.bands, ids, ahead);
+    return extras.map((extra) => {
+      const a = affordableAmount({ ...ctx.input, months: DEFAULT_MONTHS }, { accountId, date: d }, {
+        accountIds: ids,
+        floorCents,
+        nonNegativeAccountIds: nonNegativeAccountIds(ctx),
+        uncertaintyCents,
+        extraSavings: extra ? [{ accountId, monthlyCents: extra }] : [],
+      });
+      // Round amounts for people: the comfortable one to 100 €, the maximum to 10 €, always down.
+      const down = (c: number | null, step: number) => (c === null ? null : euros(Math.floor(c / step) * step));
+      return {
+        date: d,
+        extra_monthly_savings_euros: euros(extra),
+        max_euros: down(a.maxCents, 1000),
+        comfortable_euros: down(a.comfortableCents, 10000),
+      };
+    });
+  });
+  return { scope_account_ids: ids, account_id: accountId, floor_euros: euros(floorCents), rows };
 }
 
 /** Runs one tool call; bad input comes back as an error result the model can correct. */
@@ -264,6 +357,8 @@ export function runAdvisorTool(name: string, input: unknown, ctx: AdvisorContext
         return goal(ctx, args);
       case "simulate_scenario":
         return { content: JSON.stringify(scenario(ctx, args)) };
+      case "affordable_amounts":
+        return { content: JSON.stringify(affordable(ctx, args)) };
       default:
         return { content: `Unknown tool: ${name}`, isError: true };
     }

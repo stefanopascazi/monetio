@@ -79,6 +79,14 @@ describe("simulateScenario", () => {
   });
 });
 
+describe("simulateScenario extra savings", () => {
+  it("adds the unspent amount at each month end from the given month", () => {
+    const res = simulateScenario(base, { extraSavings: [{ accountId: "joint", monthlyCents: 10000, from: "2026-12-10" }] });
+    const delta = joint(res.scenario).map((v, i) => v - joint(res.baseline)[i]);
+    expect(delta).toEqual([0, 10000, 20000, 30000]);
+  });
+});
+
 describe("lowestPoint", () => {
   it("returns zero on an empty projection", () => {
     expect(lowestPoint([])).toEqual({ month: "", cents: 0 });
