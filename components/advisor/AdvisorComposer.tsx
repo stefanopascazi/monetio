@@ -42,7 +42,8 @@ export function AdvisorComposer({ turns, busy, onAsk, onNew }: Props) {
       {turns === 0 && (
         <div className="flex flex-wrap gap-2" aria-label="Domande suggerite">
           {pageContext(pathname).suggestions.map((s) => (
-            <Chip key={s} type="button" onClick={() => setQuestion(s)}>
+            // A suggestion is a ready question: one tap sends it.
+            <Chip key={s} type="button" disabled={busy} onClick={() => onAsk(s, pathname)}>
               {s}
             </Chip>
           ))}

@@ -6,12 +6,19 @@ import { AdvisorComposer } from "./AdvisorComposer";
 vi.mock("next/navigation", () => ({ usePathname: () => "/analisi/proiezioni" }));
 
 describe("AdvisorComposer", () => {
-  it("offers page suggestions and sends the question with the page", async () => {
+  it("sends a page suggestion with one tap", async () => {
     const onAsk = vi.fn();
     render(<AdvisorComposer turns={0} busy={false} onAsk={onAsk} onNew={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: "Quando il saldo sarà più basso nei prossimi mesi?" }));
-    await userEvent.click(screen.getByRole("button", { name: "Invia" }));
     expect(onAsk).toHaveBeenCalledWith("Quando il saldo sarà più basso nei prossimi mesi?", "/analisi/proiezioni");
+  });
+
+  it("sends a typed question with the page and clears the box", async () => {
+    const onAsk = vi.fn();
+    render(<AdvisorComposer turns={1} busy={false} onAsk={onAsk} onNew={vi.fn()} />);
+    await userEvent.type(screen.getByRole("textbox"), "E se aspettiamo un mese?");
+    await userEvent.click(screen.getByRole("button", { name: "Invia" }));
+    expect(onAsk).toHaveBeenCalledWith("E se aspettiamo un mese?", "/analisi/proiezioni");
     expect(screen.getByRole("textbox")).toHaveValue("");
   });
 

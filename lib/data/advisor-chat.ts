@@ -51,7 +51,7 @@ export async function answerChat(req: ChatRequest, emit: (e: AdvisorEvent) => vo
   const started = Date.now();
   try {
     const ctx = await loadAdvisorContext();
-    const run = await runAdvisor(questionWithPage(question, page), ctx, advisorClient(), {
+    const run = await runAdvisor(questionWithPage(question, page, ctx.accounts), ctx, advisorClient(), {
       model,
       history: historyMessages(rows?.rows ?? []),
       onTool: (name) => emit({ type: "status", label: toolStatus(name) }),

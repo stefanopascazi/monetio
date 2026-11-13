@@ -65,8 +65,19 @@ export function pageContext(pathname: string | null | undefined): PageContext {
   return match ? match[1] : GENERIC;
 }
 
-/** First user message: the question, with the page the user is looking at when it says something. */
-export function questionWithPage(question: string, pathname: string | null | undefined): string {
+/** The account a /conti/<id> page shows, when it is one the user can see. */
+export function pageAccount<T extends { id: string }>(pathname: string | null | undefined, accounts: T[]): T | null {
+  const id = pathname?.match(/^\/conti\/([^/?#]+)/)?.[1];
+  return (id && accounts.find((a) => a.id === id)) || null;
+}
+
+/**
+ * The question with the page the user is looking at, when it says something: on an account page the
+ * model gets that account's name and id, so "this account" means it.
+ */
+export function questionWithPage(question: string, pathname: string | null | undefined, accounts: { id: string; name: string }[] = []): string {
+  const account = pageAccount(pathname, accounts);
+  if (account) return `[Pagina aperta: conto "${account.name}" (account_id ${account.id}). "Questo conto" è questo.]\n${question}`;
   const { label } = pageContext(pathname);
   return label === GENERIC.label ? question : `[Pagina aperta: ${label}]\n${question}`;
 }

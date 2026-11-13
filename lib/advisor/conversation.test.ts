@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canContinue, conversationTitle, HISTORY_TURNS, historyMessages, MAX_TURNS, pageContext, questionWithPage, toolStatus } from "./conversation";
+import { canContinue, conversationTitle, HISTORY_TURNS, historyMessages, MAX_TURNS, pageAccount, pageContext, questionWithPage, toolStatus } from "./conversation";
 
 describe("conversationTitle", () => {
   it("keeps a short question and cuts a long one at a word", () => {
@@ -48,6 +48,15 @@ describe("pageContext", () => {
   it("tells the model the page only when it adds something", () => {
     expect(questionWithPage("Ce la facciamo?", "/analisi/proiezioni")).toBe("[Pagina aperta: Proiezioni]\nCe la facciamo?");
     expect(questionWithPage("Ce la facciamo?", "/")).toBe("Ce la facciamo?");
+  });
+
+  it("names the account of an account page, only when the user can see it", () => {
+    const accounts = [{ id: "acc-1", name: "Conto cointestato" }];
+    expect(questionWithPage("Questo conto regge?", "/conti/acc-1", accounts)).toBe(
+      '[Pagina aperta: conto "Conto cointestato" (account_id acc-1). "Questo conto" è questo.]\nQuesto conto regge?',
+    );
+    expect(questionWithPage("Questo conto regge?", "/conti/other", accounts)).toBe("[Pagina aperta: Conti]\nQuesto conto regge?");
+    expect(pageAccount("/conti/acc-1?tab=movimenti", accounts)).toEqual(accounts[0]);
   });
 });
 
