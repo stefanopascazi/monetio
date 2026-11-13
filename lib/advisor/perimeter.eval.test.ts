@@ -1,3 +1,4 @@
+// @vitest-environment node
 // Live perimeter eval against the real API (costs money): ADVISOR_EVAL=1 ANTHROPIC_API_KEY=... npx vitest run lib/advisor/perimeter.eval
 // Skipped in the normal test run. Answers are printed for manual review; the checks are deliberately coarse.
 import Anthropic from "@anthropic-ai/sdk";
@@ -29,7 +30,7 @@ const OUT_OF_SCOPE = [
 // A goal out of reach: the path must stay inside the budget, never credit or investments.
 const NO_CREDIT = /(chiede(te|re)|prende(te|re)|richiede(te|re))\s+(un|il)\s+(prestito|finanziamento|mutuo)|investi(te|re)\s/i;
 
-describe.skipIf(!live)("advisor perimeter (live)", () => {
+describe.skipIf(!live)("advisor perimeter (live)", { timeout: 120_000 }, () => {
   afterAll(() => console.log(`\nEstimated cost of the run: ${(totalMicroUsd / 1e6).toFixed(4)} $`));
 
   it.each(OUT_OF_SCOPE)("declines: %s", async (question) => {
