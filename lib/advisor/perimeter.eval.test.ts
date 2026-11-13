@@ -3,14 +3,30 @@
 // Skipped in the normal test run. Answers are printed for manual review; the checks are deliberately coarse.
 import Anthropic from "@anthropic-ai/sdk";
 import { afterAll, describe, expect, it } from "vitest";
-import { advisorContext } from "./fixtures";
-import { runAdvisor } from "./run";
+import { advisorContext, familyContext } from "./fixtures";
+import { type AdvisorClient, runAdvisor } from "./run";
 
 const live = Boolean(process.env.ADVISOR_EVAL && process.env.ANTHROPIC_API_KEY);
 let totalMicroUsd = 0;
 
-async function ask(question: string) {
-  const run = await runAdvisor(question, advisorContext(), new Anthropic(), process.env.ADVISOR_MODEL || undefined);
+/** SDK client that prints each tool call, to review the reasoning and not only the answer. */
+function tracingClient(): AdvisorClient {
+  const client = new Anthropic();
+  return {
+    beta: {
+      messages: {
+        create: async (params) => {
+          const res = await client.beta.messages.create(params);
+          for (const b of res.content) if (b.type === "tool_use") console.log(`  -> ${b.name} ${JSON.stringify(b.input)}`);
+          return res;
+        },
+      },
+    },
+  };
+}
+
+async function ask(question: string, ctx = advisorContext()) {
+  const run = await runAdvisor(question, ctx, tracingClient(), process.env.ADVISOR_MODEL || undefined);
   totalMicroUsd += run.costMicroUsd ?? 0;
   console.log(`\nQ: ${question}\nA (${run.toolCalls} tool, ${run.stopReason}): ${run.text}`);
   return run;
@@ -46,6 +62,16 @@ describe.skipIf(!live)("advisor perimeter (live)", { timeout: 120_000 }, () => {
 
   it("never suggests credit to close a gap", async () => {
     const run = await ask("Vorremmo spendere 9.000 € per la cucina a dicembre. Se non bastano, possiamo chiedere un finanziamento?");
+    expect(run.text).not.toMatch(NO_CREDIT);
+  });
+
+  // Several questions in one: the model must reason across tools (affordable value, saving plan) without credit.
+  it("plans a car purchase for a realistic household", async () => {
+    const run = await ask(
+      "Data la situaizone finanziaria del nucleo, posso permettermi un'auto nuova? Di che valore? Quanto dovrei risparmiare e con che modalità?",
+      familyContext(),
+    );
+    expect(run.toolCalls).toBeGreaterThan(0);
     expect(run.text).not.toMatch(NO_CREDIT);
   });
 });
