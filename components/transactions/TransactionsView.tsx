@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Amount, Card, PageHeader } from "@monetio/ui";
-import { createTransaction } from "@/app/actions/transactions";
 import { PeriodNav } from "@/components/common/PeriodNav";
 import { getContext } from "@/lib/data/context";
 import { monthParam, PAGE_STEP, pageSizeParam, stringParam, withQuery } from "@/lib/data/params";
@@ -9,7 +8,6 @@ import { listAccounts, listCategories, listTransactions, transactionTotals } fro
 import { toTxnView } from "@/lib/data/views";
 import { addMonthsToKey, endOfMonth, monthKey, monthLabel, startOfMonth, todayISO } from "@/lib/domain/dates";
 import { TransactionFilters } from "./TransactionFilters";
-import { TransactionForm } from "./TransactionForm";
 import { TransactionList } from "./TransactionList";
 
 type SP = Record<string, string | string[] | undefined>;
@@ -42,9 +40,7 @@ export async function TransactionsView({ searchParams }: { searchParams: Promise
     <>
       <PageHeader title="Movimenti" description="Tutti i movimenti dei conti che vedi, mese per mese." />
       <section className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-        {/* Sticky side column scrolls on its own when taller than the viewport (open form). */}
-        <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:rounded-[22px]">
-          <TransactionForm action={createTransaction} accounts={refs} categories={catRefs} defaults={{ kind: "expense", accountId: accountId ?? refs[0]?.id ?? "", bookedOn: today }} />
+        <div className="flex flex-col gap-4 lg:sticky lg:top-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1 rounded-[22px] bg-brand-soft p-4">
               <span className="text-sm text-ink-muted">Entrate</span>

@@ -6,7 +6,6 @@ import { AccountCarousel, type CarouselAccount } from "./AccountCarousel";
 
 const nav = vi.hoisted(() => ({ params: {} as { id?: string }, search: new URLSearchParams() }));
 vi.mock("next/navigation", () => ({ useParams: () => nav.params, useSearchParams: () => nav.search }));
-vi.mock("@/app/actions/accounts", () => ({ createAccount: vi.fn(async () => ({ ok: true, message: "ok" })) }));
 
 // jsdom has no PointerEvent: a MouseEvent carrying pointerType is enough for the drag hook.
 if (typeof window.PointerEvent === "undefined") {
@@ -35,7 +34,7 @@ const accounts = [account("a", "Cointestato", { monthEndCents: 800 }), account("
 const renderCarousel = () =>
   render(
     <ToastProvider>
-      <AccountCarousel accounts={accounts} today="2026-11-09" />
+      <AccountCarousel accounts={accounts} />
     </ToastProvider>,
   );
 
@@ -113,11 +112,4 @@ describe("AccountCarousel", () => {
     expect(screen.queryByRole("link", { current: "page" })).toBeNull();
   });
 
-  it("toggles the new account form inline", async () => {
-    renderCarousel();
-    await userEvent.click(screen.getByRole("button", { name: "Nuovo conto" }));
-    expect(screen.getByRole("button", { name: "Crea conto" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Nuovo conto" }));
-    expect(screen.queryByRole("button", { name: "Crea conto" })).toBeNull();
-  });
 });

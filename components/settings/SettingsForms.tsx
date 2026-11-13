@@ -51,7 +51,6 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
   const active = categories.filter((c) => !c.archived);
   return (
     <div className="flex flex-col gap-4">
-      <CategoryCreateForm />
       <ul className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {active.map((c) => (
           <CategoryItem key={c.id} category={c} />

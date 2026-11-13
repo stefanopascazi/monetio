@@ -1,15 +1,13 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import type { AccountType } from "@monetio/ui";
-import { createAccount } from "@/app/actions/accounts";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useScrollEdges } from "@/hooks/useScrollEdges";
 import { accountHref, switcherAccounts } from "@/lib/navigation/account-nav";
 import { pageStep } from "@/lib/navigation/carousel";
-import { AccountForm } from "./AccountForm";
 import { AccountLinkCard } from "./AccountLinkCard";
 
 export interface CarouselAccount {
@@ -25,8 +23,6 @@ export interface CarouselAccount {
 
 export interface AccountCarouselProps {
   accounts: CarouselAccount[];
-  /** Default opening date for the new account form. */
-  today: string;
 }
 
 const ARROW =
@@ -37,11 +33,10 @@ const ARROW =
  * The current account comes from the URL; links keep the selected statement period.
  * Desktop: arrows page through the row (they don't change account) and the mouse can drag it.
  */
-export function AccountCarousel({ accounts, today }: AccountCarouselProps) {
+export function AccountCarousel({ accounts }: AccountCarouselProps) {
   const params = useParams<{ id?: string }>();
   const search = useSearchParams();
   const currentId = params.id ?? "";
-  const [adding, setAdding] = useState(false);
   const current = useRef<HTMLLIElement>(null);
   const row = useRef<HTMLUListElement>(null);
 
@@ -83,23 +78,11 @@ export function AccountCarousel({ accounts, today }: AccountCarouselProps) {
               </li>
             );
           })}
-          <li className="w-40 shrink-0 snap-start p-0.5">
-            <button
-              type="button"
-              aria-expanded={adding}
-              onClick={() => setAdding((v) => !v)}
-              className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-[28px] border-2 border-dashed border-border p-4 text-ink-muted hover:text-ink aria-expanded:border-ink aria-expanded:text-ink"
-            >
-              <Plus aria-hidden="true" className="size-6" />
-              <span className="font-semibold">Nuovo conto</span>
-            </button>
-          </li>
         </ul>
         <ArrowButton label="Scorri avanti" disabled={atEnd} onClick={() => page(1)}>
           <ChevronRight />
         </ArrowButton>
       </section>
-      {adding && <AccountForm action={createAccount} defaults={{ openingDate: today }} initiallyOpen onClosed={() => setAdding(false)} />}
     </>
   );
 }

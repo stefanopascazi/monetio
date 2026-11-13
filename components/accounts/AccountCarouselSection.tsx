@@ -2,11 +2,10 @@ import { Skeleton } from "@monetio/ui";
 import { loadMonthEndBalances } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
-import { todayISO } from "@/lib/domain/dates";
 import { AccountCarousel } from "./AccountCarousel";
 import { accountMembers } from "./AccountGrid";
 
-/** Loads the accounts for the carousel; nothing when the household has none (the landing offers the form). */
+/** Loads the accounts for the carousel; nothing when the household has none (the landing points to the top bar "+"). */
 export async function AccountCarouselSection() {
   const [ctx, accounts, monthEnd] = await Promise.all([getContext(), listAccounts(), loadMonthEndBalances()]);
   if (!accounts.length) return null;
@@ -20,7 +19,7 @@ export async function AccountCarouselSection() {
     archived: a.archived,
     monthEndCents: a.archived ? undefined : monthEnd[a.id],
   }));
-  return <AccountCarousel accounts={items} today={todayISO()} />;
+  return <AccountCarousel accounts={items} />;
 }
 
 /** Placeholder row with the carousel's height. */
