@@ -37,7 +37,7 @@ describe("runAdvisor", () => {
     ]);
     const run = await runAdvisor("Possiamo permetterci 4.500 € a gennaio?", advisorContext(), client);
 
-    expect(run).toMatchObject({ text: "Sì, se rimandate a febbraio.", refused: false, stopReason: "end_turn", toolCalls: 2 });
+    expect(run).toMatchObject({ text: "Sì, se rimandate a febbraio.", refused: false, paymentPlan: false, stopReason: "end_turn", toolCalls: 2 });
     expect(run.verdict).toMatchObject({ outcome: "yes_if", shortfallCents: 30000 });
     expect(run.usage).toEqual({ inputTokens: 3000, outputTokens: 600, cacheReadTokens: 1500, cacheWriteTokens: 300 });
     // 3 x (1000 x 4 + 200 x 20 + 500 x 0.2 + 100 x 5) micro-dollars.
@@ -55,6 +55,21 @@ describe("runAdvisor", () => {
     await runAdvisor("?", advisorContext(), client);
     const results = create.mock.calls[1][0].messages[2].content as Anthropic.Beta.BetaToolResultBlockParam[];
     expect(results[0]).toMatchObject({ is_error: true, content: "account_id: unknown account" });
+  });
+
+  it("flags an answer that checks the user's payment plan", async () => {
+    const plan = {
+      one_off_expenses: [{ label: "Anticipo", amount_euros: 1000, date: "2026-12-01", account_id: "joint" }],
+      category_cuts: [],
+      saving_plans: [],
+      recurring_expenses: [{ label: "Rata", monthly_euros: 100, account_id: "joint", day_of_month: 1, start_date: "2026-12-01", end_date: "" }],
+      user_payment_plan: true,
+      months: 12,
+      scope_account_ids: [],
+      floor_euros: 0,
+    };
+    const { client } = fakeClient([message("tool_use", [toolUse("t1", "simulate_scenario", plan)]), message("end_turn", [text("Sì.")])]);
+    expect((await runAdvisor("?", advisorContext(), client)).paymentPlan).toBe(true);
   });
 
   it("answers with a fixed message on a refusal", async () => {

@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
-import { Badge, type BadgeTone, Card } from "@monetio/ui";
+import { Alert, Badge, type BadgeTone, Card } from "@monetio/ui";
 import type { AdvisorAnswer } from "@/app/actions/advisor";
-import { ADVISOR_AI_LABEL, ADVISOR_DISCLAIMER } from "@/lib/advisor/perimeter";
+import { ADVISOR_AI_LABEL, ADVISOR_DISCLAIMER, ADVISOR_PLAN_DISCLAIMER } from "@/lib/advisor/perimeter";
 import type { VerdictTone } from "@/lib/advisor/view";
 import { RatingButtons } from "./RatingButtons";
 
@@ -13,6 +13,11 @@ export function AdvisorAnswerCard({ answer }: { answer: AdvisorAnswer }) {
   return (
     <Card title={answer.question} action={<Badge tone="forecast" icon={<Sparkles aria-hidden="true" className="size-3" />}>{ADVISOR_AI_LABEL}</Badge>}>
       <div className="flex flex-col gap-4">
+        {answer.paymentPlan && (
+          <Alert tone="warning" title="Solo una stima, non una valutazione del finanziamento">
+            {ADVISOR_PLAN_DISCLAIMER}
+          </Alert>
+        )}
         {verdict && (
           <section aria-label="Verdetto calcolato" className="flex flex-col gap-2 rounded-xl bg-surface-sunken p-3">
             <div className="flex flex-wrap items-center gap-2">

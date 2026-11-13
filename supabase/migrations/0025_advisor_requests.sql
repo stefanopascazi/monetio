@@ -11,6 +11,8 @@ create table advisor_requests (
   -- Engine verdict of the last assess_goal call (outcome, levers, lowest point), null when none ran.
   verdict jsonb,
   refused boolean not null default false,
+  -- The answer checked a payment plan the user brought (shown with the stronger disclaimer).
+  payment_plan boolean not null default false,
   model text not null,
   stop_reason text,
   -- Set when the call failed (no answer): error class only, no payload.

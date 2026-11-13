@@ -24,7 +24,7 @@ const fd = (question: string) => {
   return f;
 };
 const QUESTION = "Possiamo permetterci una vacanza?";
-const run = { text: "Sì.", refused: false, verdict: null, model: "claude-opus-5-5", stopReason: "end_turn", usage: {}, costMicroUsd: 1, toolCalls: 1 };
+const run = { text: "Sì.", refused: false, verdict: null, paymentPlan: false, model: "claude-opus-5-5", stopReason: "end_turn", usage: {}, costMicroUsd: 1, toolCalls: 1 };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -37,7 +37,7 @@ describe("askAdvisor", () => {
   it("answers and logs the request", async () => {
     runAdvisor.mockResolvedValue(run);
     const res = await askAdvisor({}, fd(QUESTION));
-    expect(res).toEqual({ ok: true, answer: { question: QUESTION, text: "Sì.", refused: false, verdict: null, requestId: "req-1" } });
+    expect(res).toEqual({ ok: true, answer: { question: QUESTION, text: "Sì.", refused: false, verdict: null, paymentPlan: false, requestId: "req-1" } });
     expect(data.logAdvisorRequest).toHaveBeenCalledWith(expect.objectContaining({ question: QUESTION, run, model: "claude-opus-5-5" }));
   });
 

@@ -5,12 +5,15 @@ import type { ProjectionMonth } from "../domain/projection";
 import { FREQUENCY_MONTHS } from "../domain/recurrence";
 import { combinedUncertainty } from "../domain/reliability";
 import { type CategoryCut, type LowestPoint, type NegativeAccount, type OneOffExpense, type SavingPlan, simulateScenario } from "../domain/scenario";
-import { affordableAmount, assessGoal, type Lever, type VerdictOutcome } from "../domain/verdict";
+import { affordableAmount, assessGoal, extraSavingNeeded, type Lever, type VerdictOutcome } from "../domain/verdict";
 import { type AdvisorContext, liquidAccountIds, nonNegativeAccountIds, RESERVE_MONTHS } from "./context";
 
 /** Default horizon of projections and simulations, in month ends. */
 const DEFAULT_MONTHS = 12;
-const MAX_MONTHS = 36;
+// Long enough for a 60-month payment plan the user brings, plus its final payment.
+const MAX_MONTHS = 72;
+/** Month-end points returned to the model: longer horizons are sampled to keep the context small. */
+const MAX_POINTS = 24;
 
 /** Engine verdict of the last assess_goal call, shown by the UI next to the model's words. */
 export interface AdvisorVerdict {
@@ -28,6 +31,8 @@ export interface ToolOutcome {
   content: string;
   isError?: boolean;
   verdict?: AdvisorVerdict;
+  /** The scenario reproduces a payment plan the user brought: the UI shows the stronger disclaimer. */
+  paymentPlan?: boolean;
 }
 
 const str = { type: "string" } as const;
@@ -94,7 +99,8 @@ export const ADVISOR_TOOLS: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: "simulate_scenario",
-    description: "What-if projection with one-off expenses, category cuts and monthly set-asides, compared with the current projection.",
+    description:
+      "What-if projection with one-off expenses, recurring monthly expenses, category cuts and monthly set-asides, compared with the current projection. When it does not fit, it also says how much extra saving per month would make it fit.",
     strict: true,
     input_schema: {
       type: "object",
@@ -134,11 +140,28 @@ export const ADVISOR_TOOLS: Anthropic.Beta.BetaTool[] = [
             additionalProperties: false,
           },
         },
-        months: { type: "integer", description: "Month ends to simulate, 1-36." },
+        recurring_expenses: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              label: str,
+              monthly_euros: num,
+              account_id: str,
+              day_of_month: { type: "integer" },
+              start_date: { ...str, description: "YYYY-MM-DD" },
+              end_date: { ...str, description: "YYYY-MM-DD, empty = no end." },
+            },
+            required: ["label", "monthly_euros", "account_id", "day_of_month", "start_date", "end_date"],
+            additionalProperties: false,
+          },
+        },
+        user_payment_plan: { type: "boolean", description: "True when the scenario reproduces a payment plan the user described (down payment, instalments, final payment)." },
+        months: { type: "integer", description: "Month ends to simulate, 1-72." },
         scope_account_ids: scope,
         floor_euros: floor,
       },
-      required: ["one_off_expenses", "category_cuts", "saving_plans", "months", "scope_account_ids", "floor_euros"],
+      required: ["one_off_expenses", "category_cuts", "saving_plans", "recurring_expenses", "user_payment_plan", "months", "scope_account_ids", "floor_euros"],
       additionalProperties: false,
     },
   },
@@ -271,7 +294,14 @@ function goal(ctx: AdvisorContext, input: Record<string, unknown>): ToolOutcome 
   return { content: JSON.stringify(content), verdict };
 }
 
-function scenario(ctx: AdvisorContext, input: Record<string, unknown>) {
+/** At most MAX_POINTS month ends, evenly spaced, always keeping the last one. */
+function sample<T>(list: T[]): T[] {
+  if (list.length <= MAX_POINTS) return list;
+  const step = Math.ceil(list.length / MAX_POINTS);
+  return list.filter((_, i) => i % step === step - 1 || i === list.length - 1);
+}
+
+function scenario(ctx: AdvisorContext, input: Record<string, unknown>): ToolOutcome {
   const ids = scopeIds(ctx, input.scope_account_ids);
   const list = (v: unknown) => (Array.isArray(v) ? (v as Record<string, unknown>[]) : []);
   const oneOffExpenses: OneOffExpense[] = list(input.one_off_expenses).map((e, i) => ({
@@ -294,21 +324,35 @@ function scenario(ctx: AdvisorContext, input: Record<string, unknown>) {
     startDate: date(p.start_date, `saving_plans[${i}].start_date`),
     endDate: optionalDate(p.end_date, `saving_plans[${i}].end_date`),
   }));
-  const r = simulateScenario(
-    { ...ctx.input, months: months(input.months) },
-    { oneOffExpenses, categoryCuts, savingPlans },
-    { accountIds: ids, floorCents: cents(input.floor_euros ?? 0, "floor_euros", true), nonNegativeAccountIds: nonNegativeAccountIds(ctx) },
-  );
+  // A recurring expense is a monthly outflow with no destination account.
+  const recurring: SavingPlan[] = list(input.recurring_expenses).map((p, i) => ({
+    label: String(p.label ?? "Spesa ricorrente"),
+    monthlyCents: cents(p.monthly_euros, `recurring_expenses[${i}].monthly_euros`),
+    fromAccountId: account(ctx, p.account_id, `recurring_expenses[${i}].account_id`),
+    toAccountId: null,
+    dayOfMonth: Math.min(31, Math.max(1, Math.round(Number(p.day_of_month)) || 1)),
+    startDate: date(p.start_date, `recurring_expenses[${i}].start_date`),
+    endDate: optionalDate(p.end_date, `recurring_expenses[${i}].end_date`),
+  }));
+  const projection = { ...ctx.input, months: months(input.months) };
+  const plan = { oneOffExpenses, categoryCuts, savingPlans: [...savingPlans, ...recurring] };
+  const options = { accountIds: ids, floorCents: cents(input.floor_euros ?? 0, "floor_euros", true), nonNegativeAccountIds: nonNegativeAccountIds(ctx) };
+  const r = simulateScenario(projection, plan, options);
+  // The "yes, if": extra saving on the account that pays most of the plan.
+  const payer = recurring[0]?.fromAccountId ?? oneOffExpenses[0]?.accountId ?? ids[0];
+  const needed = r.feasible || !payer ? null : extraSavingNeeded(projection, plan, options, payer);
   const base = scopeTotals(r.baseline, ids);
-  return {
+  const content = {
     scope_account_ids: ids,
     feasible: r.feasible,
     shortfall_euros: euros(r.shortfallCents),
     accounts_below_zero: negativeEuros(ctx, r.negativeAccounts),
+    extra_monthly_savings_needed_euros: needed === null ? null : euros(needed),
     lowest_current: lowestEuros(r.baselineLowest),
     lowest_scenario: lowestEuros(r.lowest),
-    month_ends: scopeTotals(r.scenario, ids).map((m, i) => ({ ...m, current_euros: base[i].total_euros })),
+    month_ends: sample(scopeTotals(r.scenario, ids).map((m, i) => ({ ...m, current_euros: base[i].total_euros }))),
   };
+  return { content: JSON.stringify(content), paymentPlan: input.user_payment_plan === true };
 }
 
 function affordable(ctx: AdvisorContext, input: Record<string, unknown>) {
@@ -356,7 +400,7 @@ export function runAdvisorTool(name: string, input: unknown, ctx: AdvisorContext
       case "assess_goal":
         return goal(ctx, args);
       case "simulate_scenario":
-        return { content: JSON.stringify(scenario(ctx, args)) };
+        return scenario(ctx, args);
       case "affordable_amounts":
         return { content: JSON.stringify(affordable(ctx, args)) };
       default:

@@ -22,6 +22,8 @@ export interface AdvisorAnswer {
   text: string;
   refused: boolean;
   verdict: VerdictView | null;
+  /** Checks a payment plan the user brought: the card shows the stronger disclaimer. */
+  paymentPlan: boolean;
   /** Log row to rate; null when logging failed. */
   requestId: string | null;
 }
@@ -56,7 +58,7 @@ export async function askAdvisor(_prev: AdvisorState, fd: FormData): Promise<Adv
     const run = await runAdvisor(question, ctx, advisorClient(), model);
     const requestId = await logAdvisorRequest({ question, run, model, durationMs: Date.now() - started });
     const verdict = run.verdict ? verdictView(run.verdict, ctx) : null;
-    return { ok: true, answer: { question, text: run.text, refused: run.refused, verdict, requestId } };
+    return { ok: true, answer: { question, text: run.text, refused: run.refused, verdict, paymentPlan: run.paymentPlan, requestId } };
   } catch (e) {
     const name = e instanceof Error ? e.constructor.name : "UnknownError";
     console.error("[advisor] request failed", name, e instanceof Anthropic.APIError ? e.status : undefined);

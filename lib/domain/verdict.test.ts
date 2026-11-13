@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rule } from "./fixtures";
 import type { ProjectionInput } from "./projection";
-import { affordableAmount, assessGoal } from "./verdict";
+import { affordableAmount, assessGoal, extraSavingNeeded } from "./verdict";
 
 // Joint account: +2000 € salary, -600 € food, -1000 € mortgage per month = +400 € net.
 const base: ProjectionInput = {
@@ -97,5 +97,19 @@ describe("affordableAmount", () => {
 
   it("is null when the balance is already below the floor", () => {
     expect(affordableAmount(base, { accountId: "joint", date: "2027-01-05" }, { accountIds: ["joint"], floorCents: 10_000_000 })).toEqual({ maxCents: null, comfortableCents: null });
+  });
+});
+
+describe("extraSavingNeeded", () => {
+  const plan = { oneOffExpenses: [{ label: "Anticipo", accountId: "joint", amountCents: 450000, date: "2027-01-05" }] };
+
+  it("finds the monthly saving that closes the gap", () => {
+    // Short by 300 € at the end of January: 100 € a month over three month ends.
+    expect(extraSavingNeeded(base, plan, { accountIds: ["joint"] }, "joint")).toBe(10000);
+  });
+
+  it("is 0 when the plan already fits and null when no saving is enough", () => {
+    expect(extraSavingNeeded(base, {}, { accountIds: ["joint"] }, "joint")).toBe(0);
+    expect(extraSavingNeeded(base, plan, { accountIds: ["joint"], floorCents: 10_000_000 }, "joint", 50_000)).toBeNull();
   });
 });

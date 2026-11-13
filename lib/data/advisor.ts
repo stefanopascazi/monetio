@@ -84,6 +84,7 @@ export async function logAdvisorRequest(e: AdvisorLogEntry): Promise<string | nu
       answer: e.run?.text ?? null,
       verdict: e.run?.verdict ?? null,
       refused: e.run?.refused ?? false,
+      payment_plan: e.run?.paymentPlan ?? false,
       model: e.run?.model ?? e.model,
       stop_reason: e.run?.stopReason ?? null,
       error: e.error ?? null,

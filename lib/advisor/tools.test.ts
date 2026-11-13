@@ -129,6 +129,34 @@ describe("runAdvisorTool", () => {
     expect(json.accounts_below_zero).toEqual([{ account_id: "savings", name: "Risparmi", lowest: { month: "2027-01", total_euros: -1000 } }]);
   });
 
+  it("checks a payment plan the user brought and says how much more to save", () => {
+    const out = runAdvisorTool(
+      "simulate_scenario",
+      {
+        one_off_expenses: [
+          { label: "Anticipo", amount_euros: 3000, date: "2026-12-01", account_id: "joint" },
+          { label: "Maxi rata", amount_euros: 4000, date: "2029-12-01", account_id: "joint" },
+        ],
+        category_cuts: [],
+        saving_plans: [],
+        recurring_expenses: [{ label: "Rata", monthly_euros: 450, account_id: "joint", day_of_month: 1, start_date: "2027-01-01", end_date: "2029-11-30" }],
+        user_payment_plan: true,
+        months: 40,
+        scope_account_ids: ["joint"],
+        floor_euros: 0,
+      },
+      ctx,
+    );
+    const json = JSON.parse(out.content);
+    expect(out.paymentPlan).toBe(true);
+    // +400 € a month against a 450 € instalment: the balance drains, 50 € a month would not be enough with the final payment.
+    expect(json.feasible).toBe(false);
+    expect(json.extra_monthly_savings_needed_euros).toBeGreaterThan(50);
+    // 40 month ends sampled down to at most 24 points, last one kept.
+    expect(json.month_ends.length).toBeLessThanOrEqual(24);
+    expect(json.month_ends.at(-1).month).toBe("2030-02");
+  });
+
   it("reports an unknown tool as an error", () => {
     expect(runAdvisorTool("delete_everything", {}, ctx)).toEqual({ content: "Unknown tool: delete_everything", isError: true });
   });

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ADVISOR_AI_LABEL, ADVISOR_DISCLAIMER } from "@/lib/advisor/perimeter";
+import { ADVISOR_AI_LABEL, ADVISOR_DISCLAIMER, ADVISOR_PLAN_DISCLAIMER } from "@/lib/advisor/perimeter";
 import { AdvisorAnswerCard } from "./AdvisorAnswerCard";
 
 vi.mock("@/app/actions/advisor", () => ({ rateAdvisorAnswer: vi.fn() }));
@@ -10,6 +10,7 @@ const answer = {
   text: "Sì, se rimandate a febbraio.",
   refused: false,
   verdict: { title: "Sì, se…", tone: "warning" as const, goal: "Vacanza: 4500,00 €", lines: ["Mancano 300,00 €."] },
+  paymentPlan: false,
   requestId: "req-1",
 };
 
@@ -21,6 +22,11 @@ describe("AdvisorAnswerCard", () => {
     expect(screen.getByText("Sì, se rimandate a febbraio.")).toBeInTheDocument();
     expect(screen.getByText(ADVISOR_DISCLAIMER)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Utile" })).toBeInTheDocument();
+  });
+
+  it("warns that a user payment plan is only an estimate", () => {
+    render(<AdvisorAnswerCard answer={{ ...answer, verdict: null, paymentPlan: true }} />);
+    expect(screen.getByRole("alert")).toHaveTextContent(ADVISOR_PLAN_DISCLAIMER);
   });
 
   it("hides verdict and rating on a refusal", () => {

@@ -17,6 +17,8 @@ export interface AdvisorRun {
   text: string;
   refused: boolean;
   verdict: AdvisorVerdict | null;
+  /** The answer evaluates a payment plan the user brought: shown with the stronger disclaimer. */
+  paymentPlan: boolean;
   /** Model of the last response (a fallback model when the first one declined). */
   model: string;
   stopReason: string;
@@ -39,6 +41,7 @@ export async function runAdvisor(question: string, ctx: AdvisorContext, client: 
   let usage = EMPTY_USAGE;
   let cost: number | null = 0;
   let verdict: AdvisorVerdict | null = null;
+  let paymentPlan = false;
   let toolCalls = 0;
   let last: Anthropic.Beta.BetaMessage | null = null;
 
@@ -63,7 +66,7 @@ export async function runAdvisor(question: string, ctx: AdvisorContext, client: 
     cost = cost === null || c === null ? null : cost + c;
 
     if (response.stop_reason === "refusal") {
-      return { text: ADVISOR_REFUSAL, refused: true, verdict: null, model: response.model, stopReason: "refusal", usage, costMicroUsd: cost, toolCalls };
+      return { text: ADVISOR_REFUSAL, refused: true, verdict: null, paymentPlan: false, model: response.model, stopReason: "refusal", usage, costMicroUsd: cost, toolCalls };
     }
     if (response.stop_reason !== "tool_use" && response.stop_reason !== "pause_turn") break;
 
@@ -76,6 +79,7 @@ export async function runAdvisor(question: string, ctx: AdvisorContext, client: 
       toolCalls++;
       const outcome = runAdvisorTool(block.name, block.input, ctx);
       if (outcome.verdict) verdict = outcome.verdict;
+      if (outcome.paymentPlan) paymentPlan = true;
       results.push({ type: "tool_result", tool_use_id: block.id, content: outcome.content, ...(outcome.isError ? { is_error: true } : {}) });
     }
     messages.push({ role: "user", content: results });
@@ -93,6 +97,7 @@ export async function runAdvisor(question: string, ctx: AdvisorContext, client: 
     text: text || "Non sono riuscito a completare l'analisi. Riprova con una domanda più semplice.",
     refused: false,
     verdict,
+    paymentPlan,
     model: last?.model ?? model,
     stopReason: done ? String(last!.stop_reason) : "max_iterations",
     usage,

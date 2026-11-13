@@ -3,7 +3,7 @@
 import { makeDate, monthKey, monthsBetween, parseISO } from "./dates";
 import type { ProjectionInput } from "./projection";
 import type { ReliabilityLevel } from "./reliability";
-import { type ExtraSaving, type ScenarioOptions, type ScenarioResult, simulateScenario } from "./scenario";
+import { type ExtraSaving, type Scenario, type ScenarioOptions, type ScenarioResult, simulateScenario } from "./scenario";
 import type { ISODate } from "./types";
 
 export interface SpendingGoal {
@@ -146,4 +146,22 @@ export function affordableAmount(input: ProjectionInput, when: { accountId: stri
   const max = maxWhere(0, MAX_EUROS, (e) => fits(e, floor));
   const comfortable = maxWhere(0, MAX_EUROS, (e) => fits(e, floor + uncertaintyCents));
   return { maxCents: max === null ? null : max * 100, comfortableCents: comfortable === null ? null : comfortable * 100 };
+}
+
+/**
+ * Smallest extra monthly saving (steps of 10 €, from now on, on `accountId`) that makes a scenario feasible:
+ * the "yes, if" of a plan the user brought (e.g. a payment plan). Null when even `maxMonthlyCents` is not enough.
+ */
+export function extraSavingNeeded(
+  input: ProjectionInput,
+  scenario: Scenario,
+  options: ScenarioOptions,
+  accountId: string,
+  maxMonthlyCents = 300_000,
+): number | null {
+  const fits = (tens: number) =>
+    simulateScenario(input, { ...scenario, extraSavings: [...(scenario.extraSavings ?? []), { accountId, monthlyCents: tens * 1000 }] }, options).feasible;
+  if (simulateScenario(input, scenario, options).feasible) return 0;
+  const tens = minWhere(1, Math.floor(maxMonthlyCents / 1000), fits);
+  return tens === null ? null : tens * 1000;
 }
