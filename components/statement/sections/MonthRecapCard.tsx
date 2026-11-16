@@ -21,7 +21,7 @@ export async function MonthRecapCard({ accountId, balanceCents, today, month, sp
   ]);
   const editing = {
     planned: Object.fromEntries(planned.map((t) => [t.id, toTxnView(t, accounts, categories, members)])),
-    rules: recapRules(agenda.rules, agenda.contributions),
+    rules: recapRules(agenda.rules, agenda.contributions, members),
     accounts: refs,
     categories: catRefs,
   };

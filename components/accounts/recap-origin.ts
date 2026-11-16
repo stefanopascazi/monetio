@@ -2,8 +2,9 @@
 import type { BadgeTone } from "@monetio/ui";
 import { recurrenceSummary } from "@/components/rules/recurrence-summary";
 import { dateLabel } from "@/lib/domain/dates";
+import { creatorName } from "@/lib/data/views";
 import type { RecapItem } from "@/lib/domain/month-recap";
-import type { ContributionRule, PaymentMethod, RecurringRule, RuleSchedule } from "@/lib/domain/types";
+import type { ContributionRule, ISODate, Member, PaymentMethod, RecurringRule, RuleSchedule } from "@/lib/domain/types";
 
 /** Serializable source of a recap row: a recurring rule or a contribution. */
 export interface RecapRule {
@@ -17,10 +18,21 @@ export interface RecapRule {
   kind: "income" | "expense" | "transfer";
   paymentMethod: PaymentMethod | null;
   feeCents: number;
+  /** E.g. "Creata il 3 nov 2026 da Anna"; null when the creation day is unknown. */
+  created: string | null;
+}
+
+type Members = Pick<Member, "userId" | "displayName">[];
+
+/** "Creata il <day>[ da <name>]": rules and contributions are both feminine in Italian. */
+function createdLabel(on: ISODate | undefined, by: string | null | undefined, members: Members): string | null {
+  if (!on) return null;
+  const name = creatorName(by ?? null, members);
+  return `Creata il ${dateLabel(on)}${name ? ` da ${name}` : ""}`;
 }
 
 /** Sources of the recap rows by id (rule and contribution ids are distinct uuids). */
-export function recapRules(rules: RecurringRule[], contributions: ContributionRule[]): Record<string, RecapRule> {
+export function recapRules(rules: RecurringRule[], contributions: ContributionRule[], members: Members = []): Record<string, RecapRule> {
   const out: Record<string, RecapRule> = {};
   for (const r of rules) {
     out[r.id] = {
@@ -32,6 +44,7 @@ export function recapRules(rules: RecurringRule[], contributions: ContributionRu
       kind: r.kind,
       paymentMethod: r.paymentMethod,
       feeCents: r.feeCents,
+      created: createdLabel(r.createdOn, r.createdBy, members),
     };
   }
   for (const c of contributions) {
@@ -44,6 +57,7 @@ export function recapRules(rules: RecurringRule[], contributions: ContributionRu
       kind: "transfer",
       paymentMethod: null,
       feeCents: 0,
+      created: createdLabel(c.createdOn, c.createdBy, members),
     };
   }
   return out;
@@ -60,8 +74,13 @@ export function originTag(item: Pick<RecapItem, "source">, rule?: Pick<RecapRule
   return null;
 }
 
-/** One sentence on where the row comes from and how it will be booked. */
+/** Where the row comes from and how it will be booked, with who created its source and when. */
 export function originText(item: Pick<RecapItem, "source" | "date" | "occurrence" | "ref">, rule?: RecapRule, createdByName?: string | null): string {
+  const text = sourceText(item, rule, createdByName);
+  return rule?.created ? `${text} ${rule.created}.` : text;
+}
+
+function sourceText(item: Pick<RecapItem, "source" | "date" | "occurrence" | "ref">, rule?: RecapRule, createdByName?: string | null): string {
   const when = dateLabel(item.date);
   if (item.source === "planned") {
     const by = createdByName ? ` inserito da ${createdByName}` : "";

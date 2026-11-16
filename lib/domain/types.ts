@@ -96,6 +96,9 @@ export interface RecurringRule {
   feeCents: number;
   /** Estimate rules: categories whose booked movements reduce it in the month (empty = fixed estimate). */
   decrementCategoryIds: string[];
+  /** Day it was created (Europe/Rome) and by whom; null creator for rules older than the column. */
+  createdOn?: ISODate;
+  createdBy?: string | null;
 }
 
 /** Actual amount/due date of one occurrence of a rule, entered before paying (e.g. a bill). */
@@ -127,4 +130,7 @@ export interface ContributionRule {
   startDate: ISODate;
   endDate: ISODate | null;
   active: boolean;
+  /** Day it was created (Europe/Rome) and by whom; null creator for contributions older than the column. */
+  createdOn?: ISODate;
+  createdBy?: string | null;
 }

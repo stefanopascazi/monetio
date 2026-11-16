@@ -18,6 +18,15 @@ describe("recap-origin", () => {
     expect(rules.q).toMatchObject({ type: "contribution", schedule: null, kind: "transfer", recurrence: "Ogni mese il giorno 5" });
   });
 
+  it("says when and by whom a source was created, when known", () => {
+    const members = [{ userId: "u1", displayName: "Anna" }];
+    const known = recapRules([rule({ id: "a", amountCents: -1, createdOn: "2026-11-03", createdBy: "u1" })], [contribution({ id: "b", createdOn: "2026-10-01", createdBy: null })], members);
+    expect(known.a.created).toBe("Creata il 3 nov 2026 da Anna");
+    expect(known.b.created).toBe("Creata il 1 ott 2026");
+    expect(rules.due.created).toBeNull();
+    expect(originText({ ...at, source: "rule", ref: "r:a|2026-11" }, known.a)).toMatch(/Si registra da sola il 20 nov 2026\. Creata il 3 nov 2026 da Anna\.$/);
+  });
+
   it("links to the source in its Scadenze tab", () => {
     expect(originHref(rules.due)).toBe("/scadenze?sezione=ricorrenze&apri=due");
     expect(originHref(rules.q)).toBe("/scadenze?sezione=quote&apri=q");

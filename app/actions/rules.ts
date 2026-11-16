@@ -41,7 +41,7 @@ export async function createRule(prev: ActionState, fd: FormData): Promise<Actio
   const parsed = parseRuleForm(fd);
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
   const supabase = await createClient();
-  const { error } = await supabase.from("recurring_rules").insert({ household_id: ctx.householdId, ...ruleRow(parsed) });
+  const { error } = await supabase.from("recurring_rules").insert({ household_id: ctx.householdId, created_by: ctx.userId, ...ruleRow(parsed) });
   if (error) return failure(dbErrorMessage(error));
   await bookPassedOccurrences(ctx);
   refresh();
@@ -94,7 +94,7 @@ export async function createContribution(prev: ActionState, fd: FormData): Promi
   const parsed = parseContributionForm(fd);
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
   const supabase = await createClient();
-  const { error } = await supabase.from("contribution_rules").insert({ household_id: ctx.householdId, start_date: todayISO(), ...contributionRow(parsed) });
+  const { error } = await supabase.from("contribution_rules").insert({ household_id: ctx.householdId, created_by: ctx.userId, start_date: todayISO(), ...contributionRow(parsed) });
   if (error) return failure(dbErrorMessage(error));
   refresh();
   return success("Quota aggiunta.", prev);
