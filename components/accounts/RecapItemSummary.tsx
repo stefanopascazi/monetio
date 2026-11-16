@@ -1,3 +1,4 @@
+import { Clock } from "lucide-react";
 import { Badge } from "@monetio/ui";
 import { dateLabel } from "@/lib/domain/dates";
 import type { RecapItem } from "@/lib/domain/month-recap";
@@ -10,6 +11,7 @@ export function RecapItemSummary({ item }: { item: RecapItem }) {
     <span className="flex min-w-0 flex-col">
       <span className="truncate font-semibold">{item.label}</span>
       <span className="flex flex-wrap items-center gap-1.5 text-sm font-normal text-ink-muted">
+        {item.source === "planned" && <Clock className="size-3.5 shrink-0" aria-label="Pianificato" />}
         {item.overdue ? "In ritardo" : dateLabel(item.date)}
         {src && (
           <Badge size="sm" tone={src.tone}>

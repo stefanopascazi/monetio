@@ -79,12 +79,10 @@ export const loadCurrentMonthBooked = cache(async (): Promise<{ month: string; r
   return { month, rows, categoryNames: Object.fromEntries(categories.map((c) => [c.id, c.name])) };
 });
 
-/** Booked and still expected movements of an account in a month (current by default), with its balances. */
+/** Still expected movements of an account in a month (current by default), with its balances. */
 export const loadAccountMonthRecap = cache(async (accountId: string, balanceCents: number, month?: string) => {
   const { input } = await loadProjectionInput(RECAP_MONTHS);
-  const m = month ?? monthKey(input.today);
-  const booked = await listTransactions({ accountId, status: "booked", from: startOfMonth(m), to: endOfMonth(m), limit: 1000 });
-  return accountMonthRecap(projectedMovements(input), booked, accountId, balanceCents, input.today, m);
+  return accountMonthRecap(projectedMovements(input), accountId, balanceCents, input.today, month ?? monthKey(input.today));
 });
 
 /** Expected month-end balance ("rimanenza") per visible account. */

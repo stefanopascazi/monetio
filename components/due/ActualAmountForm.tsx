@@ -10,7 +10,7 @@ import { useToastAction } from "@/hooks/useToastAction";
 import type { DueView } from "./DueList";
 
 /** Actual amount and due date of one occurrence (e.g. the bill arrived), without paying it. */
-export function ActualAmountForm({ entry, onClose }: { entry: DueView; onClose: () => void }) {
+export function ActualAmountForm({ entry, onClose }: { entry: Pick<DueView, "key" | "amountCents" | "date" | "note" | "confirmed">; onClose: () => void }) {
   const [amount, setAmount] = useState<number | null>(Math.abs(entry.amountCents));
   const { state, pending, onSubmit, error } = useFormAction(setOccurrenceAmount.bind(null, entry.key), onClose);
   const { pending: clearing, run } = useToastAction();

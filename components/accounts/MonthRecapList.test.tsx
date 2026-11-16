@@ -4,27 +4,28 @@ import { ToastProvider } from "@monetio/ui";
 import { MonthRecapList } from "./MonthRecapList";
 
 vi.mock("@/app/actions/estimates", () => ({ bookEstimate: vi.fn(), closeEstimate: vi.fn() }));
+vi.mock("@/app/actions/overrides", () => ({ setOccurrenceAmount: vi.fn(), clearOccurrenceAmount: vi.fn() }));
+vi.mock("@/app/actions/transactions", () => ({ confirmPlanned: vi.fn(), deleteTransaction: vi.fn(), updateTransaction: vi.fn() }));
 
 const none = { outCents: 0, inCents: 0 };
-const empty = { month: "2026-11", openingCents: 1000, closingCents: 1000, paid: [], due: [], paidTotals: none, dueTotals: none };
+const empty = { month: "2026-11", openingCents: 1000, closingCents: 1000, due: [], dueTotals: none };
 
 describe("MonthRecapList", () => {
-  it("shows the current balance and both groups with their empty messages", () => {
+  it("shows the current balance and the items to book with their empty message, never a booked card", () => {
     render(<MonthRecapList recap={empty} current />);
     expect(screen.getByText("Saldo attuale")).toBeInTheDocument();
     expect(screen.getByText("Rimanenza a fine mese")).toBeInTheDocument();
     expect(screen.getByText("Nessun movimento da contabilizzare: novembre 2026.")).toBeInTheDocument();
-    expect(screen.getByText("Nessun movimento contabilizzato: novembre 2026.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Contabilizzato" })).not.toBeInTheDocument();
   });
 
-  it("starts a future month from the previous month's rimanenza and hides an empty booked card", () => {
+  it("starts a future month from the previous month's rimanenza", () => {
     render(<MonthRecapList recap={{ ...empty, month: "2026-12" }} current={false} nav={<nav>Mesi</nav>} />);
     expect(screen.getByText("Rimanenza di novembre 2026")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Contabilizzato" })).not.toBeInTheDocument();
     expect(screen.getByText("Mesi")).toBeInTheDocument();
   });
 
-  it("splits items to book and booked ones into separate cards, with source and overdue badges", () => {
+  it("lists items to book with source, planned and overdue marks", () => {
     render(
       <MonthRecapList
         current
@@ -33,22 +34,20 @@ describe("MonthRecapList", () => {
           due: [
             { key: "1", date: "2026-11-08", label: "Affitto", source: "rule", amountCents: -80000, overdue: true },
             { key: "2", date: "2026-11-20", label: "Spesa", source: "estimate", amountCents: -15000, overdue: false },
+            { key: "3", date: "2026-11-25", label: "Dentista", source: "planned", amountCents: -9000, overdue: false },
           ],
-          paid: [{ key: "3", date: "2026-11-02", label: "Stipendio", source: "booked", amountCents: 200000, overdue: false }],
-          dueTotals: { outCents: 95000, inCents: 0 },
-          paidTotals: { outCents: 0, inCents: 200000 },
+          dueTotals: { outCents: 104000, inCents: 0 },
         }}
       />,
     );
     const due = screen.getByRole("region", { name: "Da contabilizzare" });
-    const paid = screen.getByRole("region", { name: "Contabilizzato" });
-    expect(within(due).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(due).getAllByRole("listitem")).toHaveLength(3);
     expect(within(due).getByText("In ritardo")).toBeInTheDocument();
     expect(within(due).getByText("arretrato")).toBeInTheDocument();
     expect(within(due).getByText("stima")).toBeInTheDocument();
-    expect(within(paid).getByText("Stipendio")).toBeInTheDocument();
-    expect(within(due).getByText("2 movimenti · novembre 2026")).toBeInTheDocument();
-    expect(within(paid).getByText("1 movimento · novembre 2026")).toBeInTheDocument();
+    expect(within(due).getByLabelText("Pianificato")).toBeInTheDocument();
+    expect(within(due).queryByText("pianificato")).not.toBeInTheDocument();
+    expect(within(due).getByText("3 movimenti · novembre 2026")).toBeInTheDocument();
   });
 
   it("offers to book or drop estimates only in the current month", () => {

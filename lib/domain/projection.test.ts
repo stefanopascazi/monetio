@@ -143,4 +143,14 @@ describe("projectBalances", () => {
     expect(res.map((p) => p.byAccount.joint)).toEqual([100000, 91260]);
   });
 
+  it("tags rule occurrences and planned transactions with what is needed to edit them", () => {
+    const luce = rule({ id: "l", accountId: "joint", amountCents: -10000, schedule: "due", dayOfMonth: 15, startDate: "2026-11-01", endDate: "2026-11-30" });
+    const overrides = overrideMap([{ ruleId: "l", period: "2026-11", amountCents: -8740, dueDate: "2026-11-20", note: "bolletta" }]);
+    const planned = [txn({ id: "t1", accountId: "joint", amountCents: -5000, bookedOn: "2026-11-25", status: "planned" })];
+    const res = projectedMovements({ ...base, months: 1, rules: [luce], overrides, planned });
+    expect(res).toMatchObject([
+      { source: "rule", ref: ruleKey("l", "2026-11-15"), occurrence: { dueDate: "2026-11-20", confirmed: true, note: "bolletta" } },
+      { source: "planned", txnId: "t1" },
+    ]);
+  });
 });
