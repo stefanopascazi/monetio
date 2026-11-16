@@ -6,7 +6,7 @@ import { feeSource } from "@/lib/domain/fees";
 import { loadAgenda } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { fetchFeeCategoryId } from "@/lib/data/fee-category";
-import { syncAutoRules } from "@/lib/data/sync";
+import { bookPassedOccurrences } from "@/lib/data/sync";
 import { entryTransaction, paymentRows } from "@/lib/data/rows";
 import { parseContributionForm } from "@/lib/forms/contribution";
 import { isISODate, isUUID, positiveCents } from "@/lib/forms/parse";
@@ -34,15 +34,6 @@ function ruleRow(v: ReturnType<typeof parseRuleForm> & { ok: true }) {
     fee_cents: feeSource(r.kind, r.paymentMethod) ? r.feeCents : 0,
     decrement_category_ids: r.decrementCategoryIds,
   };
-}
-
-/** Books automatic occurrences already due (e.g. a rule starting in the past); the rule is saved either way. */
-async function bookPassedOccurrences(ctx: Awaited<ReturnType<typeof getContext>>) {
-  try {
-    await syncAutoRules(ctx, todayISO());
-  } catch (e) {
-    console.error("syncAutoRules failed", e instanceof Error ? e.message : e);
-  }
 }
 
 export async function createRule(prev: ActionState, fd: FormData): Promise<ActionState> {

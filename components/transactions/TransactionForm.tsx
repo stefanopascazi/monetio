@@ -29,7 +29,6 @@ export interface TransactionDefaults {
   bookedOn: string;
   description?: string;
   notes?: string | null;
-  planned?: boolean;
   skipEstimates?: boolean;
 }
 
@@ -56,7 +55,6 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
   const [kind, setKind] = useState<Kind>(defaults.kind);
   const [amount, setAmount] = useState<number | null>(defaults.amountCents ?? null);
   const [fee, setFee] = useState<number | null>(defaults.feeCents ?? null);
-  const [planned, setPlanned] = useState(defaults.planned ?? false);
   const [categoryId, setCategoryId] = useState(defaults.categoryId ?? "");
   const [skipEstimates, setSkipEstimates] = useState(defaults.skipEstimates ?? false);
   const [formKey, setFormKey] = useState(0);
@@ -67,7 +65,6 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
     setOpen(false);
     setAmount(null);
     setFee(null);
-    setPlanned(false);
     setCategoryId(defaults.categoryId ?? "");
     setSkipEstimates(false);
     setKind(defaults.kind);
@@ -96,7 +93,6 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
       <FormMessage state={state} />
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="amountCents" value={amount ?? ""} />
-      <input type="hidden" name="status" value={planned ? "planned" : "booked"} />
       {!lockKind && (
         <SegmentedControl<Kind>
           aria-label="Tipo di movimento"
@@ -119,7 +115,15 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
         />
       )}
       <TextField name="description" label="Descrizione" placeholder="Es. Esselunga" defaultValue={defaults.description} error={error("description")} required />
-      <TextField name="bookedOn" label="Data" type="date" defaultValue={defaults.bookedOn} error={error("bookedOn")} required />
+      <TextField
+        name="bookedOn"
+        label="Data"
+        type="date"
+        defaultValue={defaults.bookedOn}
+        hint="Con una data futura resta pianificato e si registra da solo quel giorno"
+        error={error("bookedOn")}
+        required
+      />
       <Select
         name="accountId"
         label={kind === "transfer" ? "Dal conto" : "Conto"}
@@ -169,13 +173,6 @@ export function TransactionForm({ action, accounts, categories, transferTargets,
           />
         </>
       )}
-      <Switch
-        label="Pianificato"
-        description="Non ancora avvenuto: conta solo nelle proiezioni finché non lo registri"
-        checked={planned}
-        onCheckedChange={setPlanned}
-        className="mio-span-full"
-      />
     </FormPanel>
   );
 }

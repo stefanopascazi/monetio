@@ -19,7 +19,6 @@ export function editDefaults(t: TxnView): TransactionDefaults {
     bookedOn: t.bookedOn,
     description: t.description,
     notes: t.notes,
-    planned: t.status === "planned",
     skipEstimates: t.skipEstimates,
   };
 }

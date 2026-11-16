@@ -1,7 +1,7 @@
 // Database rows (snake_case, bigint as number|string) to domain objects.
 import { maskIban } from "../banking/identifiers";
 import { feeSource } from "../domain/fees";
-import type { Account, Category, ContributionRule, Member, RecurringRule, Transaction } from "../domain/types";
+import type { Account, Category, ContributionRule, Member, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
 
 type Row = Record<string, unknown>;
 
@@ -86,6 +86,16 @@ export function mapTransaction(r: Row): Transaction {
     source: r.source as Transaction["source"],
     createdBy: str(r.created_by),
     skipEstimates: Boolean(r.skip_estimates),
+  };
+}
+
+export function mapOverride(r: Row): OccurrenceOverride {
+  return {
+    ruleId: String(r.rule_id),
+    period: String(r.period),
+    amountCents: Number(r.amount_cents),
+    dueDate: String(r.due_date),
+    note: r.note == null ? null : String(r.note),
   };
 }
 

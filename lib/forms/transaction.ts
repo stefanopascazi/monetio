@@ -46,7 +46,8 @@ export function parseTransactionForm(fd: FormData, today: ISODate): ParseResult<
     );
   }
 
-  const status = text(fd, "status") === "planned" || (isISODate(bookedOn) && bookedOn > today) ? "planned" : "booked";
+  // Only future dates stay planned: a date already reached is booked right away, as the daily cron would.
+  const status = isISODate(bookedOn) && bookedOn > today ? "planned" : "booked";
   return c.result({
     kind,
     accountId,

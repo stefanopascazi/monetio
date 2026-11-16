@@ -87,11 +87,19 @@ function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate, overrides?: 
   };
 }
 
-/** Auto rules whose occurrences up to today are not booked yet. */
-export function autoBookings(rules: RecurringRule[], booked: Set<string>, today: ISODate, since: ISODate): DueEntry[] {
+/** Days after today scanned for auto occurrences whose actual date was moved earlier. */
+const AUTO_EARLY_DAYS = 31;
+
+/** Auto rules whose occurrences (actual date when entered) are due by today and not booked yet. */
+export function autoBookings(rules: RecurringRule[], booked: Set<string>, today: ISODate, since: ISODate, overrides?: OverrideMap): DueEntry[] {
   return rules
     .filter((r) => r.active && r.schedule === "auto")
-    .flatMap((r) => occurrences(r, since, today).filter((d) => !booked.has(ruleKey(r.id, d, r.frequency))).map((d) => ruleEntry(r, d, today)));
+    .flatMap((r) =>
+      occurrences(r, since, addDays(today, AUTO_EARLY_DAYS))
+        .filter((d) => !booked.has(ruleKey(r.id, d, r.frequency)))
+        .map((d) => ruleEntry(r, d, today, overrides))
+        .filter((e) => e.date <= today),
+    );
 }
 
 /** Spending (positive cents) that a contribution rule shares, for a month. */
