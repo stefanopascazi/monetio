@@ -5,10 +5,10 @@ import { AgendaView } from "@/components/due/AgendaView";
 
 export const metadata: Metadata = { title: "Scadenze" };
 
-export default function DuePage() {
+export default function DuePage({ searchParams }: PageProps<"/scadenze">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <AgendaView />
+      <AgendaView searchParams={searchParams} />
     </Suspense>
   );
 }

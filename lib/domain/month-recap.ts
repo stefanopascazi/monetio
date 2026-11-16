@@ -18,6 +18,8 @@ export interface RecapItem {
   occurrence?: Movement["occurrence"];
   /** Planned transactions: their id. */
   txnId?: string;
+  /** Rule or contribution the item comes from. */
+  ruleId?: string;
   /** Decreasing estimates: booked movements that reduced them this month. */
   usage?: EstimateUsage;
 }
@@ -64,7 +66,7 @@ export function accountMonthRecap(
   const openingCents = balanceCents + own.filter((m) => m.date < first).reduce((s, m) => s + m.amountCents, 0);
   const due = own
     .filter((m) => m.date >= first && m.date <= last)
-    .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false, ...(m.ref ? { ref: m.ref } : {}), ...(m.usage ? { usage: m.usage } : {}), ...(m.occurrence ? { occurrence: m.occurrence } : {}), ...(m.txnId ? { txnId: m.txnId } : {}) }))
+    .map((m, i) => ({ key: `m${i}`, date: m.date, label: m.label, source: m.source, amountCents: m.amountCents, overdue: m.overdue ?? false, ...(m.ref ? { ref: m.ref } : {}), ...(m.usage ? { usage: m.usage } : {}), ...(m.occurrence ? { occurrence: m.occurrence } : {}), ...(m.txnId ? { txnId: m.txnId } : {}), ...(m.ruleId ? { ruleId: m.ruleId } : {}) }))
     .sort((a, b) => a.date.localeCompare(b.date) || Number(b.overdue) - Number(a.overdue) || a.amountCents - b.amountCents);
   const dueTotals = totals(due);
   return { month, openingCents, due, dueTotals, closingCents: openingCents - dueTotals.outCents + dueTotals.inCents };

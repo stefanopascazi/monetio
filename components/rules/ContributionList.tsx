@@ -1,8 +1,8 @@
 "use client";
 
 import { HandCoins, Trash2 } from "lucide-react";
-import { useState } from "react";
 import { Accordion, Amount, EmptyState, InlineConfirm } from "@monetio/ui";
+import { openTargetId, useOpenTarget } from "@/hooks/useOpenTarget";
 import { deleteContribution, updateContribution } from "@/app/actions/rules";
 import type { NamedRef } from "@/components/common/options";
 import type { ContributionRule } from "@/lib/domain/types";
@@ -35,8 +35,19 @@ function Body({ c, accounts, categories, onDone }: { c: ContributionView; accoun
   );
 }
 
-export function ContributionList({ items, accounts, categories }: { items: ContributionView[]; accounts: NamedRef[]; categories: NamedRef[] }) {
-  const [open, setOpen] = useState<string[]>([]);
+export function ContributionList({
+  items,
+  accounts,
+  categories,
+  initialOpen,
+}: {
+  items: ContributionView[];
+  accounts: NamedRef[];
+  categories: NamedRef[];
+  /** Contribution opened from a link (e.g. the account recap). */
+  initialOpen?: string;
+}) {
+  const [open, setOpen] = useOpenTarget(initialOpen);
   if (!items.length) return <EmptyState icon={<HandCoins />} title="Nessuna quota" description="Le quote spostano ogni mese denaro verso un conto condiviso." />;
   return (
     <Accordion
@@ -46,7 +57,7 @@ export function ContributionList({ items, accounts, categories }: { items: Contr
       items={items.map((c) => ({
         id: c.id,
         title: (
-          <span className="flex min-w-0 flex-col text-left">
+          <span id={openTargetId(c.id)} className="flex min-w-0 flex-col text-left">
             <span className="truncate font-semibold">{c.description}</span>
             <span className="truncate text-sm font-normal text-ink-muted">
               {c.fromName} → {c.toName} · giorno {c.dayOfMonth}

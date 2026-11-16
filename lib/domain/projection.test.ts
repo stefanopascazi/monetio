@@ -149,8 +149,14 @@ describe("projectBalances", () => {
     const planned = [txn({ id: "t1", accountId: "joint", amountCents: -5000, bookedOn: "2026-11-25", status: "planned" })];
     const res = projectedMovements({ ...base, months: 1, rules: [luce], overrides, planned });
     expect(res).toMatchObject([
-      { source: "rule", ref: ruleKey("l", "2026-11-15"), occurrence: { dueDate: "2026-11-20", confirmed: true, note: "bolletta" } },
+      { source: "rule", ruleId: "l", ref: ruleKey("l", "2026-11-15"), occurrence: { dueDate: "2026-11-20", confirmed: true, note: "bolletta" } },
       { source: "planned", txnId: "t1" },
     ]);
+  });
+
+  it("tags contributions with their key and id, to book them and open their origin", () => {
+    const quota = contribution({ id: "q", fromAccountId: "ste", toAccountId: "joint", dayOfMonth: 20, startDate: "2026-11-01" });
+    const [from] = projectedMovements({ ...base, months: 1, contributions: [quota] });
+    expect(from).toMatchObject({ source: "contribution", accountId: "ste", ref: "c:q|2026-11", ruleId: "q" });
   });
 });

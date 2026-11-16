@@ -10,7 +10,16 @@ import { useToastAction } from "@/hooks/useToastAction";
 import type { DueView } from "./DueList";
 
 /** Actual amount and due date of one occurrence (e.g. the bill arrived), without paying it. */
-export function ActualAmountForm({ entry, onClose }: { entry: Pick<DueView, "key" | "amountCents" | "date" | "note" | "confirmed">; onClose: () => void }) {
+export function ActualAmountForm({
+  entry,
+  onClose,
+  hint,
+}: {
+  entry: Pick<DueView, "key" | "amountCents" | "date" | "note" | "confirmed">;
+  onClose: () => void;
+  /** Explains what saving does, e.g. that it does not book the payment. */
+  hint?: string;
+}) {
   const [amount, setAmount] = useState<number | null>(Math.abs(entry.amountCents));
   const { state, pending, onSubmit, error } = useFormAction(setOccurrenceAmount.bind(null, entry.key), onClose);
   const { pending: clearing, run } = useToastAction();
@@ -23,6 +32,7 @@ export function ActualAmountForm({ entry, onClose }: { entry: Pick<DueView, "key
       className="mx-4 mb-4 grid grid-cols-1 gap-3 rounded-[22px] bg-surface-raised p-4 sm:grid-cols-2"
     >
       <FormMessage state={state} />
+      {hint && <p className="text-sm text-ink-muted sm:col-span-2">{hint}</p>}
       <input type="hidden" name="amountCents" value={amount ?? ""} />
       <AmountInput label="Importo da pagare" kind={entry.amountCents >= 0 ? "income" : "expense"} valueCents={amount} onValueChange={setAmount} error={error("amountCents")} />
       <TextField name="dueDate" type="date" label="Scadenza" defaultValue={entry.date} error={error("dueDate")} required />

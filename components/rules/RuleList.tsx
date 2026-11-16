@@ -8,6 +8,7 @@ import { FREQUENCY_LABEL, type NamedRef, SCHEDULE_LABEL } from "@/components/com
 import { groupRules } from "@/lib/data/rule-groups";
 import { dateLabel } from "@/lib/domain/dates";
 import type { RecurringRule } from "@/lib/domain/types";
+import { openTargetId, useOpenTarget } from "@/hooks/useOpenTarget";
 import { useToastAction } from "@/hooks/useToastAction";
 import { AmountWithFee } from "@/components/payments/AmountWithFee";
 import { PAYMENT_LABEL } from "@/lib/domain/fees";
@@ -80,7 +81,7 @@ function RuleAccordion({
       items={rules.map((r) => ({
         id: r.id,
         title: (
-          <span className="flex min-w-0 flex-col text-left">
+          <span id={openTargetId(r.id)} className="flex min-w-0 flex-col text-left">
             <span className="flex items-center gap-2 truncate font-semibold">
               {r.description}
               {!r.active && <Badge size="sm">Disattivata</Badge>}
@@ -106,6 +107,7 @@ export function RuleList({
   categories,
   transferTargets,
   today,
+  initialOpen,
 }: {
   rules: RuleView[];
   accounts: NamedRef[];
@@ -113,8 +115,10 @@ export function RuleList({
   /** Household accounts the viewer cannot see, offered as transfer destinations. */
   transferTargets?: NamedRef[];
   today: string;
+  /** Rule opened from a link (e.g. the account recap). */
+  initialOpen?: string;
 }) {
-  const [open, setOpen] = useState<string[]>([]);
+  const [open, setOpen] = useOpenTarget(initialOpen);
   const [query, setQuery] = useState("");
   if (!rules.length) return <EmptyState icon={<Repeat />} title="Nessuna ricorrenza" description="Aggiungi stipendi, rate e bollette per vedere scadenze e proiezioni." />;
   const groups = groupRules(rules, accounts, query);
