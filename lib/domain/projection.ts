@@ -51,8 +51,14 @@ export interface Movement {
   source: MovementSource;
   /** Due before today and still unpaid: counted as if it happened today. */
   overdue?: boolean;
-  /** Estimates: occurrence key (`r:<rule>|<period>`), to close or book it. */
+  /** Estimates and rule occurrences: occurrence key (`r:<rule>|<period>`), to close, book or edit it. */
   ref?: string;
+  /** Rule occurrences: effective due date and the actual amount/date entered, to edit it. */
+  occurrence?: { dueDate: ISODate; confirmed: boolean; note: string | null };
+  /** Planned transactions: their id, to edit, delete or book them. */
+  txnId?: string;
+  /** Rule or contribution the movement comes from, to show and open its origin. */
+  ruleId?: string;
   /** Category of the rule or planned transaction, when it has one. */
   categoryId?: string | null;
   /** Transfers: the other account of the pair. */
@@ -83,12 +89,13 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     ref?: string,
     categoryId: string | null = null,
     usage?: EstimateUsage,
+    extra: Pick<Movement, "occurrence" | "txnId" | "ruleId"> = {},
   ) => {
     // An estimate is a budget for its whole month, never late: an earlier day only moves it to today.
     const overdue = date < today && source !== "estimate";
     const d = date < today ? today : date;
-    out.push({ date: d, accountId, amountCents, label, source, overdue, ref, categoryId, ...(counterpart ? { counterpartId: counterpart } : {}), ...(usage ? { usage } : {}) });
-    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref, categoryId, counterpartId: accountId });
+    out.push({ date: d, accountId, amountCents, label, source, overdue, ref, categoryId, ...(counterpart ? { counterpartId: counterpart } : {}), ...(usage ? { usage } : {}), ...extra });
+    if (counterpart) out.push({ date: d, accountId: counterpart, amountCents: -amountCents, label, source, overdue, ref, categoryId, counterpartId: accountId, ...extra });
   };
   const draw = estimatePool(input.estimateMovements ?? []);
   const decreasing: { rule: RecurringRule; usage: EstimateUsage }[] = [];
@@ -117,7 +124,7 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
           }
         }
         // A used-up decreasing estimate stays listed at zero, to show what consumed it.
-        if (amount || usage) push(d, r.accountId, amount, counterpart, r.description, "estimate", key, r.categoryId, usage);
+        if (amount || usage) push(d, r.accountId, amount, counterpart, r.description, "estimate", key, r.categoryId, usage, { ruleId: r.id });
       }
       continue;
     }
@@ -125,10 +132,14 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
       const key = ruleKey(r.id, d, r.frequency);
       if (booked.has(key)) continue;
       const o = input.overrides?.get(key);
-      push(o?.dueDate ?? d, r.accountId, o?.amountCents ?? r.amountCents, counterpart, r.description, "rule", undefined, r.categoryId);
+      const due = o?.dueDate ?? d;
+      push(due, r.accountId, o?.amountCents ?? r.amountCents, counterpart, r.description, "rule", key, r.categoryId, undefined, {
+        occurrence: { dueDate: due, confirmed: !!o, note: o?.note ?? null },
+        ruleId: r.id,
+      });
       // Bonifico/CBill/transfer fee, booked as its own expense of the paying account with each occurrence.
       const source = feeSource(r.kind, r.paymentMethod);
-      if (source && r.feeCents) push(o?.dueDate ?? d, r.accountId, -r.feeCents, null, feeDescription(source, r.description), "rule");
+      if (source && r.feeCents) push(due, r.accountId, -r.feeCents, null, feeDescription(source, r.description), "rule", undefined, null, undefined, { ruleId: r.id });
     }
   }
 
@@ -145,12 +156,12 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
     for (const d of dates) {
       if (booked.has(contributionKey(c.id, d))) continue;
       const { baseCents } = contributionBase(c, monthKey(d), currentMonth, input.contributionSpending);
-      push(d, c.fromAccountId, -contributionAmount(c, baseCents), c.toAccountId, c.description, "contribution");
+      push(d, c.fromAccountId, -contributionAmount(c, baseCents), c.toAccountId, c.description, "contribution", contributionKey(c.id, d), null, undefined, { ruleId: c.id });
     }
   }
 
   for (const t of planned) {
-    if (t.status === "planned") push(t.bookedOn, t.accountId, t.amountCents, null, t.description, "planned", undefined, t.categoryId);
+    if (t.status === "planned") push(t.bookedOn, t.accountId, t.amountCents, null, t.description, "planned", undefined, t.categoryId, undefined, { txnId: t.id });
   }
   return out;
 }

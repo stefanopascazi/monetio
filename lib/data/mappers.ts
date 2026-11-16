@@ -1,7 +1,8 @@
 // Database rows (snake_case, bigint as number|string) to domain objects.
 import { maskIban } from "../banking/identifiers";
+import { todayISO } from "../domain/dates";
 import { feeSource } from "../domain/fees";
-import type { Account, Category, ContributionRule, Member, RecurringRule, Transaction } from "../domain/types";
+import type { Account, Category, ContributionRule, Member, OccurrenceOverride, RecurringRule, Transaction } from "../domain/types";
 
 type Row = Record<string, unknown>;
 
@@ -89,6 +90,21 @@ export function mapTransaction(r: Row): Transaction {
   };
 }
 
+export function mapOverride(r: Row): OccurrenceOverride {
+  return {
+    ruleId: String(r.rule_id),
+    period: String(r.period),
+    amountCents: Number(r.amount_cents),
+    dueDate: String(r.due_date),
+    note: r.note == null ? null : String(r.note),
+  };
+}
+
+/** Creation day (Europe/Rome) and creator of a rule or contribution row. */
+function creation(r: Row): { createdOn?: string; createdBy: string | null } {
+  return { ...(r.created_at ? { createdOn: todayISO(new Date(String(r.created_at))) } : {}), createdBy: str(r.created_by) };
+}
+
 export function mapRule(r: Row): RecurringRule {
   return {
     id: String(r.id),
@@ -107,6 +123,7 @@ export function mapRule(r: Row): RecurringRule {
     paymentMethod: (str(r.payment_method) as RecurringRule["paymentMethod"]) ?? null,
     feeCents: feeSource(String(r.kind), str(r.payment_method) as RecurringRule["paymentMethod"]) ? num(r.fee_cents) : 0,
     decrementCategoryIds: Array.isArray(r.decrement_category_ids) ? r.decrement_category_ids.map(String) : [],
+    ...creation(r),
   };
 }
 
@@ -127,6 +144,7 @@ export function mapContribution(r: Row): ContributionRule {
     startDate: String(r.start_date),
     endDate: str(r.end_date),
     active: Boolean(r.active),
+    ...creation(r),
   };
 }
 

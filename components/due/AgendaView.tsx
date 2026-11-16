@@ -7,11 +7,14 @@ import { contributionViews, dueViews, ruleViews } from "@/lib/data/page-views";
 import { categoryRefs } from "@/components/common/options";
 import { listAccounts, listCategories, listHiddenAccounts } from "@/lib/data/queries";
 import { transferTargets } from "@/lib/data/transfer-targets";
+import { agendaTarget } from "./agenda-target";
 import { DueList } from "./DueList";
 import { UpcomingList } from "./UpcomingList";
 
-export async function AgendaView() {
-  const agenda = await loadAgenda();
+/** Scadenze page; `searchParams` can open a rule or contribution (links from the account recap). */
+export async function AgendaView({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [agenda, sp] = await Promise.all([loadAgenda(), searchParams]);
+  const target = agendaTarget(sp);
   const [accounts, categories, hidden] = await Promise.all([listAccounts(), listCategories(), listHiddenAccounts()]);
   const active = accounts.filter((a) => !a.archived);
   const refs = active.map((a) => ({ id: a.id, name: a.name }));
@@ -27,6 +30,7 @@ export async function AgendaView() {
       <PageHeader title="Scadenze" description="Pagamenti da confermare, addebiti automatici in arrivo e regole ricorrenti." />
       <Tabs
         aria-label="Sezioni scadenze"
+        defaultValue={target.tab}
         tabs={[
           {
             id: "due",
@@ -47,7 +51,7 @@ export async function AgendaView() {
             count: rules.filter((r) => r.active).length,
             content: (
               <section className="flex flex-col gap-4 pt-4">
-                <RuleList rules={rules} accounts={refs} categories={catRefs} transferTargets={targets} today={agenda.today} />
+                <RuleList rules={rules} accounts={refs} categories={catRefs} transferTargets={targets} today={agenda.today} initialOpen={target.tab === "rules" ? target.open : undefined} />
               </section>
             ),
           },
@@ -57,7 +61,7 @@ export async function AgendaView() {
             count: contributions.length,
             content: (
               <section className="flex flex-col gap-4 pt-4">
-                <ContributionList items={contributions} accounts={refs} categories={catRefs} />
+                <ContributionList items={contributions} accounts={refs} categories={catRefs} initialOpen={target.tab === "quote" ? target.open : undefined} />
               </section>
             ),
           },

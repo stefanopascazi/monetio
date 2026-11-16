@@ -4,8 +4,10 @@ import { isExceeded, isUsedUp, RECAP_SOURCE } from "./recap-source";
 const usage = { totalCents: 6500, usedCents: 6500, overCents: 0, parts: [] };
 
 describe("recap-source", () => {
-  it("badges only projected sources", () => {
-    expect(RECAP_SOURCE.booked).toBeNull();
+  it("badges estimates and contributions only (planned rows show a clock icon)", () => {
+    expect(RECAP_SOURCE.rule).toBeNull();
+    expect(RECAP_SOURCE.planned).toBeNull();
+    expect(RECAP_SOURCE.contribution?.label).toBe("quota");
     expect(RECAP_SOURCE.estimate?.label).toBe("stima");
   });
 

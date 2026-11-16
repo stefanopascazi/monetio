@@ -6,7 +6,7 @@ import { feeSource } from "@/lib/domain/fees";
 import { loadAgenda } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
 import { fetchFeeCategoryId } from "@/lib/data/fee-category";
-import { syncAutoRules } from "@/lib/data/sync";
+import { bookPassedOccurrences } from "@/lib/data/sync";
 import { entryTransaction, paymentRows } from "@/lib/data/rows";
 import { parseContributionForm } from "@/lib/forms/contribution";
 import { isISODate, isUUID, positiveCents } from "@/lib/forms/parse";
@@ -36,21 +36,12 @@ function ruleRow(v: ReturnType<typeof parseRuleForm> & { ok: true }) {
   };
 }
 
-/** Books automatic occurrences already due (e.g. a rule starting in the past); the rule is saved either way. */
-async function bookPassedOccurrences(ctx: Awaited<ReturnType<typeof getContext>>) {
-  try {
-    await syncAutoRules(ctx, todayISO());
-  } catch (e) {
-    console.error("syncAutoRules failed", e instanceof Error ? e.message : e);
-  }
-}
-
 export async function createRule(prev: ActionState, fd: FormData): Promise<ActionState> {
   const ctx = await getContext();
   const parsed = parseRuleForm(fd);
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
   const supabase = await createClient();
-  const { error } = await supabase.from("recurring_rules").insert({ household_id: ctx.householdId, ...ruleRow(parsed) });
+  const { error } = await supabase.from("recurring_rules").insert({ household_id: ctx.householdId, created_by: ctx.userId, ...ruleRow(parsed) });
   if (error) return failure(dbErrorMessage(error));
   await bookPassedOccurrences(ctx);
   refresh();
@@ -103,7 +94,7 @@ export async function createContribution(prev: ActionState, fd: FormData): Promi
   const parsed = parseContributionForm(fd);
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
   const supabase = await createClient();
-  const { error } = await supabase.from("contribution_rules").insert({ household_id: ctx.householdId, start_date: todayISO(), ...contributionRow(parsed) });
+  const { error } = await supabase.from("contribution_rules").insert({ household_id: ctx.householdId, created_by: ctx.userId, start_date: todayISO(), ...contributionRow(parsed) });
   if (error) return failure(dbErrorMessage(error));
   refresh();
   return success("Quota aggiunta.", prev);

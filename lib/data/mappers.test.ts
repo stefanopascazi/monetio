@@ -42,6 +42,9 @@ describe("mappers", () => {
     expect(mapRule({ id: "r", account_id: "a", kind: "income", description: "S", amount_cents: 1, frequency: "monthly", schedule: "auto", day_of_month: 27, start_date: "2026-11-01", end_date: null, active: true }).dayOfMonth).toBe(27);
     expect(mapRule({ id: "r", account_id: "a", kind: "expense", description: "A", amount_cents: -1, payment_method: "bank_transfer", fee_cents: "65", active: true })).toMatchObject({ paymentMethod: "bank_transfer", feeCents: 65 });
     expect(mapRule({ id: "r", account_id: "a", kind: "expense", description: "A", amount_cents: -1, fee_cents: 65, active: true })).toMatchObject({ paymentMethod: null, feeCents: 0 });
+    // Creation day in Europe/Rome: 23:30 UTC is already the next day there.
+    expect(mapRule({ id: "r", account_id: "a", kind: "expense", description: "A", amount_cents: -1, created_at: "2026-11-03T23:30:00Z", created_by: "u1" })).toMatchObject({ createdOn: "2026-11-04", createdBy: "u1" });
+    expect(mapContribution({ id: "c", from_account_id: "a", to_account_id: "b", description: "Q", created_at: "2026-10-01T08:00:00Z" })).toMatchObject({ createdOn: "2026-10-01", createdBy: null });
     expect(mapRule({ id: "r", account_id: "a", counterpart_account_id: "b", kind: "transfer", description: "G", amount_cents: -1, fee_cents: 100, active: true })).toMatchObject({ paymentMethod: null, feeCents: 100 });
     expect(mapContribution({ id: "c", from_account_id: "a", to_account_id: "b", description: "Q", fixed_cents: "80000", share_percent: "50.00", category_ids: ["x"], rounding_cents: 1000, day_of_month: 28, estimated_spending_cents: 45000, start_date: "2026-11-01", active: true })).toMatchObject({ fixedCents: 80000, sharePercent: 50, categoryIds: ["x"] });
     expect(mapCategory({ id: "c", name: "Spesa", kind: "expense", icon: "cart", color_index: 9 }).colorIndex).toBe(6);

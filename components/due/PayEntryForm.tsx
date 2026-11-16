@@ -10,7 +10,11 @@ import { FEE_SOURCE_LABEL, feeSource } from "@/lib/domain/fees";
 import type { DueView } from "./DueList";
 
 /** Inline confirmation of a deadline with the actual amount, date and (bonifico/CBill/transfer) fee. */
-export function PayEntryForm({ entry, today, onClose }: { entry: DueView; today: string; onClose: () => void }) {
+export function PayEntryForm({ entry, today, onClose }: {
+  entry: Pick<DueView, "key" | "amountCents" | "canConfirm" | "kind" | "paymentMethod" | "feeCents">;
+  today: string;
+  onClose: () => void;
+}) {
   const [amount, setAmount] = useState<number | null>(Math.abs(entry.amountCents));
   const [fee, setFee] = useState<number | null>(entry.feeCents || null);
   const { state, pending, onSubmit, error } = useFormAction(markEntryPaid.bind(null, entry.key), onClose);

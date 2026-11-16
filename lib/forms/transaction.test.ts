@@ -32,6 +32,16 @@ describe("parseTransactionForm", () => {
     expect(res.ok && res.value).toMatchObject({ amountCents: 100, status: "planned" });
   });
 
+  it("books a planned movement whose date is already reached", () => {
+    const base = { kind: "expense", accountId: A, amountCents: "100", description: "Dentista", status: "planned" };
+    const today = parseTransactionForm(form({ ...base, bookedOn: "2026-11-05" }), "2026-11-05");
+    expect(today.ok && today.value.status).toBe("booked");
+    const past = parseTransactionForm(form({ ...base, bookedOn: "2026-11-01" }), "2026-11-05");
+    expect(past.ok && past.value.status).toBe("booked");
+    const future = parseTransactionForm(form({ ...base, bookedOn: "2026-11-06" }), "2026-11-05");
+    expect(future.ok && future.value.status).toBe("planned");
+  });
+
   it("requires a different counterpart for transfers", () => {
     const res = parseTransactionForm(form({ kind: "transfer", accountId: A, counterpartAccountId: A, amountCents: "100", bookedOn: "2026-11-05", description: "Giro" }), "2026-11-05");
     expect(res).toEqual({ ok: false, errors: { counterpartAccountId: "Scegli un conto diverso da quello di partenza" } });

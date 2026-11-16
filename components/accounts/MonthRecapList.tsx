@@ -3,10 +3,7 @@ import { Amount } from "@monetio/ui";
 import { MobileFoldCard } from "@/components/common/MobileFoldCard";
 import { addMonthsToKey, monthLabel } from "@/lib/domain/dates";
 import type { MonthRecap, RecapItem, RecapTotals } from "@/lib/domain/month-recap";
-import { EstimateActions } from "./EstimateActions";
-import { EstimateUsageRow } from "./EstimateUsageRow";
-import { isUsedUp } from "./recap-source";
-import { RecapItemSummary } from "./RecapItemSummary";
+import { type RecapEditing, RecapRow } from "./RecapRow";
 
 function Totals({ totals }: { totals: RecapTotals }) {
   return (
@@ -17,7 +14,7 @@ function Totals({ totals }: { totals: RecapTotals }) {
   );
 }
 
-function Group({ title, period, items, totals, empty, today }: { title: string; period: string; items: RecapItem[]; totals: RecapTotals; empty: string; today?: string }) {
+function Group({ title, period, items, totals, empty, today, editing }: { title: string; period: string; items: RecapItem[]; totals: RecapTotals; empty: string; today?: string; editing?: RecapEditing }) {
   return (
     <MobileFoldCard aria-label={title} title={title} subtitle={`${items.length} ${items.length === 1 ? "movimento" : "movimenti"} · ${period}`} action={<Totals totals={totals} />} padding="none">
       {items.length === 0 ? (
@@ -25,22 +22,7 @@ function Group({ title, period, items, totals, empty, today }: { title: string; 
       ) : (
         <ul className="divide-y divide-[var(--mio-border)]">
           {items.map((x) => (
-            <li key={x.key} className={x.usage ? "flex flex-col gap-2 px-1 py-1" : "flex flex-col gap-2 px-5 py-3"}>
-              {x.usage ? (
-                <EstimateUsageRow item={{ ...x, usage: x.usage }} />
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <RecapItemSummary item={x} />
-                  <Amount cents={x.amountCents} size="sm" showSign />
-                </div>
-              )}
-              {/* Estimates of the current month: book the remainder or drop it (nothing left once used up). */}
-              {today && x.ref && !isUsedUp(x) && (
-                <div className={x.usage ? "px-4 pb-2" : undefined}>
-                  <EstimateActions refKey={x.ref} amountCents={x.amountCents} today={today} />
-                </div>
-              )}
-            </li>
+            <RecapRow key={x.key} item={x} today={today} editing={editing} />
           ))}
         </ul>
       )}
@@ -49,21 +31,22 @@ function Group({ title, period, items, totals, empty, today }: { title: string; 
 }
 
 export interface MonthRecapListProps {
-  recap: Pick<MonthRecap, "month" | "openingCents" | "closingCents" | "paid" | "due" | "paidTotals" | "dueTotals">;
-  /** Today's month: the opening is the current balance and booked rows are always listed. */
+  recap: Pick<MonthRecap, "month" | "openingCents" | "closingCents" | "due" | "dueTotals">;
+  /** Today's month: the opening is the current balance. */
   current: boolean;
   /** Month navigation (PeriodNav). */
   nav?: ReactNode;
   /** Today's date: enables closing or booking the current month's estimates. */
   today?: string;
+  /** Planned movements and refs, to edit or delete them from their row. */
+  editing?: RecapEditing;
 }
 
 const balanceTone = (cents: number) => (cents < 0 ? "expense" : "neutral");
 
-/** Month of one account: balances and navigation, then still to book and booked as separate cards. */
-export function MonthRecapList({ recap, current, nav, today }: MonthRecapListProps) {
+/** Month of one account: balances and navigation, then what is still to book (booked rows live in the statement). */
+export function MonthRecapList({ recap, current, nav, today, editing }: MonthRecapListProps) {
   const period = monthLabel(recap.month, true);
-  const showPaid = current || recap.paid.length > 0;
   return (
     <div className="flex flex-col gap-4">
       <section aria-label="Riepilogo del mese" className="flex flex-col gap-3 rounded-[22px] bg-surface px-5 py-4">
@@ -83,8 +66,7 @@ export function MonthRecapList({ recap, current, nav, today }: MonthRecapListPro
           </div>
         </dl>
       </section>
-      <Group title="Da contabilizzare" period={period} items={recap.due} totals={recap.dueTotals} empty={`Nessun movimento da contabilizzare: ${period}.`} today={current ? today : undefined} />
-      {showPaid && <Group title="Contabilizzato" period={period} items={recap.paid} totals={recap.paidTotals} empty={`Nessun movimento contabilizzato: ${period}.`} />}
+      <Group title="Da contabilizzare" period={period} items={recap.due} totals={recap.dueTotals} empty={`Nessun movimento da contabilizzare: ${period}.`} today={current ? today : undefined} editing={editing} />
     </div>
   );
 }

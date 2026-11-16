@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { loadAgenda } from "@/lib/data/agenda";
 import { getContext } from "@/lib/data/context";
+import { bookPassedOccurrences } from "@/lib/data/sync";
 import { parseOverrideForm, parseRuleKey } from "@/lib/forms/override";
 import { createClient } from "@/lib/supabase/server";
 import { type ActionState, dbErrorMessage, failure, success } from "./state";
@@ -13,12 +14,12 @@ export async function setOccurrenceAmount(key: string, prev: ActionState, fd: Fo
   const ref = parseRuleKey(key);
   if (!ref) return failure("Scadenza non valida.");
   const agenda = await loadAgenda();
-  const entry = agenda.due.find((e) => e.key === key);
-  if (!entry) return failure("Scadenza non trovata o già pagata.");
+  // Any unbooked occurrence of a visible due/auto rule, also in later months of the account recap.
+  const rule = agenda.rules.find((r) => r.id === ref.ruleId);
+  if (!rule || rule.schedule === "estimate" || agenda.booked.has(key)) return failure("Scadenza non trovata o già pagata.");
   const parsed = parseOverrideForm(fd);
   if (!parsed.ok) return failure("Controlla i campi evidenziati.", parsed.errors);
-  const rule = agenda.rules.find((r) => r.id === ref.ruleId);
-  const sign = Math.sign(rule?.amountCents ?? entry.amountCents) || -1;
+  const sign = Math.sign(rule.amountCents) || -1;
 
   const supabase = await createClient();
   const { error } = await supabase.from("rule_occurrence_overrides").upsert(
@@ -35,8 +36,10 @@ export async function setOccurrenceAmount(key: string, prev: ActionState, fd: Fo
     { onConflict: "rule_id,period" },
   );
   if (error) return failure(dbErrorMessage(error));
+  // An automatic occurrence moved to today or earlier is booked right away.
+  if (rule.schedule === "auto") await bookPassedOccurrences(ctx);
   refresh();
-  return success(`${entry.description}: importo reale salvato.`, prev);
+  return success(`${rule.description}: importo reale salvato.`, prev);
 }
 
 /** Removes the actual amount, going back to the rule's estimate. */

@@ -40,6 +40,16 @@ describe("autoBookings", () => {
       "2026-11-01",
     ]);
   });
+
+  it("books an occurrence on its actual date and amount when one was entered", () => {
+    const r = rule({ amountCents: -5000, dayOfMonth: 1, startDate: "2026-11-01" });
+    const later = overrideMap([{ ruleId: "r1", period: "2026-11", amountCents: -6200, dueDate: "2026-11-10", note: null }]);
+    expect(autoBookings([r], new Set(), today, "2026-10-01", later)).toEqual([]);
+    const earlier = overrideMap([{ ruleId: "r1", period: "2026-12", amountCents: -6200, dueDate: "2026-11-04", note: null }]);
+    expect(autoBookings([r], new Set([ruleKey("r1", "2026-11-01")]), today, "2026-10-01", earlier)).toMatchObject([
+      { date: "2026-11-04", occurrenceDate: "2026-12-01", amountCents: -6200 },
+    ]);
+  });
 });
 
 describe("rule entries with fees", () => {

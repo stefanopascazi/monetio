@@ -14,12 +14,11 @@ import { accountHref, adjacentAccounts, switcherAccounts } from "@/lib/navigatio
 import { AccountPanes } from "./AccountPanes";
 import { BalanceHistoryCard } from "./sections/BalanceHistoryCard";
 import { MonthRecapCard } from "./sections/MonthRecapCard";
-import { PlannedCard } from "./sections/PlannedCard";
 import { StatementCard } from "./sections/StatementCard";
 
 /**
  * Account page body: name, balance and colour live in the carousel card above (conti layout),
- * the settings gear sits in the top bar. Statement, recap, chart and planned rows stream on their own.
+ * the settings gear sits in the top bar. Statement, recap (planned rows included) and chart stream on their own.
  * New movements come from the top bar "+".
  */
 export async function StatementView({ id, searchParams }: { id: string; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -52,9 +51,6 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
               </StreamBlock>
               <Suspense fallback={null}>
                 <BalanceHistoryCard accountId={id} accountName={account.name} year={year} />
-              </Suspense>
-              <Suspense fallback={null}>
-                <PlannedCard accountId={id} />
               </Suspense>
             </>
           }

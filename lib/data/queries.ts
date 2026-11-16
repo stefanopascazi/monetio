@@ -7,7 +7,7 @@ import { createClient } from "../supabase/server";
 import { activeHouseholdId } from "./context";
 import { type MonthlyFlow, mapFlow } from "./flows";
 import type { ExpenseRow } from "./statistics";
-import { attachFees, type ListTotals, mapAccount, mapCategory, mapContribution, mapRule, mapTotals, mapTransaction } from "./mappers";
+import { attachFees, type ListTotals, mapAccount, mapCategory, mapContribution, mapOverride, mapRule, mapTotals, mapTransaction } from "./mappers";
 import { searchTerm } from "./params";
 import type { HiddenAccount } from "./transfer-targets";
 import { hiddenAccountName } from "./views";
@@ -255,13 +255,7 @@ export const listOverrides = cache(async (): Promise<OccurrenceOverride[]> => {
   const [supabase, hh] = await Promise.all([createClient(), activeHouseholdId()]);
   const { data, error } = await supabase.from("rule_occurrence_overrides").select("rule_id, period, amount_cents, due_date, note").eq("household_id", hh);
   if (error) throw error;
-  return (data ?? []).map((r) => ({
-    ruleId: String(r.rule_id),
-    period: String(r.period),
-    amountCents: Number(r.amount_cents),
-    dueDate: String(r.due_date),
-    note: r.note == null ? null : String(r.note),
-  }));
+  return (data ?? []).map(mapOverride);
 });
 
 /** Date of the latest booked movement per account (null when it has none): one indexed read each. */
