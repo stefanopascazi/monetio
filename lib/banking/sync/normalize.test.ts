@@ -24,6 +24,11 @@ describe("toCents", () => {
 });
 
 describe("normalizeTransactions", () => {
+  it("does not repeat a counterparty already in the remittance text", () => {
+    const [m] = normalizeTransactions([txn({ entry_reference: "r", creditor: { name: "Aino Mäkinen" }, remittance_information: ["Aino Mäkinen-DBIT-1.00"] })]);
+    expect(m.description).toBe("Aino Mäkinen-DBIT-1.00");
+  });
+
   it("signs by direction and builds a readable description", () => {
     const [out, inc] = normalizeTransactions([
       txn({ entry_reference: "r1", creditor: { name: "Esselunga" }, remittance_information: ["Spesa", " carta 1234 "], creditor_account: { iban: "it60 x054 2811 1010 0000 0123 456" } }),
