@@ -6,11 +6,23 @@ import { removeBankConnection } from "@/app/actions/bank-links";
 import { useToastAction } from "@/hooks/useToastAction";
 import { type BankConnection, consentDaysLeft } from "@/lib/banking/connections";
 import { BankAccountLinkSelect } from "./BankAccountLinkSelect";
+import { BankAccountStatus } from "./BankAccountStatus";
 
 const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
 /** Consents given at banks, with the accounts each one covers and the MonetIO account each feeds. */
-export function BankConnectionList({ connections, accountOptions, now = new Date() }: { connections: BankConnection[]; accountOptions: SelectOption[]; now?: Date }) {
+export function BankConnectionList({
+  connections,
+  accountOptions,
+  balances = {},
+  now = new Date(),
+}: {
+  connections: BankConnection[];
+  accountOptions: SelectOption[];
+  /** MonetIO balance by account id, for the comparison with the bank's. */
+  balances?: Record<string, number>;
+  now?: Date;
+}) {
   const { run } = useToastAction();
   if (!connections.length) return null;
   return (
@@ -22,8 +34,12 @@ export function BankConnectionList({ connections, accountOptions, now = new Date
           <Card
             key={c.id}
             title={c.bankName}
-            subtitle={expired ? "Consenso scaduto: collega di nuovo la banca" : `Consenso valido fino al ${dateFormat.format(new Date(c.validUntil))} (${days} giorni)`}
-            action={expired ? <Badge tone="danger">Scaduto</Badge> : days <= 14 ? <Badge tone="warning">In scadenza</Badge> : <Badge tone="success">Attivo</Badge>}
+            subtitle={
+              expired ? "Consenso scaduto: collega di nuovo la banca" : `Consenso valido fino al ${dateFormat.format(new Date(c.validUntil))} (${days} giorni)`
+            }
+            action={
+              expired ? <Badge tone="danger">Scaduto</Badge> : days <= 14 ? <Badge tone="warning">In scadenza</Badge> : <Badge tone="success">Attivo</Badge>
+            }
           >
             <div className="flex flex-col gap-4">
               {c.accounts.length ? (
@@ -36,6 +52,7 @@ export function BankConnectionList({ connections, accountOptions, now = new Date
                         {a.ibanMasked && <span className="shrink-0 font-mono text-xs text-ink-muted">{a.ibanMasked}</span>}
                       </div>
                       <BankAccountLinkSelect bankAccountId={a.id} accountId={a.accountId} options={accountOptions} />
+                      {a.accountId && <BankAccountStatus account={a} monetioBalanceCents={balances[a.accountId]} />}
                     </li>
                   ))}
                 </ul>

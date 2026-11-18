@@ -19,7 +19,19 @@ const base: BankConnection = {
   status: "active",
   createdAt: "2026-11-18T10:00:00Z",
   lastSyncedAt: null,
-  accounts: [{ id: "a1", name: "Conto corrente", ibanMasked: "IT60 •••• 3456", currency: "EUR", accountId: null }],
+  accounts: [
+    {
+      id: "a1",
+      name: "Conto corrente",
+      ibanMasked: "IT60 •••• 3456",
+      currency: "EUR",
+      accountId: null,
+      bankBalanceCents: null,
+      bankBalanceOn: null,
+      lastSyncedAt: null,
+      lastError: null,
+    },
+  ],
 };
 const options = [{ value: "acc-1", label: "Conto casa" }];
 const wrap = (ui: React.ReactNode) => render(<ToastProvider>{ui}</ToastProvider>);
@@ -51,6 +63,12 @@ describe("BankConnectionList", () => {
     await userEvent.click(screen.getByRole("button", { name: "Scollega" }));
     await userEvent.click(screen.getAllByRole("button", { name: "Scollega" }).at(-1)!);
     expect(removeBankConnection).toHaveBeenCalledWith("c1");
+  });
+
+  it("shows the sync status only for linked accounts", () => {
+    const linked = { ...base, accounts: [{ ...base.accounts[0], accountId: "acc-1", bankBalanceCents: 1000 }] };
+    wrap(<BankConnectionList connections={[linked]} accountOptions={options} balances={{ "acc-1": 1000 }} now={now} />);
+    expect(screen.getByText("Allineato")).toBeInTheDocument();
   });
 
   it("renders nothing without connections", () => {

@@ -7,11 +7,13 @@ import { bankService } from "@/lib/banking/server";
 import { getContext } from "@/lib/data/context";
 import { getMyBankApp } from "@/lib/data/bank-credentials";
 import { listMyBankConnections } from "@/lib/data/bank-connections";
+import { listOpenBankReviews } from "@/lib/data/bank-reviews";
 import { listAccounts } from "@/lib/data/queries";
 import { BankAppCard } from "./BankAppCard";
 import { BankConnectionList } from "./BankConnectionList";
 import { BankCredentialsForm } from "./BankCredentialsForm";
 import { BankPicker, type BankOption } from "./BankPicker";
+import { BankReviewList } from "./BankReviewList";
 import { BankSetupGuide } from "./BankSetupGuide";
 
 /** Banks offered to the person's app; null when Enable Banking or the server key is unavailable. */
@@ -42,12 +44,19 @@ export async function BanksView({ outcome }: { outcome?: string }) {
     );
   }
 
-  const [connections, banks, accounts] = await Promise.all([listMyBankConnections(), loadBankOptions(ctx.userId), listAccounts()]);
+  const [connections, banks, accounts, reviews] = await Promise.all([
+    listMyBankConnections(),
+    loadBankOptions(ctx.userId),
+    listAccounts(),
+    listOpenBankReviews(),
+  ]);
   const accountOptions = accounts.filter((a) => !a.archived).map((a) => ({ value: a.id, label: a.name }));
+  const balances = Object.fromEntries(accounts.map((a) => [a.id, a.balanceCents]));
   return (
     <div className="flex flex-col gap-4">
       {alert}
-      <BankConnectionList connections={connections} accountOptions={accountOptions} />
+      <BankReviewList reviews={reviews} />
+      <BankConnectionList connections={connections} accountOptions={accountOptions} balances={balances} />
       {banks ? (
         <BankPicker banks={banks} sandbox={app.environment === "sandbox"} />
       ) : (

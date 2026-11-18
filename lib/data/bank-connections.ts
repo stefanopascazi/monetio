@@ -10,7 +10,9 @@ export const listMyBankConnections = cache(async (): Promise<BankConnection[]> =
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bank_connections")
-    .select("id, aspsp_name, valid_until, status, created_at, last_synced_at, bank_accounts(id, name, iban_masked, currency, account_id)")
+    .select(
+      "id, aspsp_name, valid_until, status, created_at, last_synced_at, bank_accounts(id, name, iban_masked, currency, account_id, bank_balance_cents, bank_balance_on, last_synced_at, last_error)",
+    )
     .eq("user_id", userId)
     .eq("household_id", householdId)
     .order("created_at", { ascending: true });
