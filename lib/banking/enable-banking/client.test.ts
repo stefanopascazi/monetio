@@ -59,6 +59,31 @@ describe("createEnableBankingClient", () => {
     expect(init.method).toBe("DELETE");
   });
 
+  it("follows continuation keys for booked transactions", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ transactions: [{ entry_reference: "a" }], continuation_key: "k2" }))
+      .mockResolvedValueOnce(jsonResponse({ transactions: [{ entry_reference: "b" }] }));
+    const client = createEnableBankingClient({ appId: "app-1", privateKeyPem, baseUrl: "https://api.test", fetch: fetchMock });
+    const txns = await client.getTransactions("u 1", "2026-11-01");
+    expect(txns.map((t) => t.entry_reference)).toEqual(["a", "b"]);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.test/accounts/u%201/transactions?date_from=2026-11-01&transaction_status=BOOK");
+    expect(fetchMock.mock.calls[1][0]).toContain("continuation_key=k2");
+  });
+
+  it("stops after the page limit", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ transactions: [{}], continuation_key: "again" }));
+    const client = createEnableBankingClient({ appId: "app-1", privateKeyPem, fetch: fetchMock });
+    expect(await client.getTransactions("u", "2026-11-01", 3)).toHaveLength(3);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("reads balances", async () => {
+    const balance = { balance_amount: { currency: "EUR", amount: "10.00" }, balance_type: "CLBD" };
+    const client = createEnableBankingClient({ appId: "app-1", privateKeyPem, fetch: vi.fn(async () => jsonResponse({ balances: [balance] })) });
+    await expect(client.getBalances("u")).resolves.toEqual([balance]);
+  });
+
   it("throws EnableBankingError with status and body on failure", async () => {
     const client = createEnableBankingClient({ appId: "app-1", privateKeyPem, fetch: vi.fn(async () => new Response("bad kid", { status: 401 })) });
     const error = await client.getApplication().catch((e: unknown) => e);
