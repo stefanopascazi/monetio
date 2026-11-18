@@ -34,7 +34,10 @@ function fnv(s: string): string {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
 
 function describe(t: TransactionResource, incoming: boolean): string {
-  const remittance = (t.remittance_information ?? []).map((s) => s.trim()).filter(Boolean).join(" ");
+  const remittance = (t.remittance_information ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" ");
   const party = (incoming ? t.debtor?.name : t.creditor?.name)?.trim();
   // Many banks repeat the counterparty inside the remittance text.
   const showParty = party && !remittance.toLowerCase().includes(party.toLowerCase());

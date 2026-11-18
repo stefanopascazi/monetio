@@ -38,7 +38,12 @@ describe("syncBankAccount", () => {
   it("matches the bank's movements and stores balance and outcome", async () => {
     const client = {
       getBalances: vi.fn(async () => [{ balance_amount: { currency: "EUR", amount: "950.00" }, balance_type: "CLBD", reference_date: "2026-11-18" }]),
-      getTransactions: vi.fn(async () => [txn("old", "2025-12-30", "5.00"), txn("b", "2026-11-12", "20.00"), txn("a", "2026-11-10", "50.00"), txn("c", "2026-11-13", "8.00")]),
+      getTransactions: vi.fn(async () => [
+        txn("old", "2025-12-30", "5.00"),
+        txn("b", "2026-11-12", "20.00"),
+        txn("a", "2026-11-10", "50.00"),
+        txn("c", "2026-11-13", "8.00"),
+      ]),
     };
     const store: SyncStore = {
       loadExisting: vi.fn(async () => ({
@@ -65,9 +70,32 @@ describe("syncBankAccount", () => {
   });
 });
 
+describe("syncBankAccount category proposals", () => {
+  it("asks for hints only when something is inserted and passes the proposal on", async () => {
+    const client = { getBalances: vi.fn(async () => []), getTransactions: vi.fn(async () => [txn("x", "2026-11-12", "30.00")]) };
+    const store: SyncStore = {
+      loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })),
+      loadCategoryHints: vi.fn(async () => ({
+        history: [{ description: "Mov x", amountCents: -1000, categoryId: "cat1" }],
+        categories: [{ id: "cat1", name: "Varie", kind: "expense" as const, icon: null, colorIndex: 1 as const, archived: false }],
+      })),
+      apply: vi.fn(async () => {}),
+      saveStatus: vi.fn(async () => {}),
+    };
+    await syncBankAccount(target, client, store, now);
+    expect(store.loadCategoryHints).toHaveBeenCalledWith(target);
+    expect(vi.mocked(store.apply).mock.calls[0][1][0]).toMatchObject({ type: "insert", categoryId: "cat1" });
+  });
+});
+
 describe("countDecisions", () => {
   it("counts by type", () => {
     const m = { ref: "r", bookedOn: "2026-11-01", amountCents: 1, description: "", counterpartyIban: null } as const;
-    expect(countDecisions([{ type: "review", movement: m, reason: "ambiguous", candidateId: null }])).toEqual({ inserted: 0, reconciled: 0, review: 1, skipped: 0 });
+    expect(countDecisions([{ type: "review", movement: m, reason: "ambiguous", candidateId: null }])).toEqual({
+      inserted: 0,
+      reconciled: 0,
+      review: 1,
+      skipped: 0,
+    });
   });
 });

@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
 import type { Decision } from "../../../../lib/banking/sync/match.ts";
 import type { SyncStore, SyncTarget } from "../../../../lib/banking/sync/run.ts";
+import { mapCategory } from "../../../../lib/data/mappers.ts";
 import type { ISODate } from "../../../../lib/domain/types.ts";
 
 export type BankSyncTarget = SyncTarget & { appId: string; privateKeySealed: string };
@@ -67,6 +68,26 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
       };
     },
 
+    async loadCategoryHints(target) {
+      // Same examples the owner's CSV import learns from: shared accounts and the owner's private ones.
+      const [history, categories] = await Promise.all([
+        sql`
+          select t.description, t.amount_cents, t.category_id
+          from transactions t
+          join accounts a on a.id = t.account_id
+          left join household_members me on me.household_id = a.household_id and me.user_id = ${target.userId}
+          where t.household_id = ${target.householdId} and t.kind in ('income', 'expense') and t.category_id is not null
+            and (a.visibility = 'shared' or a.owner_member_id = me.id)
+          order by t.booked_on desc, t.id
+          limit 3000`,
+        sql`select * from categories where household_id = ${target.householdId}`,
+      ]);
+      return {
+        history: history.map((r) => ({ description: r.description, amountCents: Number(r.amount_cents), categoryId: r.category_id })),
+        categories: categories.map(mapCategory),
+      };
+    },
+
     async apply(target: SyncTarget, decisions: Decision[]) {
       // All decisions of one account land together or not at all.
       await sql.begin(async (tx) => {
@@ -74,9 +95,9 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
           const m = d.movement;
           if (d.type === "insert") {
             await tx`
-              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description, bank_ref)
+              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description, bank_ref, category_id)
               values (${target.householdId}, ${target.accountId}, ${m.amountCents >= 0 ? "income" : "expense"}, 'booked', 'bank',
-                      ${m.amountCents}, ${m.bookedOn}, ${m.description}, ${m.ref})
+                      ${m.amountCents}, ${m.bookedOn}, ${m.description}, ${m.ref}, ${d.categoryId ?? null})
               on conflict (account_id, bank_ref) where bank_ref is not null do nothing`;
           } else if (d.type === "reconcile") {
             await tx`update transactions set bank_ref = ${m.ref}, updated_at = now() where id = ${d.transactionId} and bank_ref is null`;

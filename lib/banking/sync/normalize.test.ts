@@ -31,15 +31,32 @@ describe("normalizeTransactions", () => {
 
   it("signs by direction and builds a readable description", () => {
     const [out, inc] = normalizeTransactions([
-      txn({ entry_reference: "r1", creditor: { name: "Esselunga" }, remittance_information: ["Spesa", " carta 1234 "], creditor_account: { iban: "it60 x054 2811 1010 0000 0123 456" } }),
+      txn({
+        entry_reference: "r1",
+        creditor: { name: "Esselunga" },
+        remittance_information: ["Spesa", " carta 1234 "],
+        creditor_account: { iban: "it60 x054 2811 1010 0000 0123 456" },
+      }),
       txn({ entry_reference: "r2", credit_debit_indicator: "CRDT", transaction_amount: { currency: "EUR", amount: "1500.00" }, debtor: { name: "ACME Srl" } }),
     ]);
-    expect(out).toEqual({ ref: "r1", bookedOn: "2026-11-17", amountCents: -1230, description: "Esselunga · Spesa carta 1234", counterpartyIban: "IT60X0542811101000000123456" });
+    expect(out).toEqual({
+      ref: "r1",
+      bookedOn: "2026-11-17",
+      amountCents: -1230,
+      description: "Esselunga · Spesa carta 1234",
+      counterpartyIban: "IT60X0542811101000000123456",
+    });
     expect(inc).toMatchObject({ ref: "r2", amountCents: 150000, description: "ACME Srl", counterpartyIban: null });
   });
 
   it("skips pending rows and rows without a date or amount", () => {
-    expect(normalizeTransactions([txn({ status: "PDNG" }), txn({ booking_date: null, value_date: null }), txn({ transaction_amount: { currency: "EUR", amount: "x" } })])).toEqual([]);
+    expect(
+      normalizeTransactions([
+        txn({ status: "PDNG" }),
+        txn({ booking_date: null, value_date: null }),
+        txn({ transaction_amount: { currency: "EUR", amount: "x" } }),
+      ]),
+    ).toEqual([]);
   });
 
   it("falls back to value date and a content hash, unique for identical rows", () => {

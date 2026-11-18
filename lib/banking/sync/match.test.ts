@@ -2,8 +2,23 @@ import { describe, expect, it } from "vitest";
 import { type Candidate, matchMovements } from "./match";
 import type { BankMovement } from "./normalize";
 
-const mv = (over: Partial<BankMovement>): BankMovement => ({ ref: "r1", bookedOn: "2026-11-10", amountCents: -5000, description: "Enel Energia", counterpartyIban: null, ...over });
-const cand = (over: Partial<Candidate>): Candidate => ({ id: "t1", bookedOn: "2026-11-10", amountCents: -5000, description: "Bolletta luce", fromRule: true, bankRef: null, ...over });
+const mv = (over: Partial<BankMovement>): BankMovement => ({
+  ref: "r1",
+  bookedOn: "2026-11-10",
+  amountCents: -5000,
+  description: "Enel Energia",
+  counterpartyIban: null,
+  ...over,
+});
+const cand = (over: Partial<Candidate>): Candidate => ({
+  id: "t1",
+  bookedOn: "2026-11-10",
+  amountCents: -5000,
+  description: "Bolletta luce",
+  fromRule: true,
+  bankRef: null,
+  ...over,
+});
 
 describe("matchMovements", () => {
   it("skips movements already synced, also repeated within the batch", () => {
@@ -28,7 +43,11 @@ describe("matchMovements", () => {
   });
 
   it("sends a manual movement with other text and a close date to review as a possible duplicate", () => {
-    expect(matchMovements([mv({ bookedOn: "2026-11-12" })], [cand({ fromRule: false })])[0]).toMatchObject({ type: "review", reason: "possible_duplicate", candidateId: "t1" });
+    expect(matchMovements([mv({ bookedOn: "2026-11-12" })], [cand({ fromRule: false })])[0]).toMatchObject({
+      type: "review",
+      reason: "possible_duplicate",
+      candidateId: "t1",
+    });
   });
 
   it("sends a rule booking with a different amount within 20% to review", () => {

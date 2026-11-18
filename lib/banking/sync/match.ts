@@ -21,7 +21,7 @@ export type ReviewReason = "amount_differs" | "possible_duplicate" | "ambiguous"
 export type Decision =
   | { type: "skip"; movement: BankMovement }
   | { type: "reconcile"; movement: BankMovement; transactionId: string; amountChanged: boolean }
-  | { type: "insert"; movement: BankMovement }
+  | { type: "insert"; movement: BankMovement; categoryId?: string }
   | { type: "review"; movement: BankMovement; reason: ReviewReason; candidateId: string | null };
 
 /** Days a rule booking may sit from the real bank date (weekends, value dates). */
@@ -61,11 +61,12 @@ export function matchMovements(movements: BankMovement[], candidates: Candidate[
     const desc = normalizeDescription(m.description);
 
     // Same amount: a rule booking nearby, or a manual/imported one with the same text or day.
-    const exact = free.filter((c) =>
-      c.amountCents === m.amountCents &&
-      (c.fromRule
-        ? dayGap(c.bookedOn, m.bookedOn) <= RULE_WINDOW_DAYS
-        : dayGap(c.bookedOn, m.bookedOn) <= OTHER_WINDOW_DAYS && (normalizeDescription(c.description) === desc || c.bookedOn === m.bookedOn)),
+    const exact = free.filter(
+      (c) =>
+        c.amountCents === m.amountCents &&
+        (c.fromRule
+          ? dayGap(c.bookedOn, m.bookedOn) <= RULE_WINDOW_DAYS
+          : dayGap(c.bookedOn, m.bookedOn) <= OTHER_WINDOW_DAYS && (normalizeDescription(c.description) === desc || c.bookedOn === m.bookedOn)),
     );
     const hit = closest(m, exact);
     if (hit && !hit.tie) {
@@ -82,7 +83,10 @@ export function matchMovements(movements: BankMovement[], candidates: Candidate[
     const near = closest(
       m,
       free.filter(
-        (c) => c.fromRule && dayGap(c.bookedOn, m.bookedOn) <= RULE_WINDOW_DAYS && Math.abs(c.amountCents - m.amountCents) <= Math.abs(c.amountCents) * AMOUNT_TOLERANCE,
+        (c) =>
+          c.fromRule &&
+          dayGap(c.bookedOn, m.bookedOn) <= RULE_WINDOW_DAYS &&
+          Math.abs(c.amountCents - m.amountCents) <= Math.abs(c.amountCents) * AMOUNT_TOLERANCE,
       ),
     );
     if (near) {
@@ -92,7 +96,10 @@ export function matchMovements(movements: BankMovement[], candidates: Candidate[
     }
 
     // Same amount, close date, different text: maybe entered by hand with another description.
-    const dup = closest(m, free.filter((c) => !c.fromRule && c.amountCents === m.amountCents && dayGap(c.bookedOn, m.bookedOn) <= OTHER_WINDOW_DAYS + 1));
+    const dup = closest(
+      m,
+      free.filter((c) => !c.fromRule && c.amountCents === m.amountCents && dayGap(c.bookedOn, m.bookedOn) <= OTHER_WINDOW_DAYS + 1),
+    );
     if (dup) {
       used.add(dup.best.id);
       decisions.push({ type: "review", movement: m, reason: "possible_duplicate", candidateId: dup.best.id });
