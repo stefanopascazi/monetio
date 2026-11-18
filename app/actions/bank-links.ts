@@ -7,7 +7,8 @@ import { BankSetupMissing } from "@/lib/banking/bank-service";
 import { BANK_STATE_COOKIE, bankService } from "@/lib/banking/server";
 import { getContext } from "@/lib/data/context";
 import { isUUID } from "@/lib/forms/parse";
-import { type ActionState, failure, success } from "./state";
+import { createClient } from "@/lib/supabase/server";
+import { type ActionState, dbErrorMessage, failure, success } from "./state";
 
 export type StartLinkResult = ActionState & { url?: string };
 
@@ -46,6 +47,20 @@ export async function startBankLink(aspspName: string, country = "IT"): Promise<
     console.error("[banking] start link failed", error instanceof Error ? error.name : "unknown");
     return failure("Enable Banking non ha avviato il collegamento. Riprova tra qualche minuto.");
   }
+}
+
+/** Chooses the MonetIO account fed by a bank account; an empty id unlinks it. */
+export async function linkBankAccount(bankAccountId: string, accountId: string): Promise<ActionState> {
+  if (!isUUID(bankAccountId) || (accountId && !isUUID(accountId))) return failure("Valori non validi.");
+  await getContext();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("link_bank_account", { p_bank_account: bankAccountId, p_account: accountId || null });
+  if (error) {
+    if (error.code === "23505") return failure("Questo conto MonetIO riceve già i movimenti di un altro conto bancario.");
+    return failure(dbErrorMessage(error));
+  }
+  refresh();
+  return success(accountId ? "Conto abbinato." : "Abbinamento rimosso.");
 }
 
 /** Revokes a consent and removes it with its accounts (only the caller's own). */

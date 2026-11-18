@@ -12,9 +12,34 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("@/lib/data/context", () => ({ getContext: vi.fn(async () => ({ userId: "user-1" })) }));
 vi.mock("@/lib/banking/server", () => ({ BANK_STATE_COOKIE: "mio_bank_state", bankService }));
+const rpc = vi.fn();
+vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc })) }));
 
 const { BankSetupMissing } = await import("@/lib/banking/bank-service");
-const { removeBankConnection, startBankLink } = await import("./bank-links");
+const { linkBankAccount, removeBankConnection, startBankLink } = await import("./bank-links");
+
+describe("linkBankAccount", () => {
+  const ba = "11111111-2222-3333-4444-555555555555";
+  const acc = "66666666-7777-8888-9999-000000000000";
+
+  it("links and unlinks through the RPC", async () => {
+    rpc.mockResolvedValue({ error: null });
+    expect((await linkBankAccount(ba, acc)).message).toBe("Conto abbinato.");
+    expect(rpc).toHaveBeenCalledWith("link_bank_account", { p_bank_account: ba, p_account: acc });
+    expect((await linkBankAccount(ba, "")).message).toBe("Abbinamento rimosso.");
+    expect(rpc).toHaveBeenLastCalledWith("link_bank_account", { p_bank_account: ba, p_account: null });
+  });
+
+  it("explains an account already fed by another bank account", async () => {
+    rpc.mockResolvedValue({ error: { code: "23505", message: "dup" } });
+    expect((await linkBankAccount(ba, acc)).message).toMatch(/riceve già/);
+  });
+
+  it("rejects malformed ids", async () => {
+    expect((await linkBankAccount("x", acc)).ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});
 
 beforeEach(() => vi.clearAllMocks());
 

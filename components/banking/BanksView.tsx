@@ -7,6 +7,7 @@ import { bankService } from "@/lib/banking/server";
 import { getContext } from "@/lib/data/context";
 import { getMyBankApp } from "@/lib/data/bank-credentials";
 import { listMyBankConnections } from "@/lib/data/bank-connections";
+import { listAccounts } from "@/lib/data/queries";
 import { BankAppCard } from "./BankAppCard";
 import { BankConnectionList } from "./BankConnectionList";
 import { BankCredentialsForm } from "./BankCredentialsForm";
@@ -41,11 +42,12 @@ export async function BanksView({ outcome }: { outcome?: string }) {
     );
   }
 
-  const [connections, banks] = await Promise.all([listMyBankConnections(), loadBankOptions(ctx.userId)]);
+  const [connections, banks, accounts] = await Promise.all([listMyBankConnections(), loadBankOptions(ctx.userId), listAccounts()]);
+  const accountOptions = accounts.filter((a) => !a.archived).map((a) => ({ value: a.id, label: a.name }));
   return (
     <div className="flex flex-col gap-4">
       {alert}
-      <BankConnectionList connections={connections} />
+      <BankConnectionList connections={connections} accountOptions={accountOptions} />
       {banks ? (
         <BankPicker banks={banks} sandbox={app.environment === "sandbox"} />
       ) : (
