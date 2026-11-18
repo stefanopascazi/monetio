@@ -1,14 +1,7 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/common/PageSkeleton";
-import { SettingsView } from "@/components/settings/SettingsView";
+import { redirect } from "next/navigation";
+import { SETTINGS_HOME } from "@/components/settings/settings-tabs";
 
-export const metadata: Metadata = { title: "Impostazioni" };
-
+// Old single settings page: keep the link working by landing on the first tab.
 export default function SettingsPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <SettingsView />
-    </Suspense>
-  );
+  redirect(SETTINGS_HOME);
 }

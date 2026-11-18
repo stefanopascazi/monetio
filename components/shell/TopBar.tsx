@@ -1,6 +1,7 @@
 import { CircleUserRound } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SETTINGS_HOME } from "@/components/settings/settings-tabs";
 import { BalancePrivacyToggle } from "./BalancePrivacyToggle";
 import { TOPBAR_ID, TOPBAR_SLOT_ID } from "./topbar-ids";
 
@@ -23,7 +24,7 @@ export function TopBar({ create, bell }: { create?: ReactNode; bell?: ReactNode 
         {bell}
         <BalancePrivacyToggle />
         <Link
-          href="/impostazioni"
+          href={SETTINGS_HOME}
           aria-label="Profilo e impostazioni"
           className="inline-flex size-10 items-center justify-center rounded-full bg-surface text-ink-muted hover:text-ink"
         >

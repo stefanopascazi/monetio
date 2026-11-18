@@ -25,7 +25,7 @@ function JoinForm() {
     return (
       <form action={check} className="flex flex-col gap-4 pt-4">
         {lookup.message && <Alert tone="danger">{lookup.message}</Alert>}
-        <TextField name="code" label="Codice invito" placeholder="Es. 72C88930" hint="Lo trovi in Impostazioni di chi ha creato il nucleo" required />
+        <TextField name="code" label="Codice invito" placeholder="Es. 72C88930" hint="Lo trovi in Impostazioni › Nucleo di chi ha creato il nucleo" required />
         <Button type="submit" loading={checking} block>
           Continua
         </Button>
