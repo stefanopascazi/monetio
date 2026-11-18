@@ -6,7 +6,7 @@ import { TOPBAR_SLOT_ID } from "./topbar-ids";
 describe("TopBar", () => {
   it("links the personal icon to settings", () => {
     render(<TopBar />);
-    expect(screen.getByRole("link", { name: "Profilo e impostazioni" })).toHaveAttribute("href", "/impostazioni");
+    expect(screen.getByRole("link", { name: "Profilo e impostazioni" })).toHaveAttribute("href", "/impostazioni/account");
   });
 
   it("is sticky with the privacy toggle and the actions slot, without theme switch", () => {
