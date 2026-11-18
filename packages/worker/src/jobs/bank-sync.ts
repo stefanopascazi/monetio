@@ -49,6 +49,7 @@ export function createBankSyncJob({ store, masterKey, createClient = createEnabl
             clients.set(t.userId, client);
           }
           const counts = await syncBankAccount(t, client, store, ctx.now);
+          ctx.log("info", "bank account synced", { bankAccount: t.bankAccountId, ...counts });
           for (const k of ["inserted", "reconciled", "review", "skipped"] as const) totals[k] += counts[k];
         } catch (error) {
           if (isSchemaNotReady(error)) throw error;

@@ -55,7 +55,10 @@ export function countDecisions(decisions: Decision[]): SyncCounts {
   return counts;
 }
 
-export async function syncBankAccount(target: SyncTarget, client: SyncClient, store: SyncStore, now: Date): Promise<SyncCounts> {
+/** Decision counts plus what the bank returned, for the worker log. */
+export type SyncResult = SyncCounts & { from: ISODate; fetched: number; balances: number };
+
+export async function syncBankAccount(target: SyncTarget, client: SyncClient, store: SyncStore, now: Date): Promise<SyncResult> {
   const from = syncFrom(target);
   const [balances, items] = await Promise.all([client.getBalances(target.uid), client.getTransactions(target.uid, from)]);
   const movements = normalizeTransactions(items)
@@ -66,5 +69,5 @@ export async function syncBankAccount(target: SyncTarget, client: SyncClient, st
   await store.apply(target, decisions);
   const balance = pickBalance(balances);
   await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: balance && { cents: balance.cents, date: balance.date }, error: null });
-  return countDecisions(decisions);
+  return { ...countDecisions(decisions), from, fetched: items.length, balances: balances.length };
 }

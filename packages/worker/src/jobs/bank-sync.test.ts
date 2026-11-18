@@ -51,6 +51,7 @@ describe("bank-sync job", () => {
     expect(createClient).toHaveBeenCalledTimes(1);
     expect(createClient).toHaveBeenCalledWith({ appId: "app-1", privateKeyPem: "PEM-1" });
     expect(store.apply).toHaveBeenCalledTimes(2);
+    expect(log).toHaveBeenCalledWith("info", "bank account synced", expect.objectContaining({ bankAccount: "ba1", fetched: 1, balances: 0 }));
     expect(log).toHaveBeenCalledWith("info", "bank sync done", expect.objectContaining({ accounts: 2, inserted: 2, failed: 0, expired: 1 }));
   });
 
