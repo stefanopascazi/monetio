@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit && npm run worker:typecheck",
     "worker:typecheck": "tsc -p packages/worker",
     "worker:build": "node packages/worker/build.ts",
+    "worker:once": "node packages/worker/build.ts && node --env-file=.env.local packages/worker/dist/worker.mjs --run-once",
     "ds:tokens": "node packages/ui/scripts/build-tokens.ts",
     "ds:artifact": "node packages/ui/scripts/build-tokens.ts && node packages/ui/scripts/build-artifact.ts",
     "db:migrate": "node scripts/db/migrate.ts",
