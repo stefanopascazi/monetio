@@ -66,6 +66,8 @@ export function createEnableBankingClient(config: EnableBankingConfig) {
       }
       return all;
     },
+    /** Unparsed GET, for diagnostics of what a bank really returns. */
+    getRaw: (path: string) => get<Record<string, unknown>>(path),
     /** Revokes the consent at the bank. */
     deleteSession: (sessionId: string) => call<Record<string, unknown>>("DELETE", `/sessions/${encodeURIComponent(sessionId)}`),
   };

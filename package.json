@@ -21,7 +21,8 @@
     "db:migrate": "node scripts/db/migrate.ts",
     "db:import": "node scripts/import/run-import.ts",
     "auth:invite": "node scripts/dev/invite.ts",
-    "bank:aspsps": "node scripts/banking/aspsps.ts"
+    "bank:aspsps": "node scripts/banking/aspsps.ts",
+    "bank:probe": "node packages/worker/build.ts && node --env-file=.env.local packages/worker/dist/worker.mjs --bank-probe"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
