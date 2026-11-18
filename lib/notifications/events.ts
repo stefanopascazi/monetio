@@ -7,6 +7,7 @@ import { projectBalances, projectedMovements } from "../domain/projection";
 import type { DueEntry } from "../domain/schedule";
 import type { Agenda, buildProjectionInput } from "../data/projection-input";
 import { ownsRule } from "../data/rule-visibility";
+import { bankConsentEvents, bankReviewEvents, type BankSnapshot } from "./bank-events";
 import type { NotificationKind, NotificationPrefs } from "./prefs";
 
 export interface NotificationEvent {
@@ -28,6 +29,8 @@ export interface EventSnapshot {
   projection: ReturnType<typeof buildProjectionInput>;
   /** Latest booked movement per visible account. */
   lastBooked: Record<string, string | null>;
+  /** Bank sync state; absent when not loaded. */
+  bank?: BankSnapshot;
 }
 
 /** Overdue items older than this are not announced (first run, long-forgotten items). */
@@ -128,6 +131,13 @@ export function budgetEvents(s: EventSnapshot): NotificationEvent[] {
     });
 }
 
-export function selectEvents(s: EventSnapshot): NotificationEvent[] {
-  return [...dueEvents(s), ...lowBalanceEvents(s), ...staleAccountEvents(s), ...budgetEvents(s)];
+/** Bank reminders; `now` is the run time (consent ends are timestamps). */
+export function bankEvents(s: EventSnapshot, now: Date = new Date(`${s.agenda.today}T07:00:00Z`)): NotificationEvent[] {
+  if (!s.bank) return [];
+  const c = { userId: s.userId, householdId: s.householdId, suffix: suffix(s), now };
+  return [...bankConsentEvents(s.bank, c), ...bankReviewEvents(s.bank, c)];
+}
+
+export function selectEvents(s: EventSnapshot, now?: Date): NotificationEvent[] {
+  return [...dueEvents(s), ...lowBalanceEvents(s), ...staleAccountEvents(s), ...budgetEvents(s), ...bankEvents(s, now)];
 }

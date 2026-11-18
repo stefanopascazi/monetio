@@ -40,7 +40,16 @@ interface Setup {
   occurrences?: { recurringRuleId: string; contributionRuleId: null; occurrenceDate: string }[];
 }
 
-function snapshot({ rules = [], accounts = [account("a1")], prefs = {}, monthFlows = [], estimateMovements = [], lastBooked = { a1: today }, householdLabel = null, occurrences = [] }: Setup = {}): EventSnapshot {
+function snapshot({
+  rules = [],
+  accounts = [account("a1")],
+  prefs = {},
+  monthFlows = [],
+  estimateMovements = [],
+  lastBooked = { a1: today },
+  householdLabel = null,
+  occurrences = [],
+}: Setup = {}): EventSnapshot {
   const agenda = buildAgenda({ today, rules, contributions: [], occurrences, flows: monthFlows, overrides: [] });
   return {
     userId: "u1",
@@ -77,7 +86,9 @@ describe("dueEvents", () => {
 
   it("ignores items of accounts the user does not see or already paid", () => {
     expect(dueEvents(snapshot({ rules: [dueRule(14, { accountId: "hidden" })] }))).toEqual([]);
-    expect(dueEvents(snapshot({ rules: [dueRule(14)], occurrences: [{ recurringRuleId: "due14", contributionRuleId: null, occurrenceDate: "2026-11-14" }] }))).toEqual([]);
+    expect(
+      dueEvents(snapshot({ rules: [dueRule(14)], occurrences: [{ recurringRuleId: "due14", contributionRuleId: null, occurrenceDate: "2026-11-14" }] })),
+    ).toEqual([]);
   });
 
   it("skips items with nothing to pay", () => {
@@ -126,8 +137,23 @@ describe("staleAccountEvents", () => {
 
 describe("budgetEvents", () => {
   // Decreasing estimate: booked movements in its categories reduce it (the account page shows the same usage).
-  const monthly = rule({ id: "est", description: "Spese mensili", amountCents: -28_000, schedule: "estimate", dayOfMonth: 1, startDate: "2026-11-01", decrementCategoryIds: ["cash", "misc"] });
-  const mv = (id: string, categoryId: string, amountCents: number): EstimateMovement => ({ id, accountId: "a1", categoryId, amountCents, description: id, bookedOn: "2026-11-04" });
+  const monthly = rule({
+    id: "est",
+    description: "Spese mensili",
+    amountCents: -28_000,
+    schedule: "estimate",
+    dayOfMonth: 1,
+    startDate: "2026-11-01",
+    decrementCategoryIds: ["cash", "misc"],
+  });
+  const mv = (id: string, categoryId: string, amountCents: number): EstimateMovement => ({
+    id,
+    accountId: "a1",
+    categoryId,
+    amountCents,
+    description: id,
+    bookedOn: "2026-11-04",
+  });
   const spent = [mv("prelievo", "cash", -80_000), mv("tabaccaio", "misc", -20_729)];
 
   it("flags decreasing estimates gone beyond, naming the account", () => {

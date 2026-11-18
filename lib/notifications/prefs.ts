@@ -1,6 +1,6 @@
 // Notification kinds and per-user preferences (notification_prefs). Shared by the app and the worker.
 
-export const NOTIFICATION_KINDS = ["due_soon", "overdue", "low_balance", "stale_account", "budget_exceeded"] as const;
+export const NOTIFICATION_KINDS = ["due_soon", "overdue", "low_balance", "stale_account", "budget_exceeded", "bank_consent", "bank_review"] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 export const KIND_LABELS: Record<NotificationKind, string> = {
@@ -9,6 +9,8 @@ export const KIND_LABELS: Record<NotificationKind, string> = {
   low_balance: "Rimanenza sotto soglia",
   stale_account: "Conti da aggiornare",
   budget_exceeded: "Stime superate",
+  bank_consent: "Collegamento banca in scadenza",
+  bank_review: "Movimenti della banca da rivedere",
 };
 
 export interface NotificationPrefs {

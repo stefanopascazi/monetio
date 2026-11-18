@@ -46,17 +46,25 @@ async function rows(query: PromiseLike<readonly unknown[]>): Promise<Row[]> {
 
 /** Planned rows with their fee totals (same lookups as the app's withFees). */
 async function plannedWithFees(tx: TransactionSql, householdId: string) {
-  const planned = (await rows(tx`select json_agg(t order by booked_on desc, id desc) as rows from (select * from transactions where household_id = ${householdId} and status = 'planned' order by booked_on desc, id desc limit 1000) t`)).map(mapTransaction);
+  const planned = (
+    await rows(
+      tx`select json_agg(t order by booked_on desc, id desc) as rows from (select * from transactions where household_id = ${householdId} and status = 'planned' order by booked_on desc, id desc limit 1000) t`,
+    )
+  ).map(mapTransaction);
   const transfers = planned.filter((t) => t.transferGroupId && !t.parentTransactionId);
   const sides = transfers.map((t) => ({ id: t.id, groupId: t.transferGroupId! }));
   const incoming = transfers.filter((t) => t.amountCents > 0).map((t) => t.transferGroupId!);
   if (incoming.length) {
-    const paying = await rows(tx`select json_agg(t) as rows from (select id, transfer_group_id from transactions where transfer_group_id in ${tx(incoming)} and amount_cents < 0 and parent_transaction_id is null) t`);
+    const paying = await rows(
+      tx`select json_agg(t) as rows from (select id, transfer_group_id from transactions where transfer_group_id in ${tx(incoming)} and amount_cents < 0 and parent_transaction_id is null) t`,
+    );
     for (const r of paying) sides.push({ id: String(r.id), groupId: String(r.transfer_group_id) });
   }
   const ids = [...new Set([...planned.filter((t) => t.paymentMethod).map((t) => t.id), ...sides.map((s) => s.id)])];
   if (!ids.length) return planned;
-  const fees = await rows(tx`select json_agg(t) as rows from (select parent_transaction_id, amount_cents from transactions where parent_transaction_id in ${tx(ids)}) t`);
+  const fees = await rows(
+    tx`select json_agg(t) as rows from (select parent_transaction_id, amount_cents from transactions where parent_transaction_id in ${tx(ids)}) t`,
+  );
   return attachFees(
     planned,
     fees.map((r) => ({ parentId: String(r.parent_transaction_id), amountCents: Number(r.amount_cents) })),
@@ -85,7 +93,9 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
     });
 
     const rules = (await rows(tx`select json_agg(r order by description) as rows from recurring_rules r where household_id = ${hh}`)).map(mapRule);
-    const contributions = (await rows(tx`select json_agg(c order by description) as rows from contribution_rules c where household_id = ${hh}`)).map(mapContribution);
+    const contributions = (await rows(tx`select json_agg(c order by description) as rows from contribution_rules c where household_id = ${hh}`)).map(
+      mapContribution,
+    );
     const occurrences = (
       await rows(
         tx`select json_agg(t) as rows from (select recurring_rule_id, contribution_rule_id, occurrence_date from transactions
@@ -97,10 +107,20 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
       contributionRuleId: (o.contribution_rule_id as string | null) ?? null,
       occurrenceDate: (o.occurrence_date as string | null) ?? null,
     }));
-    const flows = (await rows(tx`select json_agg(f) as rows from monthly_flows f where household_id = ${hh} and month >= ${startOfMonth(monthKey(since))}`)).map(mapFlow);
+    const flows = (
+      await rows(tx`select json_agg(f) as rows from monthly_flows f where household_id = ${hh} and month >= ${startOfMonth(monthKey(since))}`)
+    ).map(mapFlow);
     const overrides: OccurrenceOverride[] = (
-      await rows(tx`select json_agg(o) as rows from (select rule_id, period, amount_cents, due_date, note from rule_occurrence_overrides where household_id = ${hh}) o`)
-    ).map((o) => ({ ruleId: String(o.rule_id), period: String(o.period), amountCents: Number(o.amount_cents), dueDate: String(o.due_date), note: o.note == null ? null : String(o.note) }));
+      await rows(
+        tx`select json_agg(o) as rows from (select rule_id, period, amount_cents, due_date, note from rule_occurrence_overrides where household_id = ${hh}) o`,
+      )
+    ).map((o) => ({
+      ruleId: String(o.rule_id),
+      period: String(o.period),
+      amountCents: Number(o.amount_cents),
+      dueDate: String(o.due_date),
+      note: o.note == null ? null : String(o.note),
+    }));
 
     const agenda = buildAgenda({ today, rules, contributions, occurrences, flows, overrides });
     const planned = await plannedWithFees(tx, hh);
@@ -127,12 +147,20 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
 
     const activeIds = projection.active.map((a) => a.id);
     const lastRows = activeIds.length
-      ? await rows(tx`select json_agg(t) as rows from (select account_id, max(booked_on) as last from transactions where account_id in ${tx(activeIds)} and status = 'booked' group by account_id) t`)
+      ? await rows(
+          tx`select json_agg(t) as rows from (select account_id, max(booked_on) as last from transactions where account_id in ${tx(activeIds)} and status = 'booked' group by account_id) t`,
+        )
       : [];
     const lastBooked: Record<string, string | null> = Object.fromEntries(activeIds.map((id) => [id, null]));
     for (const l of lastRows) lastBooked[String(l.account_id)] = String(l.last);
 
     const [prefsRow] = await rows(tx`select json_agg(p) as rows from notification_prefs p where user_id = ${r.userId}`);
+    // RLS: own consents only; review items of visible accounts.
+    const consents = await rows(
+      tx`select json_agg(c) as rows from (select id, aspsp_name, valid_until, status from bank_connections where household_id = ${hh} and user_id = ${r.userId}) c`,
+    );
+    const [reviews] = await tx<{ count: number; latest: Date | null }[]>`
+      select count(*)::int as count, max(created_at) as latest from bank_sync_reviews where household_id = ${hh} and resolved_at is null`;
 
     return {
       userId: r.userId,
@@ -142,6 +170,10 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
       agenda,
       projection,
       lastBooked,
+      bank: {
+        consents: consents.map((c) => ({ id: String(c.id), bankName: String(c.aspsp_name), validUntil: String(c.valid_until), status: String(c.status) })),
+        openReviews: { count: reviews?.count ?? 0, latestAt: reviews?.latest ? new Date(reviews.latest).toISOString() : null },
+      },
     };
   });
 }
