@@ -29,7 +29,7 @@ export function BankAccountStatus({ account, monetioBalanceCents }: { account: B
             </Badge>
           )}
           {gap != null && gap !== 0 && (
-            <Badge tone="warning" size="sm">
+            <Badge tone="warning" size="sm" className="whitespace-nowrap">
               Differenza <Amount cents={gap} tone="neutral" size="sm" showSign />
             </Badge>
           )}
