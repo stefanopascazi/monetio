@@ -3,6 +3,11 @@ import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import postgres from "postgres";
 import { cleanUrl, sslFor } from "../../../scripts/db/ssl.ts";
+import { createEnableBankingClient } from "../../../lib/banking/enable-banking/client.ts";
+import { openSecret } from "../../../lib/banking/secrets.ts";
+import type { ISODate } from "../../../lib/domain/types.ts";
+import { probeBankAccount } from "./bank/probe.ts";
+import { createPostgresBankSyncStore } from "./bank/store.ts";
 import { parseConfig } from "./config.ts";
 import { noopReporter } from "./errors/reporter.ts";
 import { createSentryReporter } from "./errors/sentry.ts";
@@ -31,6 +36,38 @@ if (process.argv.includes("--sentry-test")) {
 }
 const sql = postgres(cleanUrl(config.databaseUrl), { ssl: sslFor(config.databaseUrl), max: 2, onnotice: () => {} });
 const jobs = createJobs(sql, config);
+
+// One run of a single job, ignoring its schedule (local tests, manual catch-up): --run-once bank-sync
+const runOnce = process.argv[process.argv.indexOf("--run-once") + 1];
+if (process.argv.includes("--run-once")) {
+  const job = jobs.find((j) => j.name === runOnce);
+  if (!job) {
+    log("error", "unknown job", { job: runOnce, jobs: jobs.map((j) => j.name) });
+    process.exit(1);
+  }
+  let ok = true;
+  try {
+    await job.run({ log, signal: new AbortController().signal, now: new Date() });
+  } catch (error) {
+    ok = false;
+    log("error", "job failed", { job: job.name, error: errorMessage(error) });
+  }
+  await sql.end({ timeout: 5 });
+  process.exit(ok ? 0 : 1);
+}
+
+// Read-only look at what the bank returns for each linked account: --bank-probe
+if (process.argv.includes("--bank-probe")) {
+  if (!config.bankKeys) throw new Error("BANK_KEYS_SECRET is not set");
+  const store = createPostgresBankSyncStore(sql);
+  for (const t of await store.listTargets()) {
+    const client = createEnableBankingClient({ appId: t.appId, privateKeyPem: openSecret(t.privateKeySealed, config.bankKeys, t.userId) });
+    const result = await probeBankAccount(t.uid, client, new Date().toISOString().slice(0, 10) as ISODate);
+    console.log(JSON.stringify({ bankAccount: t.bankAccountId, ...result }, null, 2));
+  }
+  await sql.end({ timeout: 5 });
+  process.exit(0);
+}
 
 const shutdown = new AbortController();
 const queue = createSerialQueue((job, error) => {

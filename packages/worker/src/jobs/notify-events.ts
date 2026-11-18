@@ -57,7 +57,7 @@ export function createNotifyEventsJob(deps: NotifyDeps): Job {
         ctx.signal.throwIfAborted();
         try {
           const snapshot = await deps.loadSnapshot(r, today);
-          queued += await deps.insert(toInserts(snapshot, selectEvents(snapshot), ctx.now));
+          queued += await deps.insert(toInserts(snapshot, selectEvents(snapshot, ctx.now), ctx.now));
         } catch (error) {
           // Missing table or column (deploy in progress): the original error reaches runJob, which tolerates it.
           if (isSchemaNotReady(error)) throw error;

@@ -15,11 +15,14 @@
     "typecheck": "tsc --noEmit && npm run worker:typecheck",
     "worker:typecheck": "tsc -p packages/worker",
     "worker:build": "node packages/worker/build.ts",
+    "worker:once": "node packages/worker/build.ts && node --env-file=.env.local packages/worker/dist/worker.mjs --run-once",
     "ds:tokens": "node packages/ui/scripts/build-tokens.ts",
     "ds:artifact": "node packages/ui/scripts/build-tokens.ts && node packages/ui/scripts/build-artifact.ts",
     "db:migrate": "node scripts/db/migrate.ts",
     "db:import": "node scripts/import/run-import.ts",
-    "auth:invite": "node scripts/dev/invite.ts"
+    "auth:invite": "node scripts/dev/invite.ts",
+    "bank:aspsps": "node scripts/banking/aspsps.ts",
+    "bank:probe": "node packages/worker/build.ts && node --env-file=.env.local packages/worker/dist/worker.mjs --bank-probe"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
