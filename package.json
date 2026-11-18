@@ -19,7 +19,8 @@
     "ds:artifact": "node packages/ui/scripts/build-tokens.ts && node packages/ui/scripts/build-artifact.ts",
     "db:migrate": "node scripts/db/migrate.ts",
     "db:import": "node scripts/import/run-import.ts",
-    "auth:invite": "node scripts/dev/invite.ts"
+    "auth:invite": "node scripts/dev/invite.ts",
+    "bank:aspsps": "node scripts/banking/aspsps.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
