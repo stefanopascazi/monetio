@@ -49,6 +49,10 @@ describe("matchMovements", () => {
     expect(d.map((x) => (x.type === "reconcile" ? x.transactionId : x.type))).toEqual(["near", "far"]);
   });
 
+  it("skips references already waiting for review", () => {
+    expect(matchMovements([mv({})], [], ["r1"])[0].type).toBe("skip");
+  });
+
   it("inserts movements with nothing to match", () => {
     expect(matchMovements([mv({})], [])[0].type).toBe("insert");
   });

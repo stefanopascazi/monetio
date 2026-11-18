@@ -3,6 +3,8 @@ import { runPipeline } from "../backup/pipeline.ts";
 import type { WorkerConfig } from "../config.ts";
 import { createAdvisorPurgeJob, createPostgresAdvisorPurgeStore } from "./advisor-purge.ts";
 import { createBackupJob } from "./backup.ts";
+import { createBankSyncJob } from "./bank-sync.ts";
+import { createPostgresBankSyncStore } from "../bank/store.ts";
 import { createDbPingJob } from "./db-ping.ts";
 import { createPushDeliverJob } from "./push-deliver.ts";
 import { createNotifyEventsJob } from "./notify-events.ts";
@@ -26,5 +28,6 @@ export function createJobs(sql: Sql, config: WorkerConfig): Job[] {
     }),
   );
   jobs.push(createAdvisorPurgeJob(createPostgresAdvisorPurgeStore(sql)));
+  if (config.bankKeys) jobs.push(createBankSyncJob({ store: createPostgresBankSyncStore(sql), masterKey: config.bankKeys }));
   return jobs;
 }

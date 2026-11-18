@@ -1,3 +1,4 @@
+import { parseMasterKey } from "../../../lib/banking/secrets.ts";
 import type { VapidConfig } from "./push/sender.ts";
 
 export interface WorkerConfig {
@@ -10,6 +11,8 @@ export interface WorkerConfig {
   backup: { remote: string; ageRecipient: string } | null;
   /** Web push keys; null keeps the push-deliver job disabled. */
   push: VapidConfig | null;
+  /** Master key opening the sealed Enable Banking keys; null keeps the bank-sync job disabled. */
+  bankKeys: Buffer | null;
   /** Sentry DSN; null keeps error reporting off. */
   sentryDsn: string | null;
 }
@@ -32,7 +35,7 @@ export function parseConfig(env: Record<string, string | undefined>): WorkerConf
   for (const [key, value] of Object.entries(env)) {
     if (key.startsWith(HEARTBEAT_PREFIX) && value) heartbeatUrls[key] = value;
   }
-  return { databaseUrl, tickMs, heartbeatUrls, backup: parseBackup(env), push: parsePush(env), sentryDsn: env.SENTRY_DSN || null };
+  return { databaseUrl, tickMs, heartbeatUrls, backup: parseBackup(env), push: parsePush(env), bankKeys: env.BANK_KEYS_SECRET ? parseMasterKey(env.BANK_KEYS_SECRET) : null, sentryDsn: env.SENTRY_DSN || null };
 }
 
 function parseBackup(env: Record<string, string | undefined>): WorkerConfig["backup"] {

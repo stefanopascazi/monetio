@@ -11,7 +11,7 @@ describe("heartbeatEnvName", () => {
 describe("parseConfig", () => {
   it("prefers the non-pooled URL and applies defaults", () => {
     const config = parseConfig({ POSTGRES_URL: "pooled", POSTGRES_URL_NON_POOLING: "direct" });
-    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {}, backup: null, push: null, sentryDsn: null });
+    expect(config).toEqual({ databaseUrl: "direct", tickMs: 30_000, heartbeatUrls: {}, backup: null, push: null, bankKeys: null, sentryDsn: null });
   });
 
   it("falls back to the pooled URL", () => {
@@ -20,6 +20,12 @@ describe("parseConfig", () => {
 
   it("reads the optional Sentry DSN", () => {
     expect(parseConfig({ POSTGRES_URL: "x", SENTRY_DSN: "https://k@o.ingest.sentry.io/1" }).sentryDsn).toBe("https://k@o.ingest.sentry.io/1");
+  });
+
+  it("reads the bank master key and rejects a malformed one", () => {
+    const key = Buffer.alloc(32, 7);
+    expect(parseConfig({ POSTGRES_URL: "x", BANK_KEYS_SECRET: key.toString("base64") }).bankKeys?.equals(key)).toBe(true);
+    expect(() => parseConfig({ POSTGRES_URL: "x", BANK_KEYS_SECRET: "short" })).toThrow(/BANK_KEYS_SECRET/);
   });
 
   it("requires a database URL", () => {

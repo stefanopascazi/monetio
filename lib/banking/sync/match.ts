@@ -41,9 +41,12 @@ function closest(movement: BankMovement, list: Candidate[]): { best: Candidate; 
   return { best: sorted[0], tie };
 }
 
-/** One decision per movement; every candidate is used at most once across the batch. */
-export function matchMovements(movements: BankMovement[], candidates: Candidate[]): Decision[] {
-  const synced = new Set(candidates.map((c) => c.bankRef).filter((r): r is string => !!r));
+/**
+ * One decision per movement; every candidate is used at most once across the batch.
+ * `knownRefs`: references already handled elsewhere (e.g. waiting in the review queue).
+ */
+export function matchMovements(movements: BankMovement[], candidates: Candidate[], knownRefs: Iterable<string> = []): Decision[] {
+  const synced = new Set([...candidates.map((c) => c.bankRef).filter((r): r is string => !!r), ...knownRefs]);
   const open = candidates.filter((c) => !c.bankRef);
   const used = new Set<string>();
   const decisions: Decision[] = [];
