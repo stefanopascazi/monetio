@@ -1,7 +1,7 @@
 // Minimal Enable Banking API client. Each call signs a fresh application JWT.
 // `fetch` is injectable so tests never hit the network.
 import { createAppJwt } from "./jwt.ts";
-import type { Aspsp } from "./types.ts";
+import type { Aspsp, AuthRequest, AuthResponse, SessionResponse } from "./types.ts";
 
 export const ENABLE_BANKING_API = "https://api.enablebanking.com";
 
@@ -29,12 +29,16 @@ export function createEnableBankingClient(config: EnableBankingConfig) {
   const baseUrl = config.baseUrl ?? ENABLE_BANKING_API;
   const doFetch = config.fetch ?? fetch;
 
-  async function get<T>(path: string): Promise<T> {
+  async function call<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
     const token = createAppJwt({ appId: config.appId, privateKeyPem: config.privateKeyPem });
-    const res = await doFetch(`${baseUrl}${path}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } });
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const res = await doFetch(`${baseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     if (!res.ok) throw new EnableBankingError(res.status, await res.text());
-    return (await res.json()) as T;
+    const text = await res.text();
+    return (text ? JSON.parse(text) : {}) as T;
   }
+  const get = <T>(path: string) => call<T>("GET", path);
 
   return {
     /** Application record: also a cheap check that app id and key match. */
@@ -42,6 +46,12 @@ export function createEnableBankingClient(config: EnableBankingConfig) {
     /** Banks (ASPSPs) available to this app in a country, e.g. "IT". */
     listAspsps: async (country: string): Promise<Aspsp[]> =>
       (await get<{ aspsps: Aspsp[] }>(`/aspsps?country=${encodeURIComponent(country.toUpperCase())}`)).aspsps ?? [],
+    /** Starts the bank's consent flow: the person is sent to `url` and comes back to the redirect URL with a code. */
+    startAuth: (request: AuthRequest) => call<AuthResponse>("POST", "/auth", request),
+    /** Exchanges the callback code for a session holding the authorised accounts. */
+    createSession: (code: string) => call<SessionResponse>("POST", "/sessions", { code }),
+    /** Revokes the consent at the bank. */
+    deleteSession: (sessionId: string) => call<Record<string, unknown>>("DELETE", `/sessions/${encodeURIComponent(sessionId)}`),
   };
 }
 

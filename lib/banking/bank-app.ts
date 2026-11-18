@@ -26,6 +26,13 @@ export function shortAppId(appId: string): string {
   return appId.length > 12 ? `${appId.slice(0, 4)}…${appId.slice(-4)}` : appId;
 }
 
+/** Public origin of the request, behind Vercel's proxy too. */
+export function requestOrigin(get: (name: string) => string | null): string {
+  const host = get("x-forwarded-host") ?? get("host") ?? "localhost:3000";
+  const proto = get("x-forwarded-proto") ?? (/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https");
+  return `${proto.split(",")[0].trim()}://${host}`;
+}
+
 /** Redirect URL to register in the Control Panel for this deployment. */
 export function bankCallbackUrl(origin: string): string {
   return `${origin.replace(/\/+$/, "")}/api/bank/callback`;
