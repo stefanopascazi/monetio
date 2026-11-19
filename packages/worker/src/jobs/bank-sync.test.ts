@@ -69,10 +69,11 @@ describe("bank-sync job", () => {
     await expect(run()).rejects.toThrow("missing");
   });
 
-  it("runs four times a day", () => {
+  it("runs at 8, 12, 18 and 23 Rome time", () => {
     const { job } = setup([]);
-    expect(job.isDue!(new Date("2026-11-18T05:30:00Z"), new Date("2026-11-18T10:59:00Z"))).toBe(false);
-    expect(job.isDue!(new Date("2026-11-18T05:30:00Z"), new Date("2026-11-18T11:00:00Z"))).toBe(true);
+    // Winter: 12:00 Rome is 11:00 UTC.
+    expect(job.isDue!(new Date("2026-11-18T07:30:00Z"), new Date("2026-11-18T10:59:00Z"))).toBe(false);
+    expect(job.isDue!(new Date("2026-11-18T07:30:00Z"), new Date("2026-11-18T11:00:00Z"))).toBe(true);
   });
 });
 

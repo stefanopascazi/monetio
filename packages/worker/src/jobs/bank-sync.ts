@@ -8,10 +8,11 @@ import { slotsDue } from "./schedule.ts";
 import type { Job } from "./types.ts";
 
 /**
- * Four runs a day (UTC): PSD2 allows four unattended reads per account per day.
- * 05, 11, 17, 21 UTC = 06, 12, 18, 22 Rome in winter.
+ * Four runs a day: PSD2 allows four unattended reads per account per day.
+ * Spread over waking hours only, Rome wall-clock time (DST-aware).
  */
-export const BANK_SYNC_HOURS_UTC = [5, 11, 17, 21];
+export const BANK_SYNC_HOURS = [8, 12, 18, 23];
+export const BANK_SYNC_TIME_ZONE = "Europe/Rome";
 
 export type BankSyncDeps = {
   store: BankSyncStore;
@@ -33,7 +34,7 @@ export function createBankSyncJob({ store, masterKey, createClient = createEnabl
     name: "bank-sync",
     intervalMs: 10 * 60_000,
     timeoutMs: 20 * 60_000,
-    isDue: slotsDue(BANK_SYNC_HOURS_UTC),
+    isDue: slotsDue(BANK_SYNC_HOURS, BANK_SYNC_TIME_ZONE),
     async run(ctx) {
       const expired = await store.expireConnections(ctx.now);
       const targets = await store.listTargets();
