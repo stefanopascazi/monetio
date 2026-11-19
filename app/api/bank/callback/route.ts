@@ -22,8 +22,8 @@ export async function GET(request: Request) {
   if (!check.ok) return back(check.reason === "denied" ? "negata" : check.reason === "state" ? "scaduta" : "errore");
 
   try {
-    await bankService().completeLink({ userId: ctx.userId, householdId: ctx.householdId, code: check.code });
-    return back("collegata");
+    const count = await bankService().completeLink({ userId: ctx.userId, householdId: ctx.householdId, code: check.code });
+    return back(count > 0 ? "collegata" : "nessun-conto");
   } catch (error) {
     console.error("[banking] complete link failed", error instanceof Error ? error.name : "unknown");
     return back("errore");

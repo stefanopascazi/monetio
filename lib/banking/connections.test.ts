@@ -65,7 +65,7 @@ describe("consentDaysLeft", () => {
 
 describe("LINK_OUTCOME_MESSAGE", () => {
   it("covers every outcome the callback can send", () => {
-    expect(Object.keys(LINK_OUTCOME_MESSAGE).sort()).toEqual(["collegata", "errore", "negata", "scaduta"]);
+    expect(Object.keys(LINK_OUTCOME_MESSAGE).sort()).toEqual(["collegata", "errore", "negata", "nessun-conto", "scaduta"]);
   });
 });
 

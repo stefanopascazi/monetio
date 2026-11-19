@@ -56,11 +56,21 @@ export function createBankService({ masterKey, store, createClient, now = () => 
       return { ok: true as const, url, state };
     },
 
-    /** Exchanges the callback code and stores the consent with its accounts. Returns how many accounts came back. */
+    /** Exchanges the callback code and stores the consent with its accounts. Returns how many accounts came back (0: nothing stored). */
     completeLink: async (input: { userId: string; householdId: string; code: string }) => {
       const client = await clientFor(input.userId);
       const session = await client.createSession(input.code);
       const accounts = mapSessionAccounts(session);
+      // Restricted apps get an empty list for accounts not whitelisted in the Control Panel:
+      // nothing to read, so revoke the consent instead of storing an empty link.
+      if (!accounts.length) {
+        try {
+          await client.deleteSession(session.session_id);
+        } catch (error) {
+          console.warn("[banking] empty session revoke failed", error instanceof Error ? error.name : "unknown");
+        }
+        return 0;
+      }
       await store.insertConnection(
         {
           user_id: input.userId,

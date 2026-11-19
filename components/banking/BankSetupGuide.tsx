@@ -29,7 +29,7 @@ export function BankSetupGuide({ callbackUrl }: { callbackUrl: string }) {
           Email, privacy e termini puoi lasciarli vuoti.
         </li>
         <li>
-          Solo per Production: collega i tuoi conti dal Control Panel (<strong>Activate by linking accounts</strong>). Puoi collegare solo conti tuoi o cointestati.
+          Solo per Production: aggiungi dal Control Panel (<strong>Linked accounts</strong>) ogni conto che vuoi vedere in MonetIO. Puoi collegare solo conti tuoi o cointestati. È un passaggio da fare una volta sola per conto: Enable Banking condivide solo i conti in quell&apos;elenco, ma non passa l&apos;autorizzazione a MonetIO, quindi poi colleghi la banca anche da qui.
         </li>
         <li>Copia l&apos;Application ID e caricalo qui sotto insieme al file .pem.</li>
       </ol>

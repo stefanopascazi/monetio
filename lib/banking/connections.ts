@@ -78,6 +78,10 @@ export const LINK_OUTCOME_MESSAGE: Record<string, { tone: "success" | "danger" |
   collegata: { tone: "success", text: "Banca collegata. I conti autorizzati sono qui sotto." },
   negata: { tone: "warning", text: "Collegamento annullato: la banca non ha ricevuto il consenso." },
   scaduta: { tone: "danger", text: "Il collegamento è scaduto o è stato avviato da un altro browser. Riprova da qui." },
+  "nessun-conto": {
+    tone: "warning",
+    text: "La banca ha dato il consenso ma non ha condiviso nessun conto. Aggiungi prima il conto in \"Linked accounts\" della tua app sul Control Panel di Enable Banking, poi ricollegalo da qui.",
+  },
   errore: { tone: "danger", text: "Non è stato possibile completare il collegamento. Riprova tra qualche minuto." },
 };
 
