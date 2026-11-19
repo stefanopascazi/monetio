@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { Alert } from "@monetio/ui";
 import { bankCallbackUrl, requestOrigin } from "@/lib/banking/bank-app";
+import { recentBanks, type BankOption } from "@/lib/banking/bank-options";
 import { LINK_OUTCOME_MESSAGE } from "@/lib/banking/connections";
 import { summarizeAspsps } from "@/lib/banking/enable-banking/aspsps";
 import { bankService } from "@/lib/banking/server";
@@ -12,7 +13,7 @@ import { listAccounts } from "@/lib/data/queries";
 import { BankAppCard } from "./BankAppCard";
 import { BankConnectionList } from "./BankConnectionList";
 import { BankCredentialsForm } from "./BankCredentialsForm";
-import { BankPicker, type BankOption } from "./BankPicker";
+import { BankPicker } from "./BankPicker";
 import { BankReviewList } from "./BankReviewList";
 import { BankSetupGuide } from "./BankSetupGuide";
 
@@ -20,7 +21,7 @@ import { BankSetupGuide } from "./BankSetupGuide";
 async function loadBankOptions(userId: string): Promise<BankOption[] | null> {
   try {
     const rows = summarizeAspsps(await bankService().listBanks(userId, "IT"));
-    return rows.filter((r) => r.personal).map((r) => ({ name: r.name, beta: r.beta }));
+    return rows.filter((r) => r.personal).map((r) => ({ name: r.name }));
   } catch (error) {
     console.error("[banking] list banks failed", error instanceof Error ? error.name : "unknown");
     return null;
@@ -58,7 +59,7 @@ export async function BanksView({ outcome }: { outcome?: string }) {
       <BankReviewList reviews={reviews} />
       <BankConnectionList connections={connections} accountOptions={accountOptions} balances={balances} />
       {banks ? (
-        <BankPicker banks={banks} sandbox={app.environment === "sandbox"} />
+        <BankPicker banks={banks} recent={recentBanks(banks, connections.map((c) => c.bankName))} sandbox={app.environment === "sandbox"} />
       ) : (
         <Alert tone="warning">Elenco delle banche non disponibile: Enable Banking non risponde o il server non è configurato.</Alert>
       )}

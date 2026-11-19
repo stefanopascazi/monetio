@@ -1,15 +1,17 @@
 "use client";
 
 import { Link2 } from "lucide-react";
-import { useState, useTransition } from "react";
-import { Button, Card, Select, useToast } from "@monetio/ui";
+import { useMemo, useState, useTransition } from "react";
+import { Button, Card, Chip, SearchSelect, useToast } from "@monetio/ui";
 import { startBankLink } from "@/app/actions/bank-links";
+import { recentFirst, type BankOption } from "@/lib/banking/bank-options";
 
-export type BankOption = { name: string; beta: boolean };
+type Props = { banks: BankOption[]; recent?: string[]; sandbox: boolean };
 
-/** Choose a bank and go to its consent page; the bank sends the person back to MonetIO. */
-export function BankPicker({ banks, sandbox }: { banks: BankOption[]; sandbox: boolean }) {
-  const [bank, setBank] = useState(banks[0]?.name ?? "");
+/** Choose a bank (searchable list, or one already used) and go to its consent page; the bank sends the person back. */
+export function BankPicker({ banks, recent = [], sandbox }: Props) {
+  const options = useMemo(() => recentFirst(banks, recent).map((b) => ({ value: b.name, label: b.name })), [banks, recent]);
+  const [bank, setBank] = useState(options[0]?.value ?? "");
   const [pending, start] = useTransition();
   const toast = useToast();
 
@@ -26,21 +28,26 @@ export function BankPicker({ banks, sandbox }: { banks: BankOption[]; sandbox: b
       subtitle={
         sandbox
           ? "App di prova: scegli Mock ASPSP e usa le credenziali di test mostrate dalla pagina della banca."
-          : "Verrai mandato alla tua banca per dare il consenso in sola lettura. Puoi revocarlo quando vuoi."
+          : 'Verrai mandato alla tua banca per dare il consenso in sola lettura. Arrivano solo i conti già aggiunti in "Linked accounts" sul Control Panel di Enable Banking.'
       }
     >
       {banks.length ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <Select
-            label="Banca"
-            className="sm:flex-1"
-            value={bank}
-            onChange={(e) => setBank(e.target.value)}
-            options={banks.map((b) => ({ value: b.name, label: b.beta ? `${b.name} (beta)` : b.name }))}
-          />
-          <Button iconStart={<Link2 />} loading={pending} disabled={!bank} onClick={connect}>
-            Collega
-          </Button>
+        <div className="flex flex-col gap-3">
+          {recent.length > 0 && (
+            <div className="flex flex-wrap gap-2" aria-label="Banche già usate">
+              {recent.map((name) => (
+                <Chip key={name} selected={bank === name} onClick={() => setBank(name)}>
+                  {name}
+                </Chip>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <SearchSelect label="Banca" className="sm:flex-1" value={bank} onChange={setBank} options={options} searchPlaceholder="Cerca banca, es. Intesa, BCC" />
+            <Button iconStart={<Link2 />} loading={pending} disabled={!bank} onClick={connect}>
+              Collega
+            </Button>
+          </div>
         </div>
       ) : (
         <p className="text-sm text-ink-muted">Enable Banking non ha restituito banche per la tua app. Riprova più tardi.</p>

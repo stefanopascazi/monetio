@@ -70,6 +70,23 @@ describe("bank service", () => {
     expect(accounts).toEqual([{ uid: "u1", name: "Conto", iban_masked: null, currency: "EUR" }]);
   });
 
+  it("revokes and does not store a consent without accounts", async () => {
+    const { service, client, store } = setup();
+    client.createSession.mockResolvedValueOnce({ session_id: "sess-2", aspsp: { name: "Mock ASPSP", country: "IT" }, access: { valid_until: "2027-05-17T09:59:00Z" }, accounts: [] });
+    expect(await service.completeLink({ userId: "user-1", householdId: "h1", code: "code" })).toBe(0);
+    expect(store.insertConnection).not.toHaveBeenCalled();
+    expect(client.deleteSession).toHaveBeenCalledWith("sess-2");
+  });
+
+  it("returns 0 even when revoking an empty consent fails", async () => {
+    const { service, client, store } = setup();
+    client.createSession.mockResolvedValueOnce({ session_id: "sess-2", aspsp: { name: "Mock ASPSP", country: "IT" }, access: { valid_until: "2027-05-17T09:59:00Z" }, accounts: [] });
+    client.deleteSession.mockRejectedValueOnce(new Error("gone"));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await service.completeLink({ userId: "user-1", householdId: "h1", code: "code" })).toBe(0);
+    expect(store.insertConnection).not.toHaveBeenCalled();
+  });
+
   it("revokes the session and deletes the link even when the bank call fails", async () => {
     const { service, client, store } = setup();
     client.deleteSession.mockRejectedValueOnce(new Error("gone"));

@@ -10,8 +10,9 @@ vi.mock("@/app/actions/bank-links", () => ({ startBankLink: vi.fn() }));
 const assign = vi.fn();
 const wrap = (ui: React.ReactNode) => render(<ToastProvider>{ui}</ToastProvider>);
 const banks = [
-  { name: "Mock ASPSP", beta: false },
-  { name: "Genome", beta: true },
+  { name: "Mock ASPSP" },
+  { name: "Genome" },
+  { name: "Revolut" },
 ];
 
 afterEach(() => vi.unstubAllGlobals());
@@ -21,8 +22,8 @@ describe("BankPicker", () => {
     vi.stubGlobal("location", { ...window.location, assign });
     vi.mocked(startBankLink).mockResolvedValue({ ok: true, url: "https://bank.example/consent" });
     wrap(<BankPicker banks={banks} sandbox />);
-    expect(screen.getByRole("option", { name: "Genome (beta)" })).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Banca"), "Genome");
+    await userEvent.click(screen.getByRole("button", { name: "Banca" }));
+    await userEvent.click(screen.getByRole("option", { name: "Genome" }));
     await userEvent.click(screen.getByRole("button", { name: "Collega" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://bank.example/consent"));
     expect(startBankLink).toHaveBeenCalledWith("Genome");
@@ -33,6 +34,27 @@ describe("BankPicker", () => {
     wrap(<BankPicker banks={banks} sandbox={false} />);
     await userEvent.click(screen.getByRole("button", { name: "Collega" }));
     expect(await screen.findByText("Banca non disponibile per la tua app.")).toBeInTheDocument();
+  });
+
+  it("filters the list with the search box inside the open select", async () => {
+    wrap(<BankPicker banks={banks} sandbox={false} />);
+    await userEvent.click(screen.getByRole("button", { name: "Banca" }));
+    await userEvent.type(screen.getByRole("combobox"), "revo");
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Revolut"]);
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Banca" })).toHaveTextContent("Revolut");
+  });
+
+  it("shows banks already used first and as shortcuts", async () => {
+    vi.mocked(startBankLink).mockResolvedValue({ ok: false, message: "x" });
+    wrap(<BankPicker banks={banks} recent={["Revolut"]} sandbox={false} />);
+    expect(screen.getByRole("button", { name: "Revolut" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Banca" }));
+    expect(screen.getAllByRole("option")[0]).toHaveTextContent("Revolut");
+    await userEvent.click(screen.getByRole("option", { name: "Genome" }));
+    await userEvent.click(screen.getByRole("button", { name: "Revolut" }));
+    await userEvent.click(screen.getByRole("button", { name: "Collega" }));
+    expect(startBankLink).toHaveBeenCalledWith("Revolut");
   });
 
   it("explains an empty list", () => {

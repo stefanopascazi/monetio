@@ -27,6 +27,12 @@ describe("GET /api/bank/callback", () => {
     expect(cookieDelete).toHaveBeenCalledWith({ name: "mio_bank_state", path: "/api/bank" });
   });
 
+  it("warns when the bank shared no account", async () => {
+    completeLink.mockResolvedValue(0);
+    const res = await call("code=c1&state=st");
+    expect(location(res)).toBe("http://localhost:3000/dati/banche?esito=nessun-conto");
+  });
+
   it("refuses a state that does not match the cookie", async () => {
     expect(location(await call("code=c1&state=other"))).toMatch(/esito=scaduta$/);
     cookieGet.mockReturnValue(undefined);

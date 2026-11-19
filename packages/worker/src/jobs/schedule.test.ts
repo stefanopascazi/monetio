@@ -48,3 +48,31 @@ describe("slotsDue", () => {
     expect(isDue(null, at("2026-11-10T03:00:00Z"))).toBe(true);
   });
 });
+
+describe("slotsDue in a time zone", () => {
+  const isDue = slotsDue([8, 12, 18, 23], "Europe/Rome");
+
+  it("follows Rome wall-clock hours in winter (UTC+1)", () => {
+    expect(isDue(at("2026-11-19T06:00:00Z"), at("2026-11-19T06:59:00Z"))).toBe(false);
+    expect(isDue(at("2026-11-19T06:00:00Z"), at("2026-11-19T07:00:00Z"))).toBe(true);
+    expect(isDue(at("2026-11-19T07:05:00Z"), at("2026-11-19T10:59:00Z"))).toBe(false);
+    expect(isDue(at("2026-11-19T07:05:00Z"), at("2026-11-19T22:00:00Z"))).toBe(true);
+  });
+
+  it("follows Rome wall-clock hours in summer (UTC+2)", () => {
+    expect(isDue(at("2026-07-10T04:00:00Z"), at("2026-07-10T05:59:00Z"))).toBe(false);
+    expect(isDue(at("2026-07-10T04:00:00Z"), at("2026-07-10T06:00:00Z"))).toBe(true);
+    expect(isDue(at("2026-07-10T16:05:00Z"), at("2026-07-10T21:00:00Z"))).toBe(true);
+  });
+
+  it("does not run at night after the 23:00 slot", () => {
+    expect(isDue(at("2026-11-19T22:05:00Z"), at("2026-11-20T03:00:00Z"))).toBe(false);
+    expect(isDue(at("2026-11-19T21:00:00Z"), at("2026-11-20T03:00:00Z"))).toBe(true);
+  });
+
+  it("handles the DST change day", () => {
+    // 2026-03-29: Rome switches to UTC+2 at 02:00, so 08:00 is 06:00 UTC.
+    expect(isDue(at("2026-03-28T22:05:00Z"), at("2026-03-29T05:59:00Z"))).toBe(false);
+    expect(isDue(at("2026-03-28T22:05:00Z"), at("2026-03-29T06:00:00Z"))).toBe(true);
+  });
+});
