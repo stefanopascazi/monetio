@@ -1,38 +1,25 @@
 "use client";
 
-import { Link2, Search } from "lucide-react";
+import { Link2 } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
-import { Button, Card, Chip, Select, TextField, useToast } from "@monetio/ui";
+import { Button, Card, Chip, SearchSelect, useToast } from "@monetio/ui";
 import { startBankLink } from "@/app/actions/bank-links";
-import {
-  filterBanks,
-  recentFirst,
-  type BankOption,
-} from "@/lib/banking/bank-options";
+import { recentFirst, type BankOption } from "@/lib/banking/bank-options";
 
 type Props = { banks: BankOption[]; recent?: string[]; sandbox: boolean };
 
-/** Choose a bank (search, or one already used) and go to its consent page; the bank sends the person back. */
+/** Choose a bank (searchable list, or one already used) and go to its consent page; the bank sends the person back. */
 export function BankPicker({ banks, recent = [], sandbox }: Props) {
-  const ordered = useMemo(() => recentFirst(banks, recent), [banks, recent]);
-  const [query, setQuery] = useState("");
-  const [bank, setBank] = useState(ordered[0]?.name ?? "");
+  const options = useMemo(() => recentFirst(banks, recent).map((b) => ({ value: b.name, label: b.name })), [banks, recent]);
+  const [bank, setBank] = useState(options[0]?.value ?? "");
   const [pending, start] = useTransition();
   const toast = useToast();
-  const shown = useMemo(() => filterBanks(ordered, query), [ordered, query]);
-  // The select always shows a visible choice: fall back to the first match when the filter hides it.
-  const selected = shown.some((b) => b.name === bank)
-    ? bank
-    : (shown[0]?.name ?? "");
 
   const connect = () =>
     start(async () => {
-      const res = await startBankLink(selected);
+      const res = await startBankLink(bank);
       if (res.ok && res.url) window.location.assign(res.url);
-      else
-        toast.show(res.message ?? "Collegamento non avviato.", {
-          tone: "danger",
-        });
+      else toast.show(res.message ?? "Collegamento non avviato.", { tone: "danger" });
     });
 
   return (
@@ -49,56 +36,21 @@ export function BankPicker({ banks, recent = [], sandbox }: Props) {
           {recent.length > 0 && (
             <div className="flex flex-wrap gap-2" aria-label="Banche già usate">
               {recent.map((name) => (
-                <Chip
-                  key={name}
-                  selected={selected === name}
-                  onClick={() => {
-                    setQuery("");
-                    setBank(name);
-                  }}
-                >
+                <Chip key={name} selected={bank === name} onClick={() => setBank(name)}>
                   {name}
                 </Chip>
               ))}
             </div>
           )}
-          <TextField
-            label="Cerca banca"
-            type="search"
-            prefix={<Search />}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Es. Intesa, BCC, Revolut"
-          />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <Select
-              label="Banca"
-              className="sm:flex-1"
-              value={selected}
-              onChange={(e) => setBank(e.target.value)}
-              disabled={!shown.length}
-              options={shown.map((b) => ({ value: b.name, label: b.name }))}
-              hint={
-                shown.length
-                  ? undefined
-                  : "Nessuna banca corrisponde alla ricerca."
-              }
-            />
-            <Button
-              iconStart={<Link2 />}
-              loading={pending}
-              disabled={!selected}
-              onClick={connect}
-            >
+            <SearchSelect label="Banca" className="sm:flex-1" value={bank} onChange={setBank} options={options} searchPlaceholder="Cerca banca, es. Intesa, BCC" />
+            <Button iconStart={<Link2 />} loading={pending} disabled={!bank} onClick={connect}>
               Collega
             </Button>
           </div>
         </div>
       ) : (
-        <p className="text-sm text-ink-muted">
-          Enable Banking non ha restituito banche per la tua app. Riprova più
-          tardi.
-        </p>
+        <p className="text-sm text-ink-muted">Enable Banking non ha restituito banche per la tua app. Riprova più tardi.</p>
       )}
     </Card>
   );
