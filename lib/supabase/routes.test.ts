@@ -8,6 +8,8 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/cron/sync")).toBe(true);
     expect(isPublicPath("/api/health")).toBe(true);
     expect(isPublicPath("/api/debug/sentry")).toBe(true);
+    expect(isPublicPath("/privacy")).toBe(true);
+    expect(isPublicPath("/terms-of-use")).toBe(true);
     expect(isPublicPath("/")).toBe(false);
     expect(isPublicPath("/loginx")).toBe(false);
     expect(isPublicPath("/conti")).toBe(false);

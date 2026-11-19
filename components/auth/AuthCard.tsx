@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LegalLinks } from "@/components/legal/LegalPage";
 
 /** Centered card for login and onboarding screens. */
 export function AuthCard({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
@@ -12,6 +13,7 @@ export function AuthCard({ title, description, children }: { title: string; desc
         {description && <p className="text-ink-muted">{description}</p>}
       </div>
       <div className="rounded-[28px] bg-surface p-6">{children}</div>
+      <LegalLinks />
     </main>
   );
 }
