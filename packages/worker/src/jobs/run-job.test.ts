@@ -53,6 +53,15 @@ describe("runJob", () => {
     expect(locks.release).toHaveBeenCalled();
   });
 
+  it("awaits an async due check", async () => {
+    const { deps } = setup();
+    const run = vi.fn(async () => {});
+    await runJob(job(run, async () => false), deps);
+    expect(run).not.toHaveBeenCalled();
+    await runJob(job(run, async () => true), deps);
+    expect(run).toHaveBeenCalled();
+  });
+
   it("runs when due", async () => {
     const { deps } = setup();
     const run = vi.fn(async () => {});
