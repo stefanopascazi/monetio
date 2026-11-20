@@ -21,6 +21,13 @@ const preview: SyncPreview = {
 const categories = [{ id: "spesa", name: "Spesa", kind: "expense" as const }];
 const wrap = () => render(<ToastProvider><BankSyncPreview bankAccountId="ba1" defaultFrom="2026-11-01" today="2026-11-20" categories={categories} /></ToastProvider>);
 
+/** Renders and loads the preview, waiting until it is shown: the form is disabled while it loads. */
+async function openPreview() {
+  wrap();
+  await userEvent.click(screen.getByRole("button", { name: "Mostra anteprima" }));
+  await screen.findByRole("region", { name: "Nuovi" });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(previewBankSync).mockResolvedValue({ ok: true, preview });
@@ -28,8 +35,7 @@ beforeEach(() => {
 
 describe("BankSyncPreview", () => {
   it("loads the preview from the chosen day with new and doubtful movements selected", async () => {
-    wrap();
-    await userEvent.click(screen.getByRole("button", { name: "Mostra anteprima" }));
+    await openPreview();
     expect(previewBankSync).toHaveBeenCalledWith("ba1", "2026-11-01");
     expect(screen.getByRole("region", { name: "Nuovi" })).toHaveTextContent("Supermercato");
     expect(screen.getByRole("region", { name: "Già presenti" })).toHaveTextContent("Bolletta");
@@ -39,16 +45,14 @@ describe("BankSyncPreview", () => {
   });
 
   it("confirms only the movements left selected", async () => {
-    wrap();
-    await userEvent.click(screen.getByRole("button", { name: "Mostra anteprima" }));
+    await openPreview();
     await userEvent.click(screen.getByLabelText(/Importa Bar/));
     await userEvent.click(screen.getByRole("button", { name: "Conferma e importa (2)" }));
     expect(confirmBankSync).toHaveBeenCalledWith("ba1", "2026-11-01", ["n1", "n2"], []);
   });
 
   it("applies a picked category to identical new movements and sends the pick", async () => {
-    wrap();
-    await userEvent.click(screen.getByRole("button", { name: "Mostra anteprima" }));
+    await openPreview();
     await userEvent.selectOptions(screen.getByLabelText(/Categoria di Supermercato del/), "spesa");
     expect(screen.getByLabelText(/Categoria di SUPERMERCATO 02\/11/)).toHaveValue("spesa");
     await userEvent.click(screen.getByRole("button", { name: /Conferma e importa/ }));
@@ -56,12 +60,11 @@ describe("BankSyncPreview", () => {
   });
 
   it("drops the preview when the day changes", async () => {
-    wrap();
-    await userEvent.click(screen.getByRole("button", { name: "Mostra anteprima" }));
+    await openPreview();
     await userEvent.clear(screen.getByLabelText("Importa dal"));
     await userEvent.type(screen.getByLabelText("Importa dal"), "2026-11-05");
     expect(screen.queryByText("Supermercato")).toBeNull();
-    expect(screen.getByRole("button", { name: "Mostra anteprima" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Mostra anteprima" })).toBeEnabled();
   });
 
   it("reports a failed preview", async () => {
