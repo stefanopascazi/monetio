@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { History, Undo2 } from "lucide-react";
-import { Accordion, Badge, InlineConfirm } from "@monetio/ui";
+import { Accordion, Badge, Button, InlineConfirm } from "@monetio/ui";
 import { undoBankSync } from "@/app/actions/bank-sync-batches";
 import { useToastAction } from "@/hooks/useToastAction";
+import { BankSyncBatchDetails } from "./BankSyncBatchDetails";
 import { BATCH_KIND_LABEL, batchSummary, type BankSyncBatch, undoableBatchId, undoMessage } from "@/lib/banking/sync-batches";
 
 const timeFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
@@ -11,6 +13,7 @@ const timeFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "sh
 /** Latest syncs of a bank-fed account; the newest active one can be undone. */
 export function BankSyncHistory({ batches }: { batches: BankSyncBatch[] }) {
   const { run } = useToastAction();
+  const [open, setOpen] = useState<string | null>(null);
   if (!batches.length) return null;
   const undoable = undoableBatchId(batches);
   return (
@@ -34,6 +37,12 @@ export function BankSyncHistory({ batches }: { batches: BankSyncBatch[] }) {
                     )}
                   </div>
                   <span className="text-ink-muted">{batchSummary(b)}</span>
+                  {!b.undoneAt && (
+                    <Button variant="ghost" size="sm" className="self-start" aria-expanded={open === b.id} onClick={() => setOpen(open === b.id ? null : b.id)}>
+                      {open === b.id ? "Nascondi movimenti" : "Vedi movimenti"}
+                    </Button>
+                  )}
+                  {open === b.id && !b.undoneAt && <BankSyncBatchDetails batchId={b.id} />}
                   {b.id === undoable && (
                     <InlineConfirm
                       triggerLabel="Annulla aggiornamento"

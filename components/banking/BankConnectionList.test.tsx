@@ -7,7 +7,7 @@ import type { BankConnection } from "@/lib/banking/connections";
 import { BankConnectionList } from "./BankConnectionList";
 
 vi.mock("@/app/actions/bank-sync", () => ({ previewBankSync: vi.fn(), confirmBankSync: vi.fn() }));
-vi.mock("@/app/actions/bank-sync-batches", () => ({ undoBankSync: vi.fn() }));
+vi.mock("@/app/actions/bank-sync-batches", () => ({ undoBankSync: vi.fn(), loadBankSyncBatchDetail: vi.fn() }));
 vi.mock("@/app/actions/bank-links", () => ({
   removeBankConnection: vi.fn(async () => ({ ok: true, message: "Banca scollegata." })),
   linkBankAccount: vi.fn(),

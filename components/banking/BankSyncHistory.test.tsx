@@ -8,6 +8,10 @@ import { BankSyncHistory } from "./BankSyncHistory";
 
 vi.mock("@/app/actions/bank-sync-batches", () => ({
   undoBankSync: vi.fn(async () => ({ ok: true, message: "Aggiornamento annullato." })),
+  loadBankSyncBatchDetail: vi.fn(async () => ({
+    ok: true,
+    detail: { inserted: [{ id: "t1", bookedOn: "2026-11-15", amountCents: -700, description: "Spesa" }], reconciled: [], reviews: [] },
+  })),
 }));
 
 const batches: BankSyncBatch[] = [
@@ -50,5 +54,16 @@ describe("BankSyncHistory", () => {
     expect(screen.getByText("Annullato")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Annulla aggiornamento/ }));
     expect(screen.getByText(/anteprima del primo import/)).toBeInTheDocument();
+  });
+
+  it("shows the movements of an active batch on demand", async () => {
+    const user = userEvent.setup();
+    wrap(<BankSyncHistory batches={[{ ...batches[0], undoneAt: "2026-11-20T08:00:00Z" }, batches[1]]} />);
+    await user.click(screen.getByRole("button", { name: /Ultimi aggiornamenti/ }));
+    expect(screen.getAllByRole("button", { name: "Vedi movimenti" })).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Vedi movimenti" }));
+    expect(await screen.findByText("Spesa")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Nascondi movimenti" }));
+    expect(screen.queryByText("Spesa")).toBeNull();
   });
 });

@@ -1,5 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { batchSummary, type BankSyncBatch, mapBankSyncBatch, undoableBatchId, undoMessage } from "./sync-batches";
+import { batchSummary, type BankSyncBatch, changeNotes, mapBankSyncBatch, mapBatchDetail, undoableBatchId, undoMessage } from "./sync-batches";
+
+describe("mapBatchDetail", () => {
+  const mv = (id: string, cents: number | string) => ({ id, booked_on: "2026-11-15", amount_cents: cents, description: id });
+
+  it("maps inserted, changed (fee rows out) and queued movements", () => {
+    const d = mapBatchDetail({
+      inserted: [mv("ins", "-700")],
+      changes: [
+        { prev_amount_cents: "-5000", prev_booked_on: "2026-11-10", prev_status: "planned", transaction: { ...mv("rec", -5000), status: "booked", parent_transaction_id: null } },
+        { prev_amount_cents: -100, prev_booked_on: "2026-11-10", prev_status: "planned", transaction: { ...mv("fee", -100), status: "booked", parent_transaction_id: "rec" } },
+        { prev_amount_cents: -1, prev_booked_on: "2026-11-10", prev_status: "booked", transaction: null },
+      ],
+      reviews: [
+        { ...mv("open", -1), reason: "ambiguous", resolution: null },
+        { ...mv("excl", -2), reason: "excluded", resolution: "ignored" },
+        { ...mv("add", -3), reason: "amount_differs", resolution: "added" },
+      ],
+    });
+    expect(d.inserted).toEqual([{ id: "ins", bookedOn: "2026-11-15", amountCents: -700, description: "ins" }]);
+    expect(d.reconciled).toEqual([
+      { id: "rec", bookedOn: "2026-11-15", amountCents: -5000, description: "rec", status: "booked", prevAmountCents: -5000, prevBookedOn: "2026-11-10", prevStatus: "planned" },
+    ]);
+    expect(d.reviews.map((r) => r.state)).toEqual(["open", "excluded", "added"]);
+  });
+});
+
+describe("changeNotes", () => {
+  const c = { id: "x", description: "x", bookedOn: "2026-11-15", amountCents: -100, status: "booked" as const, prevBookedOn: "2026-11-15", prevAmountCents: -100, prevStatus: "booked" as const };
+
+  it("flags only what changed", () => {
+    expect(changeNotes(c)).toEqual({ status: false, bookedOn: false, amount: false });
+    expect(changeNotes({ ...c, prevStatus: "planned", prevBookedOn: "2026-11-10", prevAmountCents: -90 })).toEqual({ status: true, bookedOn: true, amount: true });
+  });
+});
 
 const batch = (id: string, createdAt: string, undoneAt: string | null = null): BankSyncBatch => ({
   id,

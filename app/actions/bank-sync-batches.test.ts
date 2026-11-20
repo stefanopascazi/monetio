@@ -5,8 +5,28 @@ vi.mock("@/lib/data/context", () => ({ getContext: vi.fn(async () => ({ userId: 
 const rpc = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc })) }));
 
-const { undoBankSync } = await import("./bank-sync-batches");
+const getBankSyncBatchDetail = vi.fn();
+vi.mock("@/lib/data/bank-sync-batches", () => ({ getBankSyncBatchDetail: (batchId: string) => getBankSyncBatchDetail(batchId) }));
+
+const { loadBankSyncBatchDetail, undoBankSync } = await import("./bank-sync-batches");
 const id = "11111111-2222-3333-4444-555555555555";
+
+describe("loadBankSyncBatchDetail", () => {
+  it("returns the batch movements", async () => {
+    const detail = { inserted: [], reconciled: [], reviews: [] };
+    getBankSyncBatchDetail.mockResolvedValue(detail);
+    expect(await loadBankSyncBatchDetail(id)).toEqual({ ok: true, detail });
+    expect(getBankSyncBatchDetail).toHaveBeenCalledWith(id);
+  });
+
+  it("reports load errors and bad ids", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    getBankSyncBatchDetail.mockRejectedValue({ code: "XX000", message: "boom" });
+    expect((await loadBankSyncBatchDetail(id)).ok).toBe(false);
+    expect((await loadBankSyncBatchDetail("x")).ok).toBe(false);
+    expect(getBankSyncBatchDetail).toHaveBeenCalledTimes(1);
+  });
+});
 
 beforeEach(() => vi.clearAllMocks());
 
