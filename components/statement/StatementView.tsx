@@ -15,6 +15,7 @@ import { AccountPanes } from "./AccountPanes";
 import { BalanceHistoryCard } from "./sections/BalanceHistoryCard";
 import { MonthRecapCard } from "./sections/MonthRecapCard";
 import { StatementCard } from "./sections/StatementCard";
+import { UncategorisedCard } from "./sections/UncategorisedCard";
 
 /**
  * Account page body: name, balance and colour live in the carousel card above (conti layout),
@@ -57,6 +58,11 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
           statement={
             <StreamBlock height={480}>
               <StatementCard accountId={id} openingDate={account.openingDate} period={period} today={today} />
+            </StreamBlock>
+          }
+          uncategorised={
+            <StreamBlock height={240}>
+              <UncategorisedCard accountId={id} />
             </StreamBlock>
           }
         />

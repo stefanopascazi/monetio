@@ -11,7 +11,7 @@ describe("BankPreviewList", () => {
   it("shows why a movement needs a review and hides empty groups", () => {
     render(
       <BankPreviewList
-        items={[{ ref: "r1", bookedOn: "2026-11-11", amountCents: -500, description: "Bar", group: "review", reason: "amount_differs" }]}
+        items={[{ ref: "r1", bookedOn: "2026-11-11", amountCents: -500, description: "Bar", group: "review", reason: "amount_differs", categoryId: null }]}
         selected={new Set(["r1"])}
         onToggle={vi.fn()}
       />,

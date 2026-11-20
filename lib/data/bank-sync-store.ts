@@ -3,6 +3,7 @@ import type { CategoryHints } from "../banking/sync/categories";
 import type { SyncStore } from "../banking/sync/run";
 import type { ISODate } from "../domain/types";
 import { createClient } from "../supabase/server";
+import { listAccountMatches } from "./category-matches";
 import { mapCategory } from "./mappers";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -52,28 +53,12 @@ export function createPreviewSyncStore(supabase: Client): Pick<SyncStore, "loadE
     },
 
     async loadCategoryHints(target): Promise<CategoryHints> {
-      // Same examples as the worker: RLS limits them to accounts the owner sees.
-      const [history, categories] = await Promise.all([
-        readPages(
-          (a, b) =>
-            supabase
-              .from("transactions")
-              .select("description, amount_cents, category_id")
-              .eq("household_id", target.householdId)
-              .in("kind", ["income", "expense"])
-              .not("category_id", "is", null)
-              .order("booked_on", { ascending: false })
-              .order("id")
-              .range(a, b),
-          3000,
-        ),
+      const [matches, categories] = await Promise.all([
+        listAccountMatches(supabase, target.accountId),
         supabase.from("categories").select("*").eq("household_id", target.householdId),
       ]);
       if (categories.error) throw categories.error;
-      return {
-        history: history.map((r) => ({ description: r.description, amountCents: Number(r.amount_cents), categoryId: r.category_id as string })),
-        categories: (categories.data ?? []).map(mapCategory),
-      };
+      return { matches, categories: (categories.data ?? []).map(mapCategory) };
     },
   };
 }

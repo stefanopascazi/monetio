@@ -9,15 +9,19 @@ export interface RowCategoryProps {
   categories: CategoryOption[];
   onChange: (categoryId: string) => void;
   label: string;
+  /** Note next to a suggested value. */
+  suggestedLabel?: string;
+  disabled?: boolean;
 }
 
 /** Compact category picker of one preview row; flags a suggested value. */
-export function RowCategory({ amountCents, value, suggested, categories, onChange, label }: RowCategoryProps) {
+export function RowCategory({ amountCents, value, suggested, categories, onChange, label, suggestedLabel = "proposta", disabled }: RowCategoryProps) {
   return (
     <span className="flex flex-wrap items-center gap-2 text-xs">
       <select
         aria-label={label}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         className="max-w-full rounded-full border border-border bg-surface px-2 py-1 text-xs font-semibold text-ink"
       >
@@ -28,7 +32,7 @@ export function RowCategory({ amountCents, value, suggested, categories, onChang
           </option>
         ))}
       </select>
-      {suggested && value && <span className="text-ink-muted">proposta</span>}
+      {suggested && value && <span className="text-ink-muted">{suggestedLabel}</span>}
     </span>
   );
 }

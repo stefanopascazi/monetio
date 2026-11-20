@@ -102,13 +102,13 @@ describe("syncBankAccount", () => {
   });
 });
 
-describe("syncBankAccount category proposals", () => {
-  it("asks for hints only when something is inserted and passes the proposal on", async () => {
+describe("syncBankAccount category matches", () => {
+  it("asks for matches only when something is inserted and applies them", async () => {
     const client = { getBalances: vi.fn(async () => []), getTransactions: vi.fn(async () => [txn("x", "2026-11-12", "30.00")]) };
     const store: SyncStore = {
       loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })),
       loadCategoryHints: vi.fn(async () => ({
-        history: [{ description: "Mov x", amountCents: -1000, categoryId: "cat1" }],
+        matches: [{ key: "mov x", direction: -1 as const, categoryId: "cat1" }],
         categories: [{ id: "cat1", name: "Varie", kind: "expense" as const, icon: null, colorIndex: 1 as const, archived: false }],
       })),
       apply: vi.fn(async () => {}),

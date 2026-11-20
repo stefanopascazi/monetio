@@ -1,7 +1,6 @@
 import "server-only";
 import { addDays } from "../domain/dates";
 import type { ISODate, RuleFrequency } from "../domain/types";
-import type { CategorisedMovement } from "../import/categories";
 import { POSSIBLE_WINDOW_DAYS } from "../import/classify";
 import type { Movement } from "../import/dedup";
 import type { ExistingRule, PastMovement } from "../import/recurring";
@@ -181,23 +180,6 @@ export async function linkTransferSides(
       .eq("import_ref", row.importRef);
   }
   return linked;
-}
-
-/** Recent categorised income/expense of the household: the examples category suggestions learn from. */
-export async function categorisedHistory(supabase: Client, householdId: string, limit = 3000): Promise<CategorisedMovement[]> {
-  const rows = await allPages<Record<string, unknown>>((a, b) =>
-    supabase
-      .from("transactions")
-      .select("description, amount_cents, category_id")
-      .eq("household_id", householdId)
-      .in("kind", ["income", "expense"])
-      .not("category_id", "is", null)
-      .order("booked_on", { ascending: false })
-      .order("id")
-      .range(a, b),
-    limit,
-  );
-  return rows.map((r) => ({ description: String(r.description), amountCents: Number(r.amount_cents), categoryId: String(r.category_id) }));
 }
 
 /** Last 13 months of plain income/expense on the account, for recurring detection. */

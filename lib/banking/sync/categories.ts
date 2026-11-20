@@ -1,22 +1,17 @@
-// Category proposals for bank movements: the same learner the CSV import uses, fed with the
-// household's categorised movements the consent owner can see.
+// Categories of bank movements: inserted ones take the account's match for their description.
 import type { Category } from "../../domain/types.ts";
-import { type CategorisedMovement, suggestCategories } from "../../import/categories.ts";
+import { type CategoryMatch, createMatcher } from "../../import/matches.ts";
 import type { Decision } from "./match.ts";
 
-export type CategoryHints = { history: CategorisedMovement[]; categories: Category[] };
+export type CategoryHints = { matches: CategoryMatch[]; categories: Category[] };
 
-/** Inserted movements get the suggested category when one is found; others are left as they are. */
-export function withSuggestedCategories(decisions: Decision[], hints: CategoryHints): Decision[] {
-  const inserts = decisions.flatMap((d, i) => (d.type === "insert" ? [{ line: i, d }] : []));
-  if (!inserts.length || !hints.history.length) return decisions;
-  const drafts = inserts.map(({ line, d }) => ({
-    line,
-    bookedOn: d.movement.bookedOn,
-    amountCents: d.movement.amountCents,
-    description: d.movement.description,
-    category: null,
-  }));
-  const suggested = suggestCategories(drafts, hints.history, hints.categories);
-  return decisions.map((d, i) => (d.type === "insert" && suggested.has(i) ? { ...d, categoryId: suggested.get(i)! } : d));
+/** Inserted movements get the matched category when one exists; others are left as they are. */
+export function withMatchedCategories(decisions: Decision[], hints: CategoryHints): Decision[] {
+  if (!hints.matches.length) return decisions;
+  const matched = createMatcher(hints.matches, hints.categories);
+  return decisions.map((d) => {
+    if (d.type !== "insert") return d;
+    const categoryId = matched(d.movement.description, d.movement.amountCents);
+    return categoryId ? { ...d, categoryId } : d;
+  });
 }

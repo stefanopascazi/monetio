@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { Alert, Amount, Button, TextField, useToast } from "@monetio/ui";
 import { confirmBankSync, previewBankSync } from "@/app/actions/bank-sync";
 import { useToastAction } from "@/hooks/useToastAction";
-import { defaultSelection, type SyncPreview, selectedTotal } from "@/lib/banking/sync/preview";
+import type { CategoryOption } from "@/components/import/import-view";
+import { type CategoryPick, defaultSelection, type SyncPreview, selectedTotal, withPick } from "@/lib/banking/sync/preview";
 import { BankPreviewList } from "./BankPreviewList";
 
 type Props = {
@@ -12,13 +13,17 @@ type Props = {
   /** Suggested first day: the latest movement already recorded, else today. */
   defaultFrom: string;
   today: string;
+  /** Active household categories, for the category of new movements. */
+  categories?: CategoryOption[];
 };
 
 /** First sync of a newly linked account: read the bank now, choose what to import, then confirm. */
-export function BankSyncPreview({ bankAccountId, defaultFrom, today }: Props) {
+export function BankSyncPreview({ bankAccountId, defaultFrom, today, categories }: Props) {
   const [from, setFrom] = useState(defaultFrom);
   const [preview, setPreview] = useState<SyncPreview | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Picks in order: the server replays them on the movements it reads again from the bank.
+  const [picks, setPicks] = useState<CategoryPick[]>([]);
   const [loading, startLoading] = useTransition();
   const toast = useToast();
   const { pending, run } = useToastAction();
@@ -33,6 +38,7 @@ export function BankSyncPreview({ bankAccountId, defaultFrom, today }: Props) {
       }
       setPreview(res.preview);
       setSelected(new Set(defaultSelection(res.preview.items)));
+      setPicks([]);
     });
 
   const toggle = (ref: string, value: boolean) =>
@@ -42,6 +48,11 @@ export function BankSyncPreview({ bankAccountId, defaultFrom, today }: Props) {
       else next.delete(ref);
       return next;
     });
+
+  const pickCategory = (ref: string, categoryId: string | null) => {
+    setPreview((p) => p && { ...p, items: withPick(p.items, ref, categoryId) });
+    setPicks((prev) => [...prev, [ref, categoryId]]);
+  };
 
   const changeFrom = (value: string) => {
     setFrom(value);
@@ -63,12 +74,20 @@ export function BankSyncPreview({ bankAccountId, defaultFrom, today }: Props) {
       </div>
       {preview && (
         <>
-          <BankPreviewList items={preview.items} selected={selected} onToggle={toggle} disabled={busy} />
+          <BankPreviewList
+            items={preview.items}
+            selected={selected}
+            onToggle={toggle}
+            categories={categories}
+            picked={new Set(picks.map(([ref]) => ref))}
+            onPickCategory={pickCategory}
+            disabled={busy}
+          />
           <div className="flex flex-wrap items-center gap-3">
             <span className="flex-1 text-xs text-ink-muted">
               Movimenti nuovi scelti: <Amount cents={selectedTotal(preview.items, selected)} tone="neutral" size="sm" showSign />
             </span>
-            <Button loading={pending} disabled={busy} onClick={() => run(() => confirmBankSync(bankAccountId, preview.from, [...selected]))}>
+            <Button loading={pending} disabled={busy} onClick={() => run(() => confirmBankSync(bankAccountId, preview.from, [...selected], picks))}>
               {count ? `Conferma e importa (${count})` : "Conferma senza importare"}
             </Button>
           </div>

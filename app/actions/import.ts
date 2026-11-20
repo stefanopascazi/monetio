@@ -1,11 +1,11 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { listAccountMatches } from "@/lib/data/category-matches";
 import { getContext } from "@/lib/data/context";
 import {
   accountHistory,
   accountRules,
-  categorisedHistory,
   createTransferSides,
   identifiedAccounts,
   linkTransferSides,
@@ -68,14 +68,14 @@ export async function previewImport(accountId: string, payload: unknown): Promis
   const account = await loadImportAccount(supabase, ctx.householdId, accountId);
   if (!account) return { ok: false, message: "Conto non trovato." };
   const today = todayISO();
-  const [statuses, history, past, rules, categories] = await Promise.all([
+  const [statuses, matches, past, rules, categories] = await Promise.all([
     classify(supabase, ctx.householdId, account.id, account.openingDate, drafts),
-    categorisedHistory(supabase, ctx.householdId),
+    listAccountMatches(supabase, account.id),
     accountHistory(supabase, account.id, today),
     accountRules(supabase, account.id),
     householdCategories(supabase, ctx.householdId),
   ]);
-  const insights = buildInsights({ drafts, statuses, history, accountHistory: past, rules, categories, today });
+  const insights = buildInsights({ drafts, statuses, matches, accountHistory: past, rules, categories, today });
   return { ok: true, statuses, openingDate: account.openingDate, ...insights };
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Decision } from "./match";
-import { confirmItems, defaultSelection, previewItems, selectedTotal } from "./preview";
+import { applyPicks, confirmItems, defaultSelection, parsePicks, previewItems, type PreviewItem, selectedTotal, withPick } from "./preview";
 
 const mov = (ref: string, bookedOn: string, amountCents: number) =>
   ({ ref, bookedOn, amountCents, description: `Mov ${ref}`, counterpartyIban: null }) as Decision["movement"];
@@ -46,5 +46,86 @@ describe("selectedTotal", () => {
   it("sums only the chosen new movements", () => {
     expect(selectedTotal(previewItems(decisions), new Set(["n1", "n2", "r1"]))).toBe(4000);
     expect(selectedTotal(previewItems(decisions), new Set(["n1"]))).toBe(-1000);
+  });
+});
+
+const item = (ref: string, description: string, amountCents: number, categoryId: string | null, group: PreviewItem["group"] = "new"): PreviewItem => ({
+  ref,
+  bookedOn: "2026-11-10",
+  amountCents,
+  description,
+  group,
+  reason: null,
+  categoryId,
+});
+
+describe("previewItems categories", () => {
+  it("carries the matched category of new movements only", () => {
+    expect(previewItems(decisions).map((i) => [i.ref, i.categoryId])).toEqual([
+      ["n2", null],
+      ["r1", null],
+      ["n1", "cat1"],
+      ["m1", null],
+      ["k1", null],
+    ]);
+  });
+});
+
+describe("withPick", () => {
+  const items = [
+    item("a", "Bar Roma 10/11", -300, null),
+    item("b", "BAR ROMA 11/11", -250, null),
+    item("c", "Bar Roma", -250, "manual"),
+    item("d", "Bar Roma", 250, null),
+    item("e", "Bar Roma", -250, null, "review"),
+  ];
+
+  it("applies a category to identical new movements without one", () => {
+    expect(withPick(items, "a", "bar").map((i) => i.categoryId)).toEqual(["bar", "bar", "manual", null, null]);
+  });
+
+  it("moves identical movements that had the same category as the picked one", () => {
+    const once = withPick(items, "a", "bar");
+    expect(withPick(once, "a", "food").map((i) => i.categoryId)).toEqual(["food", "food", "manual", null, null]);
+  });
+
+  it("clears only the picked movement and ignores unknown refs", () => {
+    const once = withPick(items, "a", "bar");
+    expect(withPick(once, "b", null).map((i) => i.categoryId)).toEqual(["bar", null, "manual", null, null]);
+    expect(withPick(items, "e", "bar")).toBe(items);
+  });
+});
+
+describe("applyPicks", () => {
+  const items = [item("a", "Bar", -300, null), item("b", "Bar", -250, null), item("s", "Stipendio", 1000, null)];
+  const valid = (id: string | null, amount: number) => (id === "bar" && amount < 0 ? "bar" : null);
+
+  it("replays picks in order, drops invalid categories and lists the choices to remember", () => {
+    const res = applyPicks(items, [["a", "bar"], ["s", "bar"], ["x", "bar"]], valid);
+    expect([...res.categories]).toEqual([
+      ["a", "bar"],
+      ["b", "bar"],
+      ["s", null],
+    ]);
+    expect([...res.remembered]).toEqual([["a", { description: "Bar", amountCents: -300, categoryId: "bar" }]]);
+  });
+
+  it("forgets a choice cleared later", () => {
+    expect(applyPicks(items, [["a", "bar"], ["a", null]], valid).remembered.size).toBe(0);
+  });
+});
+
+describe("parsePicks", () => {
+  const uuid = "11111111-2222-4333-8444-555555555555";
+  it("accepts ref/category pairs and a missing input", () => {
+    expect(parsePicks(undefined)).toEqual([]);
+    expect(parsePicks([["r1", uuid], ["r2", null]])).toEqual([["r1", uuid], ["r2", null]]);
+  });
+
+  it("rejects malformed input", () => {
+    expect(parsePicks("x")).toBeNull();
+    expect(parsePicks([["r1"]])).toBeNull();
+    expect(parsePicks([["r1", "nope"]])).toBeNull();
+    expect(parsePicks([["x".repeat(121), uuid]])).toBeNull();
   });
 });
