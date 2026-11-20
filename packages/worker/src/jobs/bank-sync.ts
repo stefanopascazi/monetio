@@ -1,18 +1,14 @@
 import { createEnableBankingClient, EnableBankingError, type EnableBankingConfig } from "../../../../lib/banking/enable-banking/client.ts";
 import { openSecret } from "../../../../lib/banking/secrets.ts";
 import { type SyncClient, syncBankAccount } from "../../../../lib/banking/sync/run.ts";
+import { BANK_SYNC_HOURS, BANK_SYNC_TIME_ZONE } from "../../../../lib/banking/sync/slots.ts";
 import type { BankSyncStore } from "../bank/store.ts";
 import { errorMessage } from "../logger.ts";
 import { isSchemaNotReady } from "../schema.ts";
 import { slotsDue } from "./schedule.ts";
 import type { Job } from "./types.ts";
 
-/**
- * Four runs a day: PSD2 allows four unattended reads per account per day.
- * Spread over waking hours only, Rome wall-clock time (DST-aware).
- */
-export const BANK_SYNC_HOURS = [8, 12, 18, 23];
-export const BANK_SYNC_TIME_ZONE = "Europe/Rome";
+export { BANK_SYNC_HOURS, BANK_SYNC_TIME_ZONE };
 
 export type BankSyncDeps = {
   store: BankSyncStore;

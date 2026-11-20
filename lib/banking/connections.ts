@@ -11,6 +11,9 @@ export type BankConnectionAccount = {
   bankBalanceOn: string | null;
   lastSyncedAt: string | null;
   lastError: string | null;
+  /** Null while the first-sync preview waits for the owner's confirmation. */
+  syncConfirmedAt: string | null;
+  syncFrom: string | null;
 };
 
 export type BankConnection = {
@@ -41,6 +44,8 @@ type Row = {
         bank_balance_on?: string | null;
         last_synced_at?: string | null;
         last_error?: string | null;
+        sync_confirmed_at?: string | null;
+        sync_from?: string | null;
       }[]
     | null;
 };
@@ -64,6 +69,8 @@ export function mapBankConnection(row: Row): BankConnection {
       bankBalanceOn: a.bank_balance_on ?? null,
       lastSyncedAt: a.last_synced_at ?? null,
       lastError: a.last_error ?? null,
+      syncConfirmedAt: a.sync_confirmed_at ?? null,
+      syncFrom: a.sync_from ?? null,
     })),
   };
 }
@@ -84,6 +91,11 @@ export const LINK_OUTCOME_MESSAGE: Record<string, { tone: "success" | "danger" |
   },
   errore: { tone: "danger", text: "Non è stato possibile completare il collegamento. Riprova tra qualche minuto." },
 };
+
+/** Linked to a MonetIO account but the first import is not confirmed yet. */
+export function awaitsPreview(account: Pick<BankConnectionAccount, "accountId" | "syncConfirmedAt">): boolean {
+  return !!account.accountId && !account.syncConfirmedAt;
+}
 
 /** Bank balance minus MonetIO balance; null when either is unknown. Zero means aligned. */
 export function balanceGap(bankCents: number | null, monetioCents: number | null | undefined): number | null {

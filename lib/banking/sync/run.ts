@@ -15,6 +15,8 @@ export type SyncTarget = {
   accountId: string;
   /** MonetIO account opening date: older movements are already in its opening balance. */
   openingDate: ISODate;
+  /** First day chosen by the owner when confirming the preview; null before that. */
+  syncFrom: ISODate | null;
   lastSyncedAt: Date | null;
   connectionCreatedAt: Date;
 };
@@ -42,9 +44,17 @@ export const FIRST_SYNC_DAYS = 30;
 
 const iso = (d: Date) => d.toISOString().slice(0, 10) as ISODate;
 
+/** Oldest day a movement may be imported from: the opening date or the owner's choice, the later. */
+export function syncFloor(target: Pick<SyncTarget, "openingDate" | "syncFrom">): ISODate {
+  return target.syncFrom && target.syncFrom > target.openingDate ? target.syncFrom : target.openingDate;
+}
+
 export function syncFrom(target: SyncTarget): ISODate {
+  const floor = syncFloor(target);
+  // A day chosen by the owner and not synced yet (the preview): read exactly from there.
+  if (!target.lastSyncedAt && target.syncFrom) return floor;
   const start = target.lastSyncedAt ? addDays(iso(target.lastSyncedAt), -OVERLAP_DAYS) : addDays(iso(target.connectionCreatedAt), -FIRST_SYNC_DAYS);
-  return start < target.openingDate ? target.openingDate : start;
+  return start < floor ? floor : start;
 }
 
 export function countDecisions(decisions: Decision[]): SyncCounts {
@@ -61,18 +71,34 @@ export function countDecisions(decisions: Decision[]): SyncCounts {
 /** Decision counts plus what the bank returned, for the worker log. */
 export type SyncResult = SyncCounts & { from: ISODate; fetched: number; balances: number };
 
-export async function syncBankAccount(target: SyncTarget, client: SyncClient, store: SyncStore, now: Date): Promise<SyncResult> {
+export type SyncPlan = {
+  from: ISODate;
+  decisions: Decision[];
+  balance: { cents: number; date: ISODate | null } | null;
+  fetched: number;
+  balances: number;
+};
+
+/** Reads the bank and decides what each movement does, without writing anything. */
+export async function planSync(target: SyncTarget, client: SyncClient, store: Pick<SyncStore, "loadExisting" | "loadCategoryHints">): Promise<SyncPlan> {
   const from = syncFrom(target);
+  const floor = syncFloor(target);
   const [balances, items] = await Promise.all([client.getBalances(target.uid), client.getTransactions(target.uid, from)]);
+  // Some banks return more than asked: the floor is enforced here too.
   const movements = normalizeTransactions(items)
-    .filter((m) => m.bookedOn >= target.openingDate)
+    .filter((m) => m.bookedOn >= floor)
     .sort((a, b) => a.bookedOn.localeCompare(b.bookedOn));
   const { candidates, reviewRefs } = await store.loadExisting(target.accountId, addDays(from, -RULE_WINDOW_DAYS));
   const matched = matchMovements(movements, candidates, reviewRefs);
   const hints = matched.some((d) => d.type === "insert") && store.loadCategoryHints ? await store.loadCategoryHints(target) : null;
   const decisions = hints ? withSuggestedCategories(matched, hints) : matched;
-  await store.apply(target, decisions);
-  const balance = pickBalance(balances);
-  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: balance && { cents: balance.cents, date: balance.date }, error: null });
-  return { ...countDecisions(decisions), from, fetched: items.length, balances: balances.length };
+  const picked = pickBalance(balances);
+  return { from, decisions, balance: picked && { cents: picked.cents, date: picked.date }, fetched: items.length, balances: balances.length };
+}
+
+export async function syncBankAccount(target: SyncTarget, client: SyncClient, store: SyncStore, now: Date): Promise<SyncResult> {
+  const plan = await planSync(target, client, store);
+  await store.apply(target, plan.decisions);
+  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: plan.balance, error: null });
+  return { ...countDecisions(plan.decisions), from: plan.from, fetched: plan.fetched, balances: plan.balances };
 }

@@ -1,10 +1,13 @@
 import { Amount, Badge } from "@monetio/ui";
 import { balanceGap, type BankConnectionAccount } from "@/lib/banking/connections";
+import { nextSyncLabel } from "@/lib/banking/sync/slots";
 
 const timeFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Rome" });
 
-/** Last sync of a linked bank account and its balance next to MonetIO's (check only). */
-export function BankAccountStatus({ account, monetioBalanceCents }: { account: BankConnectionAccount; monetioBalanceCents: number | undefined }) {
+type Props = { account: BankConnectionAccount; monetioBalanceCents: number | undefined; now?: Date };
+
+/** Last and next sync of a linked bank account and its balance next to MonetIO's (check only). */
+export function BankAccountStatus({ account, monetioBalanceCents, now = new Date() }: Props) {
   const gap = balanceGap(account.bankBalanceCents, monetioBalanceCents);
   return (
     <div className="flex flex-col gap-2 text-xs text-ink-muted">
@@ -36,9 +39,8 @@ export function BankAccountStatus({ account, monetioBalanceCents }: { account: B
         </div>
       )}
       <span>
-        {account.lastSyncedAt
-          ? `Ultimo aggiornamento ${timeFormat.format(new Date(account.lastSyncedAt))}`
-          : "Non ancora aggiornato: il primo giro arriva entro qualche ora."}
+        {account.lastSyncedAt ? `Ultimo aggiornamento ${timeFormat.format(new Date(account.lastSyncedAt))} · ` : ""}
+        Prossimo {nextSyncLabel(now)}
       </span>
     </div>
   );

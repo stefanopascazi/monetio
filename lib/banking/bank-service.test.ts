@@ -8,6 +8,18 @@ const masterKey = randomBytes(32);
 const now = () => new Date("2026-11-18T10:00:00Z");
 const DAY = 86_400;
 
+const pendingTarget = {
+  bankAccountId: "ba1",
+  uid: "u1",
+  userId: "user-1",
+  householdId: "h1",
+  accountId: "acc1",
+  openingDate: "2026-01-01" as const,
+  syncFrom: null,
+  lastSyncedAt: null,
+  connectionCreatedAt: new Date("2026-11-18T09:00:00Z"),
+};
+
 function setup(overrides: Partial<BankStore> = {}) {
   const client = {
     listAspsps: vi.fn(async () => [{ name: "Mock ASPSP", country: "IT", maximum_consent_validity: 180 * DAY }]),
@@ -19,12 +31,15 @@ function setup(overrides: Partial<BankStore> = {}) {
       accounts: [{ uid: "u1", name: "Conto", currency: "EUR" }],
     })),
     deleteSession: vi.fn(async () => ({})),
+    getBalances: vi.fn(async () => []),
+    getTransactions: vi.fn(async () => []),
   };
   const store: BankStore = {
     loadCredentials: vi.fn(async () => ({ app_id: "app-1", private_key_sealed: sealSecret("PEM", masterKey, "user-1") })),
     insertConnection: vi.fn(async () => {}),
     loadConnection: vi.fn(async () => ({ id: "c1", session_id_sealed: sealSecret("sess-1", masterKey, "user-1") })),
     deleteConnection: vi.fn(async () => {}),
+    loadPendingSyncTarget: vi.fn(async () => pendingTarget),
     ...overrides,
   };
   const createClient = vi.fn(() => client);
@@ -100,5 +115,19 @@ describe("bank service", () => {
     const { service, store } = setup({ loadConnection: vi.fn(async () => null) });
     expect(await service.removeLink({ userId: "user-1", connectionId: "c9" })).toBe(false);
     expect(store.deleteConnection).not.toHaveBeenCalled();
+  });
+
+  it("builds the preview context with PSU headers for a pending account", async () => {
+    const { service, createClient } = setup();
+    const psu = { ipAddress: "203.0.113.5", userAgent: "UA" };
+    const ctx = await service.previewContext({ userId: "user-1", bankAccountId: "ba1", psu });
+    expect(ctx?.target).toEqual(pendingTarget);
+    expect(createClient).toHaveBeenCalledWith({ appId: "app-1", privateKeyPem: "PEM", psu });
+  });
+
+  it("returns no preview context when the account is not pending", async () => {
+    const { service, createClient } = setup({ loadPendingSyncTarget: vi.fn(async () => null) });
+    expect(await service.previewContext({ userId: "user-1", bankAccountId: "ba1" })).toBeNull();
+    expect(createClient).not.toHaveBeenCalled();
   });
 });

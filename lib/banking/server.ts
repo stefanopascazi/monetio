@@ -3,6 +3,7 @@ import { createAdminClient } from "../supabase/admin";
 import { createBankService, type BankStore } from "./bank-service";
 import { createEnableBankingClient } from "./enable-banking/client";
 import { masterKeyFromEnv } from "./secrets";
+import { type PendingRow, pendingTarget } from "./sync/pending";
 
 /** Service-role store: the bank tables have no write policies and hide sealed columns. */
 function supabaseBankStore(): BankStore {
@@ -32,6 +33,19 @@ function supabaseBankStore(): BankStore {
     async deleteConnection(id) {
       const { error } = await admin.from("bank_connections").delete().eq("id", id);
       if (error) throw error;
+    },
+    async loadPendingSyncTarget(userId, bankAccountId) {
+      const { data, error } = await admin
+        .from("bank_accounts")
+        .select("id, uid, account_id, conn:bank_connections!inner(user_id, household_id, created_at, status, valid_until), account:accounts!inner(opening_date, archived_at)")
+        .eq("id", bankAccountId)
+        .eq("conn.user_id", userId)
+        .is("sync_confirmed_at", null)
+        .not("account_id", "is", null)
+        .maybeSingle();
+      if (error) throw error;
+      const row = data as unknown as PendingRow | null;
+      return row ? pendingTarget(row, new Date()) : null;
     },
   };
 }

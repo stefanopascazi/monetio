@@ -10,7 +10,17 @@ export type EnableBankingConfig = {
   privateKeyPem: string;
   baseUrl?: string;
   fetch?: typeof fetch;
+  /** The person is using MonetIO right now: the bank treats the reads as user-initiated, outside the 4-a-day limit. */
+  psu?: PsuContext;
 };
+
+export type PsuContext = { ipAddress: string; userAgent: string | null };
+
+/** Enable Banking's PSU headers; empty when the person is not present (worker runs). */
+export function psuHeaders(psu: PsuContext | undefined): Record<string, string> {
+  if (!psu?.ipAddress) return {};
+  return { "Psu-Ip-Address": psu.ipAddress, ...(psu.userAgent ? { "Psu-User-Agent": psu.userAgent.slice(0, 300) } : {}) };
+}
 
 export class EnableBankingError extends Error {
   // Plain fields, no parameter properties: scripts run under Node's strip-only TypeScript.
@@ -31,7 +41,7 @@ export function createEnableBankingClient(config: EnableBankingConfig) {
 
   async function call<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
     const token = createAppJwt({ appId: config.appId, privateKeyPem: config.privateKeyPem });
-    const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: "application/json", ...psuHeaders(config.psu) };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     const res = await doFetch(`${baseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     if (!res.ok) throw new EnableBankingError(res.status, await res.text());
