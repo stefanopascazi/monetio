@@ -95,27 +95,14 @@ describe.skipIf(!sql)("integrity checks", () => {
     });
   });
 
-  it("transfer_unlinked: both sides present but not linked", async () => {
+  it("ignores unlinked and one-sided transfers: household data choices, not platform anomalies", async () => {
     await withHousehold(async ({ acc, tr, findings }) => {
       const a = await acc("A");
       const b = await acc("B");
-      const x = await tr({ account_id: a, kind: "transfer", counterpart_account_id: b, amount_cents: -500 });
-      const y = await tr({ account_id: b, kind: "transfer", counterpart_account_id: a, amount_cents: 500 });
-      const found = await findings("transfer_unlinked");
-      expect(found).toHaveLength(1);
-      expect(found[0].details.transaction_ids).toEqual([x, y].sort());
-      expect(await findings("transfer_missing_side")).toEqual([]);
-    });
-  });
-
-  it("transfer_missing_side: no other side, spreadsheet history excluded", async () => {
-    await withHousehold(async ({ acc, tr, findings }) => {
-      const a = await acc("A");
-      const b = await acc("B");
-      const lone = await tr({ account_id: a, kind: "transfer", counterpart_account_id: b, amount_cents: -500, source: "manual" });
-      await tr({ account_id: a, kind: "transfer", counterpart_account_id: b, amount_cents: -700, source: "import", import_ref: `legacy-${randomUUID()}` });
-      const found = await findings("transfer_missing_side");
-      expect(found.map((f) => f.subject)).toEqual([lone]);
+      await tr({ account_id: a, kind: "transfer", counterpart_account_id: b, amount_cents: -500 });
+      await tr({ account_id: b, kind: "transfer", counterpart_account_id: a, amount_cents: 500 });
+      await tr({ account_id: a, kind: "transfer", counterpart_account_id: b, amount_cents: -700, booked_on: "2026-10-09" });
+      expect(await findings()).toEqual([]);
     });
   });
 

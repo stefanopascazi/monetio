@@ -17,10 +17,9 @@ goes through the security-definer functions above, which refuse callers who are 
 
 ## Integrity checks (migration 0039)
 
-- `integrity_findings()` lists current anomalies (ids, dates, counts only): `rule_double_booking`, `transfer_unlinked`,
-  `transfer_missing_side`, `transfer_mismatch`, `orphan_movement`, `household_without_admin`, `balance_drift`.
-  One-sided transfers from the spreadsheet import (`import_ref` set, no batch) are known history: counted as
-  `legacy_one_sided_transfers`, never listed.
+- `integrity_findings()` lists current anomalies (ids, dates, counts only), platform invariants only:
+  `rule_double_booking`, `transfer_mismatch`, `orphan_movement`, `household_without_admin`, `balance_drift`.
+  Unlinked or one-sided transfers are a household's own data, not platform anomalies (migration 0040).
 - `run_integrity_checks()` reconciles `integrity_anomalies` (new, still open, resolved) and logs `integrity_runs`.
 - Worker job `integrity-check`: nightly after 04:00 Italian time, or within 2 minutes of a console request
   (`admin_request_job('integrity-check')`, audit-logged). The console reads `admin_integrity()`.
