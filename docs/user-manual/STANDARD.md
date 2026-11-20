@@ -66,6 +66,7 @@ Ogni funzione è un blocco con questo ordine. Le parti tra parentesi sono facolt
 ## Grafica
 
 - Colori, caratteri e forme del design system MonetIO (`packages/ui`, tema Mint & Coral).
+- Marchio ufficiale: icona `public/icons/icon.svg` e scritta "monet**io**" come nell'app. Mai disegnarne di nuovi.
 - Tema chiaro e scuro automatici.
 - Testo grande (17 px) e righe corte per facilitare la lettura.
 - Etichette colorate: verde per "Buono a sapersi", corallo per "Attenzione".
