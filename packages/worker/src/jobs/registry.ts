@@ -7,6 +7,7 @@ import { createBankSyncJob } from "./bank-sync.ts";
 import { createPostgresBankSyncStore } from "../bank/store.ts";
 import { createDbPingJob } from "./db-ping.ts";
 import { createPushDeliverJob } from "./push-deliver.ts";
+import { createJobRunsPurgeJob, createPostgresJobRunStore } from "./runs.ts";
 import { createNotifyEventsJob } from "./notify-events.ts";
 import { createOutboxWriter } from "../notify/outbox.ts";
 import { listRecipients, loadSnapshot } from "../notify/snapshot.ts";
@@ -28,6 +29,7 @@ export function createJobs(sql: Sql, config: WorkerConfig): Job[] {
     }),
   );
   jobs.push(createAdvisorPurgeJob(createPostgresAdvisorPurgeStore(sql)));
+  jobs.push(createJobRunsPurgeJob(createPostgresJobRunStore(sql)));
   if (config.bankKeys) jobs.push(createBankSyncJob({ store: createPostgresBankSyncStore(sql), masterKey: config.bankKeys }));
   return jobs;
 }

@@ -3,6 +3,7 @@ import type { Heartbeat } from "../heartbeat.ts";
 import { errorMessage, type Logger } from "../logger.ts";
 import { isSchemaNotReady } from "../schema.ts";
 import type { LockStore } from "./lock.ts";
+import type { JobRun, JobRunStore } from "./runs.ts";
 import { withJobLock } from "./lock.ts";
 import type { Job } from "./types.ts";
 
@@ -20,6 +21,8 @@ export interface RunJobDeps {
   bootedAt?: number;
   /** False while the migration this bundle needs is not applied yet: jobs wait, nothing is reported. */
   schemaReady?: () => Promise<boolean>;
+  /** Run history for the sysadmin console; a failed write never fails the job. */
+  runs?: Pick<JobRunStore, "record">;
 }
 
 type Outcome = "done" | "not-due";
@@ -49,6 +52,7 @@ export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
     if (!result.ran) return deps.log("info", "job skipped, lock held elsewhere", { job: job.name });
     if (result.value === "not-due") return;
     deps.log("info", "job done", { job: job.name, durationMs: now() - started });
+    await recordRun(deps, { job: job.name, startedAt: new Date(started), durationMs: now() - started, status: "success", error: null, holder: deps.holder });
     await deps.heartbeat.ping(job.name, "success");
   } catch (error) {
     if (isSchemaNotReady(error) && deps.bootedAt !== undefined && now() - deps.bootedAt < SCHEMA_GRACE_MS) {
@@ -56,6 +60,16 @@ export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
     }
     deps.log("error", "job failed", { job: job.name, durationMs: now() - started, error: errorMessage(error) });
     deps.reporter.capture(error, { job: job.name });
+    await recordRun(deps, { job: job.name, startedAt: new Date(started), durationMs: now() - started, status: "failed", error: errorMessage(error), holder: deps.holder });
     await deps.heartbeat.ping(job.name, "fail", errorMessage(error));
+  }
+}
+
+async function recordRun(deps: RunJobDeps, run: JobRun): Promise<void> {
+  if (!deps.runs) return;
+  try {
+    await deps.runs.record(run);
+  } catch (error) {
+    deps.log("warn", "job run not recorded", { job: run.job, error: errorMessage(error) });
   }
 }

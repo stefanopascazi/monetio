@@ -16,6 +16,7 @@ import { createHeartbeat } from "./heartbeat.ts";
 import { createPostgresLockStore } from "./jobs/lock.ts";
 import { createJobs } from "./jobs/registry.ts";
 import { runJob } from "./jobs/run-job.ts";
+import { createPostgresJobRunStore } from "./jobs/runs.ts";
 import { createLogger, errorMessage } from "./logger.ts";
 import { createSchemaGate, migrationApplied, REQUIRED_MIGRATION } from "./schema.ts";
 import { createSerialQueue } from "./scheduler/queue.ts";
@@ -83,6 +84,7 @@ const deps = {
   shutdown: shutdown.signal,
   bootedAt: Date.now(),
   schemaReady: createSchemaGate(REQUIRED_MIGRATION, migrationApplied(sql), log),
+  runs: createPostgresJobRunStore(sql),
 };
 const scheduler = createScheduler({ jobs, queue, tickMs: config.tickMs, runJob: (job) => runJob(job, deps) });
 
