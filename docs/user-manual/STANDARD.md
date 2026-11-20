@@ -20,6 +20,9 @@ Ogni frase deve essere capita al primo colpo, senza rileggerla.
 8. **Numeri in cifre** ("3 conti", non "tre conti").
 9. **Esempi concreti** quando aiutano: "Es. bolletta della luce".
 10. **Verbo "premi"** per mouse e dita: vale per computer e telefono.
+11. **Niente nomi reali**: niente banche, negozi, marchi, telefoni o persone. Usa esempi generici ("Spesa al supermercato", "la tua banca").
+
+Il titolo del manuale è sempre **Manuale d'uso**.
 
 ## Parole da evitare
 
