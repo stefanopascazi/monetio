@@ -1,3 +1,8 @@
+## Manuale utente
+
+[Manuale per chi usa MonetIO](https://claude.ai/artifact/BeLueZC9VQ7wwGQTq57ENa): guida semplice a tutte le funzioni.
+Sorgente in `docs/user-manual/index.html`, regole di scrittura in `docs/user-manual/STANDARD.md`.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

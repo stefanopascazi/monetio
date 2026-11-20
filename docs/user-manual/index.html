@@ -1,0 +1,752 @@
+<title>Manuale MonetIO</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@600;700&family=Onest:wght@400;500;600&display=swap">
+<style>
+/* Layout: mint header band, then sticky index rail + one reading column (stacked on phones). Tokens mirror packages/ui. */
+:root {
+  --bg: #fbfcfb; --surface: #f1f4f3; --raised: #ffffff; --sunken: #e7ecea; --border: #e1e7e4;
+  --ink: #0e1a16; --muted: #4b5853;
+  --brand: #3ddc97; --brand-soft: #d8f7e9; --on-brand: #05261a; --brand-ink: #0a7448;
+  --accent-soft: #ffe7df; --accent-ink: #b23a1b;
+  --forecast-soft: #ece9fe; --forecast-ink: #5242cc;
+  --focus: #0e1a16;
+  --font-display: "Gabarito", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Onest", "Segoe UI", system-ui, sans-serif;
+  --r-md: 14px; --r-lg: 22px; --r-pill: 999px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b0f0e; --surface: #151b19; --raised: #1d2522; --sunken: #070a09; --border: #26302d;
+    --ink: #eef4f1; --muted: #a7b4af;
+    --brand: #4ff0a8; --brand-soft: #103a29; --on-brand: #04150d; --brand-ink: #5fe8a9;
+    --accent-soft: #3d1a10; --accent-ink: #ff9e84;
+    --forecast-soft: #241f4d; --forecast-ink: #b6acff;
+    --focus: #5fe8a9; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b0f0e; --surface: #151b19; --raised: #1d2522; --sunken: #070a09; --border: #26302d;
+  --ink: #eef4f1; --muted: #a7b4af;
+  --brand: #4ff0a8; --brand-soft: #103a29; --on-brand: #04150d; --brand-ink: #5fe8a9;
+  --accent-soft: #3d1a10; --accent-ink: #ff9e84;
+  --forecast-soft: #241f4d; --forecast-ink: #b6acff;
+  --focus: #5fe8a9; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 17px; line-height: 1.6; }
+a { color: var(--brand-ink); font-weight: 600; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+/* Header */
+.hero { background: var(--brand-soft); padding-block: 40px 32px; }
+.hero .wrap { display: flex; flex-direction: column; gap: 12px; }
+.logo { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--brand-ink); }
+.logo i { width: 34px; height: 34px; border-radius: var(--r-pill); background: var(--brand); color: var(--on-brand); display: grid; place-items: center; font-style: normal; font-size: 18px; }
+h1 { font-family: var(--font-display); font-size: clamp(34px, 6vw, 48px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.lead { font-size: 19px; color: var(--muted); margin: 0; max-width: 46ch; }
+.meta { font-size: 14px; color: var(--muted); margin: 0; }
+
+/* Search */
+.search { margin-top: 8px; max-width: 520px; }
+.search label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+.search input { width: 100%; font: inherit; font-size: 18px; padding: 14px 18px; border-radius: var(--r-pill); border: 2px solid transparent; background: var(--raised); color: var(--ink); }
+.search input:focus { border-color: var(--brand-ink); outline: none; }
+.no-results { display: none; background: var(--surface); border-radius: var(--r-lg); padding: 20px 24px; }
+
+/* Body grid */
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; padding-block: 40px 64px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; max-height: calc(100vh - 32px); overflow-y: auto; }
+.toc h2 { font-family: var(--font-display); font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.toc a { display: block; padding: 8px 14px; border-radius: var(--r-pill); color: var(--ink); text-decoration: none; font-weight: 500; font-size: 16px; }
+.toc a:hover { background: var(--surface); }
+.toc a.on { background: var(--brand-soft); color: var(--brand-ink); font-weight: 600; }
+.toc-mobile { display: none; }
+
+main { min-width: 0; display: flex; flex-direction: column; gap: 56px; }
+.chapter { display: flex; flex-direction: column; gap: 20px; }
+.chapter > header { display: flex; flex-direction: column; gap: 6px; }
+.chapter h2 { font-family: var(--font-display); font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+.chapter > header p { margin: 0; color: var(--muted); max-width: 62ch; }
+
+.fn { background: var(--surface); border-radius: var(--r-lg); padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
+.fn h3 { font-family: var(--font-sans); font-size: 21px; font-weight: 600; margin: 0; text-wrap: balance; }
+.fn p { margin: 0; max-width: 65ch; }
+.where { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; color: var(--muted); }
+.path { background: var(--raised); color: var(--ink); border-radius: var(--r-pill); padding: 3px 12px; font-weight: 600; font-size: 15px; }
+.fn ol, .fn ul { margin: 0; padding-left: 26px; display: flex; flex-direction: column; gap: 6px; max-width: 65ch; }
+.fn ol li::marker { font-weight: 700; color: var(--brand-ink); }
+.note { border-radius: var(--r-md); padding: 12px 16px; font-size: 16px; display: flex; flex-direction: column; gap: 4px; }
+.note strong:first-child { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+.note.tip { background: var(--brand-soft); }
+.note.tip strong:first-child { color: var(--brand-ink); }
+.note.warn { background: var(--accent-soft); }
+.note.warn strong:first-child { color: var(--accent-ink); }
+.note ul { padding-left: 20px; }
+
+.kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.kind { background: var(--raised); border-radius: var(--r-md); padding: 12px 16px; font-size: 16px; }
+.kind b { display: block; font-size: 17px; }
+
+dl.glossary { display: grid; grid-template-columns: minmax(140px, 200px) minmax(0, 1fr); gap: 0; margin: 0; background: var(--surface); border-radius: var(--r-lg); overflow: hidden; }
+dl.glossary dt, dl.glossary dd { margin: 0; padding: 14px 20px; border-top: 1px solid var(--border); }
+dl.glossary dt:first-of-type, dl.glossary dt:first-of-type + dd { border-top: 0; }
+dl.glossary dt { font-weight: 600; }
+
+footer.end { color: var(--muted); font-size: 15px; padding-block: 24px 48px; border-top: 1px solid var(--border); }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 24px 48px; }
+  nav.toc { display: none; }
+  .toc-mobile { display: block; background: var(--surface); border-radius: var(--r-lg); padding: 4px 8px; }
+  .toc-mobile summary { cursor: pointer; padding: 12px; font-weight: 600; font-size: 18px; }
+  .toc-mobile ol { list-style: none; margin: 0; padding: 0 0 8px; display: grid; gap: 2px; }
+  .toc-mobile a { display: block; padding: 10px 12px; border-radius: var(--r-pill); color: var(--ink); text-decoration: none; font-weight: 500; }
+  .fn { padding: 20px; }
+  dl.glossary { grid-template-columns: minmax(0, 1fr); }
+  dl.glossary dd { border-top: 0; padding-top: 0; }
+}
+</style>
+
+<header class="hero gutter">
+  <div class="wrap">
+    <span class="logo"><i aria-hidden="true">€</i>MonetIO</span>
+    <h1>Manuale per chi usa MonetIO</h1>
+    <p class="lead">Come tenere in ordine i soldi di casa, passo per passo.</p>
+    <p class="meta">Aggiornato il 20 novembre 2026</p>
+    <div class="search">
+      <label for="q">Cerca nel manuale</label>
+      <input id="q" type="search" placeholder="Es. bolletta, giroconto, password" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<div class="gutter">
+  <div class="wrap layout">
+    <nav class="toc" aria-label="Indice">
+      <h2>Indice</h2>
+      <ol id="toc"></ol>
+    </nav>
+
+    <main>
+      <details class="toc-mobile">
+        <summary>Indice del manuale</summary>
+        <ol id="toc-m"></ol>
+      </details>
+
+      <p class="no-results" id="none">Nessun risultato. Prova con un'altra parola.</p>
+
+      <!-- 1. First steps -->
+      <section class="chapter" id="primi-passi">
+        <header>
+          <h2>Primi passi</h2>
+          <p>Entrare, conoscere lo schermo e capire cos'è un nucleo.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Entrare la prima volta</h3>
+          <p>MonetIO funziona su invito. Ti invita chi gestisce il nucleo.</p>
+          <ol>
+            <li>Apri l'email di invito e premi il link.</li>
+            <li>Scegli la tua password.</li>
+            <li>Scegli <b>Crea nuovo</b> per iniziare un nucleo tuo.</li>
+            <li>Oppure scegli <b>Ho un codice</b> per entrare in un nucleo esistente.</li>
+            <li>Con il codice, alla domanda <b>Chi sei?</b> scegli il tuo nome.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>Il codice invito lo trova chi ha creato il nucleo, in <b>Impostazioni › Nucleo</b>.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Entrare e uscire</h3>
+          <p>Le volte successive bastano email e password.</p>
+          <ol>
+            <li>Scrivi email e password.</li>
+            <li>Premi <b>Accedi</b>.</li>
+          </ol>
+          <p>Per uscire: premi il tuo nome in alto, poi <b>Sessione</b>.</p>
+        </article>
+
+        <article class="fn">
+          <h3>Recuperare la password</h3>
+          <p>Hai dimenticato la password? Ne scegli una nuova.</p>
+          <ol>
+            <li>Nella pagina di accesso premi <b>Password dimenticata?</b></li>
+            <li>Scrivi la tua email e premi <b>Invia link</b>.</li>
+            <li>Apri l'email e scegli la nuova password.</li>
+          </ol>
+        </article>
+
+        <article class="fn">
+          <h3>Muoversi nell'app</h3>
+          <p>Le sezioni principali sono sempre a portata di mano.</p>
+          <ul>
+            <li><b>Barra in basso</b> (sul computer a sinistra): Home, Conti, Movimenti, Scadenze.</li>
+            <li><b>Altre sezioni</b>: sul telefono trascina la barra verso l'alto. Sul computer premi <b>Altro</b>. Trovi Analisi e Dati.</li>
+            <li><b>Tasto +</b> in alto: aggiunge movimenti, conti, ricorrenze e altro.</li>
+            <li><b>Campanella</b>: le notifiche.</li>
+            <li><b>Occhio</b>: nasconde o mostra i saldi. Utile in pubblico.</li>
+            <li><b>Il tuo nome</b> in alto: le impostazioni.</li>
+            <li><b>Bolla in basso a destra</b>: l'assistente.</li>
+          </ul>
+        </article>
+
+        <article class="fn">
+          <h3>Il nucleo</h3>
+          <p>Il nucleo è la tua famiglia dentro MonetIO. Conti e spese si condividono lì.</p>
+          <div class="note tip"><strong>Buono a sapersi</strong>Puoi far parte di più nuclei. Passi dall'uno all'altro in <b>Impostazioni › Nucleo</b>.</div>
+        </article>
+      </section>
+
+      <!-- 2. Home -->
+      <section class="chapter" id="home">
+        <header>
+          <h2>Home</h2>
+          <p>Il riassunto di tutto in una sola pagina.</p>
+        </header>
+        <article class="fn">
+          <h3>Leggere la Home</h3>
+          <p>Ogni riquadro mostra una cosa sola.</p>
+          <ul>
+            <li><b>Saldo dei conti che vedi</b>: quanto c'è in tutto, oggi.</li>
+            <li><b>Entrate e uscite del mese</b>.</li>
+            <li><b>Flusso di cassa</b>: soldi entrati e usciti nel tempo.</li>
+            <li><b>Spese per categoria</b>: dove vanno i soldi.</li>
+            <li><b>Dove stiamo andando</b>: il saldo previsto nei prossimi 12 mesi.</li>
+            <li><b>In scadenza</b>: i pagamenti dei prossimi 31 giorni.</li>
+            <li><b>Ultimi movimenti</b>.</li>
+          </ul>
+          <p>Premi un riquadro per aprire la sezione completa.</p>
+        </article>
+      </section>
+
+      <!-- 3. Accounts -->
+      <section class="chapter" id="conti">
+        <header>
+          <h2>Conti</h2>
+          <p>Conto corrente, risparmio, investimenti o contanti. Ogni soldo sta in un conto.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Creare un conto</h3>
+          <p>Serve almeno un conto per registrare i movimenti.</p>
+          <p class="where">Dove si trova: <span class="path">Tasto + › Conto</span></p>
+          <ol>
+            <li>Scrivi il nome. Es. "Conto cointestato".</li>
+            <li>Scegli il tipo.</li>
+            <li>Scrivi il saldo iniziale e la sua data.</li>
+            <li>Scegli <b>Chi può vederlo</b>: solo tu o tutto il nucleo.</li>
+            <li>Premi <b>Crea conto</b>.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>Banca, IBAN e ultime 4 cifre delle carte sono facoltativi. Aiutano MonetIO a riconoscere i tuoi estratti conto.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Vedere un conto</h3>
+          <p>Ogni conto ha la sua pagina.</p>
+          <p class="where">Dove si trova: <span class="path">Conti</span></p>
+          <ol>
+            <li>Apri <b>Conti</b>.</li>
+            <li>Scorri di lato per passare da un conto all'altro.</li>
+            <li>Scegli cosa vedere: <b>Movimenti</b>, <b>Riepilogo</b> o <b>Da categorizzare</b>.</li>
+          </ol>
+          <ul>
+            <li><b>Saldo attuale</b>: quanto c'è oggi.</li>
+            <li><b>Rimanenza a fine mese</b>: quanto resterà, contando le spese previste.</li>
+            <li><b>Andamento saldo</b>: come è cambiato nel tempo.</li>
+          </ul>
+        </article>
+
+        <article class="fn">
+          <h3>Cambiare o archiviare un conto</h3>
+          <p>Modifichi nome, dati della banca e chi può vederlo.</p>
+          <ol>
+            <li>Apri il conto.</li>
+            <li>Premi l'ingranaggio.</li>
+            <li>Cambia ciò che serve e premi <b>Salva conto</b>.</li>
+          </ol>
+          <p>Un conto chiuso si archivia con <b>Archivia conto</b>. I suoi movimenti restano.</p>
+          <div class="note tip"><strong>Buono a sapersi</strong>Per riavere un conto archiviato: <b>Impostazioni › Nucleo › Conti archiviati</b>.</div>
+        </article>
+      </section>
+
+      <!-- 4. Movements -->
+      <section class="chapter" id="movimenti">
+        <header>
+          <h2>Movimenti</h2>
+          <p>Ogni soldo che entra o esce da un conto.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Aggiungere un movimento</h3>
+          <p>Registra una spesa, un incasso o uno spostamento di soldi.</p>
+          <p class="where">Dove si trova: <span class="path">Tasto + › Movimento</span></p>
+          <ol>
+            <li>Scegli il tipo di movimento.</li>
+            <li>Scrivi l'importo.</li>
+            <li>Scrivi una descrizione. Es. "Esselunga".</li>
+            <li>Scegli conto, data e categoria.</li>
+            <li>Premi <b>Salva movimento</b>.</li>
+          </ol>
+          <div class="kinds">
+            <div class="kind"><b>Uscita</b>Soldi che escono. Es. la spesa.</div>
+            <div class="kind"><b>Entrata</b>Soldi che entrano. Es. lo stipendio.</div>
+            <div class="kind"><b>Giroconto</b>Soldi spostati tra due tuoi conti.</div>
+            <div class="kind"><b>Bonifico</b>Soldi mandati a un'altra persona.</div>
+            <div class="kind"><b>CBill</b>Bolletta pagata dalla banca online.</div>
+          </div>
+          <div class="note tip"><strong>Buono a sapersi</strong>
+            <ul>
+              <li>Con una data futura il movimento aspetta. Si registra da solo quel giorno.</li>
+              <li>La banca ti ha chiesto una commissione? Scrivila nella casella <b>Spese</b>.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="fn">
+          <h3>Trovare un movimento</h3>
+          <p>Tutti i movimenti, mese per mese.</p>
+          <p class="where">Dove si trova: <span class="path">Movimenti</span></p>
+          <ol>
+            <li>Scegli il mese.</li>
+            <li>Scrivi una parola nella casella <b>Cerca</b>.</li>
+            <li>Se serve, scegli un conto o una categoria.</li>
+          </ol>
+        </article>
+
+        <article class="fn">
+          <h3>Modificare o eliminare un movimento</h3>
+          <ol>
+            <li>Premi il movimento.</li>
+            <li>Premi <b>Modifica</b>, cambia e premi <b>Salva modifiche</b>.</li>
+            <li>Per toglierlo premi <b>Elimina movimento</b> e conferma.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>Un movimento eliminato resta nello storico delle modifiche.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Dare una categoria ai movimenti</h3>
+          <p>La categoria dice a cosa è servito il soldo. Es. Spesa, Casa, Auto.</p>
+          <p class="where">Dove si trova: <span class="path">Conti › un conto › Da categorizzare</span></p>
+          <ol>
+            <li>Apri il conto e scegli <b>Da categorizzare</b>.</li>
+            <li>Scegli la categoria accanto a ogni gruppo di movimenti.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>MonetIO ricorda la scelta. I prossimi movimenti con la stessa descrizione prendono la categoria da soli.</div>
+        </article>
+      </section>
+
+      <!-- 5. Recurring -->
+      <section class="chapter" id="ricorrenze">
+        <header>
+          <h2>Ricorrenze e quote</h2>
+          <p>Le entrate e le uscite che tornano ogni mese, inserite una volta sola.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Aggiungere una ricorrenza</h3>
+          <p>Stipendio, mutuo, bollette: scrivili una volta, MonetIO li ripete.</p>
+          <p class="where">Dove si trova: <span class="path">Tasto + › Ricorrenza</span></p>
+          <ol>
+            <li>Scegli se è un'uscita, un'entrata o un giroconto.</li>
+            <li>Scegli come gestirla (vedi sotto).</li>
+            <li>Scrivi importo e descrizione. Es. "Rata mutuo".</li>
+            <li>Scegli conto, categoria e frequenza.</li>
+            <li>Scegli il giorno della prima scadenza.</li>
+            <li>Premi <b>Salva ricorrenza</b>.</li>
+          </ol>
+          <div class="kinds">
+            <div class="kind"><b>Automatica</b>Si registra da sola. Es. stipendio, addebiti in banca.</div>
+            <div class="kind"><b>A scadenza</b>Aspetta che tu la segni pagata. Es. bollette.</div>
+            <div class="kind"><b>Solo stima</b>Non crea movimenti. Serve per le previsioni.</div>
+          </div>
+          <div class="note tip"><strong>Buono a sapersi</strong>Una ricorrenza spenta con <b>Attiva</b> non crea movimenti né previsioni.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Usare una stima a scalare</h3>
+          <p>Un budget mensile che cala a ogni spesa. Es. 400 € al mese per la spesa.</p>
+          <ol>
+            <li>Crea una ricorrenza <b>Solo stima</b>.</li>
+            <li>Accendi <b>A scalare</b>.</li>
+            <li>Scegli il conto e le categorie da scalare.</li>
+          </ol>
+          <p>Ogni spesa in quelle categorie riduce la stima del mese.</p>
+          <div class="note tip"><strong>Buono a sapersi</strong>Una spesa fuori budget? Nel movimento accendi <b>Non scalare dalle stime</b>.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Aggiungere una quota automatica</h3>
+          <p>Ogni mese sposta soldi verso un conto condiviso. Es. la quota spesa di ognuno.</p>
+          <p class="where">Dove si trova: <span class="path">Tasto + › Quota automatica</span></p>
+          <ol>
+            <li>Scrivi una descrizione. Es. "Quota spesa Ste".</li>
+            <li>Scegli da quale conto e verso quale conto.</li>
+            <li>Scrivi una quota fissa, una percentuale delle spese condivise, o entrambe.</li>
+            <li>Scegli il giorno del versamento.</li>
+            <li>Premi <b>Salva quota</b>.</li>
+          </ol>
+        </article>
+      </section>
+
+      <!-- 6. Due dates -->
+      <section class="chapter" id="scadenze">
+        <header>
+          <h2>Scadenze</h2>
+          <p>Cosa c'è da pagare e cosa arriva da solo nei prossimi 31 giorni.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Pagare una scadenza</h3>
+          <p class="where">Dove si trova: <span class="path">Scadenze › Da pagare</span></p>
+          <ol>
+            <li>Trova la scadenza nell'elenco.</li>
+            <li>Premi <b>Registra pagamento</b>.</li>
+            <li>Controlla importo e data, poi conferma.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>È arrivata la bolletta con un altro importo? Premi <b>Modifica importo</b>. Non registra il pagamento.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Le altre schede</h3>
+          <ul>
+            <li><b>Addebiti automatici</b>: si registrano da soli nei prossimi 31 giorni.</li>
+            <li><b>Ricorrenze</b>: tutte le ricorrenze, da cercare e modificare.</li>
+            <li><b>Quote</b>: tutte le quote automatiche.</li>
+          </ul>
+        </article>
+      </section>
+
+      <!-- 7. Analysis -->
+      <section class="chapter" id="analisi">
+        <header>
+          <h2>Analisi</h2>
+          <p>Cosa è successo e dove stai andando.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Leggere le statistiche</h3>
+          <p class="where">Dove si trova: <span class="path">Analisi › Statistiche</span></p>
+          <ol>
+            <li>Scegli il periodo e, se vuoi, un conto.</li>
+            <li>Leggi i riquadri.</li>
+          </ol>
+          <ul>
+            <li><b>Entrate e uscite</b>: quanto hai messo da parte o speso in più.</li>
+            <li><b>Dove vanno i soldi</b>: le spese più alte.</li>
+            <li><b>Spese fisse e variabili</b>: fisse sono bollette, rate, quote. Variabili tutto il resto.</li>
+            <li><b>Categorie rispetto al solito</b>: dove spendi più o meno del normale.</li>
+          </ul>
+        </article>
+
+        <article class="fn">
+          <h3>Guardare le previsioni</h3>
+          <p>Il saldo dei prossimi mesi, calcolato da ricorrenze e quote.</p>
+          <p class="where">Dove si trova: <span class="path">Analisi › Proiezioni</span></p>
+          <ol>
+            <li>Scegli quanto lontano guardare: 6 mesi, 1 anno, 3 anni o 10 anni.</li>
+            <li>Scegli un conto o tutti i conti.</li>
+            <li>Premi un valore per vedere da cosa nasce.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>Più ricorrenze inserisci, più la previsione è giusta. Se mancano dati, MonetIO te lo dice.</div>
+        </article>
+      </section>
+
+      <!-- 8. Data -->
+      <section class="chapter" id="dati">
+        <header>
+          <h2>Dati e banche</h2>
+          <p>Portare dentro i movimenti senza scriverli a mano.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Importare un estratto conto</h3>
+          <p>Porta in MonetIO i movimenti scaricati dalla banca.</p>
+          <p class="where">Dove si trova: <span class="path">Dati › Importa</span></p>
+          <ol>
+            <li>Scarica l'estratto conto dalla banca, in formato Excel o CSV.</li>
+            <li>Premi la casella <b>File da importare</b> e scegli il file.</li>
+            <li>Scegli il conto in cui metterlo.</li>
+            <li>Se serve, indica dove sono data, descrizione e importo.</li>
+            <li>Controlla l'elenco e premi <b>Importa</b>.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>
+            <ul>
+              <li>MonetIO salta i movimenti già presenti.</li>
+              <li>Revolut e Cherry Bank vengono riconosciuti da soli.</li>
+              <li>Trova spese che si ripetono? Te le propone come ricorrenze.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="fn">
+          <h3>Annullare un'importazione</h3>
+          <p>Hai sbagliato file o conto? Torni indietro.</p>
+          <p class="where">Dove si trova: <span class="path">Dati › Storico import</span></p>
+          <ol>
+            <li>Trova l'importazione.</li>
+            <li>Premi <b>Annulla import</b> e conferma.</li>
+          </ol>
+        </article>
+
+        <article class="fn">
+          <h3>Collegare la banca</h3>
+          <p>MonetIO legge da solo i movimenti della tua banca.</p>
+          <p class="where">Dove si trova: <span class="path">Dati › Banche collegate</span></p>
+          <ol>
+            <li>Segui la guida <b>Come collegare le tue banche</b>. Si fa una volta sola.</li>
+            <li>Premi <b>Collega una banca</b> e cerca la tua.</li>
+            <li>Entra nella tua banca e dai il permesso.</li>
+            <li>Scegli a quale conto MonetIO abbinare ogni conto della banca.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>Il primo passaggio è tecnico. Fatti aiutare da chi ha installato MonetIO.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Controllare i movimenti della banca</h3>
+          <p>Ogni aggiornamento mostra cosa entra in MonetIO.</p>
+          <ul>
+            <li><b>Nuovi</b>: quelli spuntati vengono aggiunti.</li>
+            <li><b>Abbinati</b>: c'erano già, ricevono solo il riferimento della banca.</li>
+            <li><b>Da rivedere</b>: simili a movimenti già presenti. Decidi tu.</li>
+          </ul>
+          <p>Un aggiornamento sbagliato si annulla con <b>Annulla aggiornamento</b>.</p>
+          <div class="note warn"><strong>Attenzione</strong>Il permesso della banca scade. Quando MonetIO ti avvisa, collega di nuovo la banca.</div>
+        </article>
+
+        <article class="fn">
+          <h3>Esportare i dati</h3>
+          <p>In arrivo: scaricherai movimenti, conti e ricorrenze in un unico file.</p>
+        </article>
+      </section>
+
+      <!-- 9. Assistant -->
+      <section class="chapter" id="assistente">
+        <header>
+          <h2>Assistente</h2>
+          <p>Fai una domanda sul bilancio di casa. Ti risponde guardando i tuoi numeri.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Fare una domanda</h3>
+          <p class="where">Dove si trova: <span class="path">Bolla in basso a destra</span></p>
+          <ol>
+            <li>Premi la bolla.</li>
+            <li>Scrivi la domanda. Es. "Possiamo permetterci 3000 € di vacanza ad agosto?"</li>
+            <li>Premi <b>Invia</b>.</li>
+          </ol>
+          <p>Ti dice se si può fare e come arrivarci.</p>
+        </article>
+
+        <article class="fn">
+          <h3>Cosa sa fare e cosa no</h3>
+          <ul>
+            <li><b>Sì</b>: spese, risparmi, scadenze, previsioni del saldo.</li>
+            <li><b>No</b>: investimenti, prestiti, mutui, assicurazioni, tasse, pensione.</li>
+          </ul>
+          <div class="note tip"><strong>Buono a sapersi</strong>
+            <ul>
+              <li>Le conversazioni le vedi solo tu.</li>
+              <li>Si cancellano da sole dopo 30 giorni.</li>
+              <li>L'assistente non cambia nulla senza il tuo sì.</li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <!-- 10. Notifications -->
+      <section class="chapter" id="notifiche">
+        <header>
+          <h2>Notifiche</h2>
+          <p>MonetIO ti avvisa quando qualcosa merita attenzione.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Leggere le notifiche</h3>
+          <p>Premi la campanella in alto. Trovi gli avvisi degli ultimi 30 giorni:</p>
+          <ul>
+            <li>scadenze in arrivo o superate;</li>
+            <li>rimanenza sotto la soglia scelta;</li>
+            <li>conti da aggiornare;</li>
+            <li>stime superate;</li>
+            <li>banche da ricollegare o movimenti da rivedere.</li>
+          </ul>
+        </article>
+
+        <article class="fn">
+          <h3>Ricevere avvisi sul telefono o sul computer</h3>
+          <p class="where">Dove si trova: <span class="path">Impostazioni › App › Notifiche</span></p>
+          <ol>
+            <li>Accendi <b>Notifiche su questo dispositivo</b>.</li>
+            <li>Dai il permesso quando il browser lo chiede.</li>
+            <li>In <b>Preferenze notifiche</b> scegli quali avvisi ricevere.</li>
+          </ol>
+          <div class="note tip"><strong>Buono a sapersi</strong>
+            <ul>
+              <li>Ogni telefono o computer va acceso a parte.</li>
+              <li>Su iPhone: prima aggiungi MonetIO alla schermata Home (Condividi › Aggiungi alla schermata Home).</li>
+              <li>Con l'<b>Orario silenzioso</b> gli avvisi aspettano il mattino.</li>
+              <li>In <b>Rimanenza minima</b> scegli sotto quale cifra avvisarti.</li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <!-- 11. Settings -->
+      <section class="chapter" id="impostazioni">
+        <header>
+          <h2>Impostazioni</h2>
+          <p>Premi il tuo nome in alto. Trovi 3 schede.</p>
+        </header>
+
+        <article class="fn">
+          <h3>Account</h3>
+          <ul>
+            <li><b>Profilo</b>: cambia il tuo nome.</li>
+            <li><b>Sessione</b>: esci da MonetIO.</li>
+          </ul>
+        </article>
+
+        <article class="fn">
+          <h3>Nucleo</h3>
+          <ul>
+            <li><b>Invita una persona</b>: scrivi nome ed email. Riceverà l'invito.</li>
+            <li><b>Codice invito</b>: dallo a chi ha già un profilo.</li>
+            <li><b>Ruolo</b>: gli amministratori gestiscono persone e nucleo.</li>
+            <li><b>I tuoi nuclei</b>: passa da un nucleo all'altro o aggiungine uno.</li>
+            <li><b>Categorie</b>: aggiungi, rinomina o archivia. Scegli colore e icona.</li>
+            <li><b>Conti archiviati</b>: ripristina un conto chiuso.</li>
+          </ul>
+          <div class="note warn"><strong>Attenzione</strong><b>Elimina nucleo</b> cancella tutto il nucleo. Non si può annullare.</div>
+        </article>
+
+        <article class="fn">
+          <h3>App</h3>
+          <ul>
+            <li><b>Aspetto</b>: tema chiaro, scuro o come il telefono.</li>
+            <li><b>Notifiche</b>: vedi il capitolo <a href="#notifiche">Notifiche</a>.</li>
+          </ul>
+        </article>
+      </section>
+
+      <!-- 12. Troubleshooting -->
+      <section class="chapter" id="problemi">
+        <header>
+          <h2>Se qualcosa non va</h2>
+          <p>I dubbi più comuni, con la soluzione.</p>
+        </header>
+        <article class="fn">
+          <h3>Non vedo il tasto per aggiungere un movimento</h3>
+          <p>Crea prima un conto: <b>Tasto + › Conto</b>.</p>
+        </article>
+        <article class="fn">
+          <h3>Non vedo i saldi, solo puntini</h3>
+          <p>Hai nascosto i saldi. Premi l'occhio in alto.</p>
+        </article>
+        <article class="fn">
+          <h3>Non vedo un conto di un familiare</h3>
+          <p>È un conto privato. Solo chi lo ha creato può renderlo visibile al nucleo.</p>
+        </article>
+        <article class="fn">
+          <h3>Il link dell'email non funziona</h3>
+          <p>Forse è scaduto o già usato. Chiedine uno nuovo con <b>Password dimenticata?</b></p>
+        </article>
+        <article class="fn">
+          <h3>Il saldo non torna con la banca</h3>
+          <ol>
+            <li>Cerca movimenti doppi o mancanti nel mese.</li>
+            <li>Controlla il saldo iniziale del conto, nell'ingranaggio.</li>
+          </ol>
+        </article>
+      </section>
+
+      <!-- 13. Glossary -->
+      <section class="chapter" id="parole">
+        <header>
+          <h2>Parole utili</h2>
+          <p>Le parole di MonetIO, spiegate in breve.</p>
+        </header>
+        <dl class="glossary">
+          <dt>Nucleo</dt><dd>La tua famiglia dentro MonetIO.</dd>
+          <dt>Conto condiviso</dt><dd>Un conto che vede tutto il nucleo.</dd>
+          <dt>Conto privato</dt><dd>Un conto che vedi solo tu.</dd>
+          <dt>Movimento</dt><dd>Soldi che entrano o escono da un conto.</dd>
+          <dt>Giroconto</dt><dd>Soldi spostati tra due conti tuoi.</dd>
+          <dt>Bonifico</dt><dd>Soldi mandati dal tuo conto a un'altra persona.</dd>
+          <dt>CBill</dt><dd>Un modo per pagare le bollette dalla banca online.</dd>
+          <dt>Categoria</dt><dd>A cosa è servito un movimento. Es. Casa, Auto.</dd>
+          <dt>Ricorrenza</dt><dd>Un'entrata o un'uscita che si ripete.</dd>
+          <dt>Quota automatica</dt><dd>Soldi versati ogni mese in un conto condiviso.</dd>
+          <dt>Stima</dt><dd>Una spesa prevista, usata per le previsioni.</dd>
+          <dt>Rimanenza</dt><dd>Quanto resterà sul conto a fine mese.</dd>
+          <dt>Proiezione</dt><dd>Il saldo previsto nei mesi futuri.</dd>
+          <dt>Estratto conto</dt><dd>L'elenco dei movimenti che dà la banca.</dd>
+          <dt>Importare</dt><dd>Portare in MonetIO i movimenti di un file.</dd>
+          <dt>Archiviare</dt><dd>Mettere da parte senza cancellare.</dd>
+        </dl>
+      </section>
+
+      <footer class="end">MonetIO, uso familiare. Il manuale segue l'app: se qualcosa è cambiato, dillo a chi lo cura.</footer>
+    </main>
+  </div>
+</div>
+
+<script>
+// Build both indexes from the chapters, highlight the current one, filter function blocks by search.
+(() => {
+  const chapters = [...document.querySelectorAll(".chapter")];
+  const fill = (ol) => chapters.forEach((c) => {
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = "#" + c.id;
+    a.textContent = c.querySelector("h2").textContent;
+    li.append(a);
+    ol.append(li);
+  });
+  fill(document.getElementById("toc"));
+  fill(document.getElementById("toc-m"));
+  document.getElementById("toc-m").addEventListener("click", (e) => {
+    if (e.target.closest("a")) e.currentTarget.closest("details").open = false;
+  });
+
+  const links = [...document.querySelectorAll("#toc a")];
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (!en.isIntersecting) return;
+        links.forEach((l) => l.classList.toggle("on", l.hash === "#" + en.target.id));
+      });
+    }, { rootMargin: "-20% 0px -70% 0px" });
+    chapters.forEach((c) => io.observe(c));
+  }
+
+  // Accent-insensitive search over each function block and glossary row.
+  const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const none = document.getElementById("none");
+  document.getElementById("q").addEventListener("input", (e) => {
+    const q = norm(e.target.value.trim());
+    let shown = 0;
+    chapters.forEach((c) => {
+      const items = [...c.querySelectorAll(".fn, dl.glossary dt")];
+      let any = false;
+      items.forEach((it) => {
+        const text = it.tagName === "DT" ? it.textContent + " " + it.nextElementSibling.textContent : it.textContent;
+        const hit = !q || norm(text).includes(q);
+        it.hidden = !hit;
+        if (it.tagName === "DT") it.nextElementSibling.hidden = !hit;
+        if (hit) any = true;
+      });
+      c.hidden = !any;
+      if (any) shown++;
+    });
+    none.style.display = shown ? "none" : "block";
+  });
+})();
+</script>
