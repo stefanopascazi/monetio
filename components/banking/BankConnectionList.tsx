@@ -6,8 +6,10 @@ import { removeBankConnection } from "@/app/actions/bank-links";
 import { useToastAction } from "@/hooks/useToastAction";
 import type { CategoryOption } from "@/components/import/import-view";
 import { awaitsPreview, type BankConnection, consentDaysLeft } from "@/lib/banking/connections";
+import type { BankSyncBatch } from "@/lib/banking/sync-batches";
 import { BankAccountLinkSelect } from "./BankAccountLinkSelect";
 import { BankAccountStatus } from "./BankAccountStatus";
+import { BankSyncHistory } from "./BankSyncHistory";
 import { BankSyncPreview } from "./BankSyncPreview";
 
 const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
@@ -18,6 +20,7 @@ export function BankConnectionList({
   accountOptions,
   balances = {},
   lastBookedOn = {},
+  batches = {},
   categories,
   today,
   now = new Date(),
@@ -28,6 +31,8 @@ export function BankConnectionList({
   balances?: Record<string, number>;
   /** Latest recorded movement by account id: default start of a first-sync preview. */
   lastBookedOn?: Record<string, string>;
+  /** Latest sync batches by account id, newest first. */
+  batches?: Record<string, BankSyncBatch[]>;
   /** Active categories, for new movements in a first-sync preview. */
   categories?: CategoryOption[];
   /** Today in Rome (ISO), computed at request time by the server page. */
@@ -69,6 +74,7 @@ export function BankConnectionList({
                         ) : (
                           <BankAccountStatus account={a} monetioBalanceCents={balances[a.accountId]} now={now} />
                         ))}
+                      {a.accountId && <BankSyncHistory batches={batches[a.accountId] ?? []} />}
                     </li>
                   ))}
                 </ul>

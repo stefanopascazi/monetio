@@ -7,6 +7,7 @@ import type { BankConnection } from "@/lib/banking/connections";
 import { BankConnectionList } from "./BankConnectionList";
 
 vi.mock("@/app/actions/bank-sync", () => ({ previewBankSync: vi.fn(), confirmBankSync: vi.fn() }));
+vi.mock("@/app/actions/bank-sync-batches", () => ({ undoBankSync: vi.fn() }));
 vi.mock("@/app/actions/bank-links", () => ({
   removeBankConnection: vi.fn(async () => ({ ok: true, message: "Banca scollegata." })),
   linkBankAccount: vi.fn(),
@@ -72,6 +73,13 @@ describe("BankConnectionList", () => {
     const linked = { ...base, accounts: [{ ...base.accounts[0], accountId: "acc-1", bankBalanceCents: 1000, syncConfirmedAt: "2026-11-18T09:00:00Z" }] };
     wrap(<BankConnectionList connections={[linked]} accountOptions={options} balances={{ "acc-1": 1000 }} now={now} today="2026-11-18" />);
     expect(screen.getByText("Allineato")).toBeInTheDocument();
+  });
+
+  it("shows the sync history of a linked account", () => {
+    const linked = { ...base, accounts: [{ ...base.accounts[0], accountId: "acc-1", syncConfirmedAt: "2026-11-18T09:00:00Z" }] };
+    const batches = { "acc-1": [{ id: "b1", accountId: "acc-1", kind: "worker" as const, inserted: 1, reconciled: 0, review: 0, createdAt: "2026-11-18T07:00:00Z", undoneAt: null }] };
+    wrap(<BankConnectionList connections={[linked]} accountOptions={options} batches={batches} now={now} today="2026-11-18" />);
+    expect(screen.getByRole("button", { name: /Ultimi aggiornamenti/ })).toBeInTheDocument();
   });
 
   it("asks for the first-sync preview of a newly linked account, starting from its latest movement", () => {

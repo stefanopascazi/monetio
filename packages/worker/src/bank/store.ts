@@ -83,26 +83,34 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
     },
 
     async apply(target: SyncTarget, decisions: Decision[]) {
-      // All decisions of one account land together or not at all.
+      // All decisions of one account land together or not at all, recorded as one undoable batch (#88).
       await sql.begin(async (tx) => {
+        const [{ id: batch }] = await tx`select open_bank_sync_batch(${target.bankAccountId}, 'worker') as id`;
+        const counts = { inserted: 0, reconciled: 0, review: 0 };
         for (const d of decisions) {
           const m = d.movement;
           if (d.type === "insert") {
-            await tx`
-              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description, bank_ref, category_id)
+            const rows = await tx`
+              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description, bank_ref, category_id, bank_sync_batch_id)
               values (${target.householdId}, ${target.accountId}, ${m.amountCents >= 0 ? "income" : "expense"}, 'booked', 'bank',
-                      ${m.amountCents}, ${m.bookedOn}, ${m.description}, ${m.ref}, ${d.categoryId ?? null})
-              on conflict (account_id, bank_ref) where bank_ref is not null do nothing`;
+                      ${m.amountCents}, ${m.bookedOn}, ${m.description}, ${m.ref}, ${d.categoryId ?? null}, ${batch})
+              on conflict (account_id, bank_ref) where bank_ref is not null do nothing
+              returning id`;
+            counts.inserted += rows.length;
           } else if (d.type === "reconcile") {
             // Shared with confirm_bank_sync: planned rows become booked, batches share the reference.
-            await tx`select reconcile_bank_rows(${target.accountId}, ${d.transactionIds}::uuid[], ${m.ref}, ${m.bookedOn})`;
+            const [{ n }] = await tx`select reconcile_bank_rows(${target.accountId}, ${d.transactionIds}::uuid[], ${m.ref}, ${m.bookedOn}, ${batch}) as n`;
+            if (Number(n) > 0) counts.reconciled++;
           } else if (d.type === "review") {
-            await tx`
-              insert into bank_sync_reviews (household_id, account_id, bank_ref, booked_on, amount_cents, description, reason, candidate_transaction_id)
-              values (${target.householdId}, ${target.accountId}, ${m.ref}, ${m.bookedOn}, ${m.amountCents}, ${m.description}, ${d.reason}, ${d.candidateId})
-              on conflict (account_id, bank_ref) do nothing`;
+            const rows = await tx`
+              insert into bank_sync_reviews (household_id, account_id, bank_ref, booked_on, amount_cents, description, reason, candidate_transaction_id, batch_id)
+              values (${target.householdId}, ${target.accountId}, ${m.ref}, ${m.bookedOn}, ${m.amountCents}, ${m.description}, ${d.reason}, ${d.candidateId}, ${batch})
+              on conflict (account_id, bank_ref) do nothing
+              returning id`;
+            counts.review += rows.length;
           }
         }
+        await tx`select close_bank_sync_batch(${batch}, ${counts.inserted}, ${counts.reconciled}, ${counts.review})`;
       });
     },
 
