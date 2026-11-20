@@ -8,7 +8,7 @@ function store(over: Partial<IntegrityStore> = {}) {
     hasPendingRequest: vi.fn(async () => false),
     claimRequest: vi.fn(async () => null as number | null),
     finishRequest: vi.fn(async () => {}),
-    run: vi.fn(async () => ({ transfer_unlinked: 2 })),
+    run: vi.fn(async () => ({ balance_drift: 2 })),
     ...over,
   };
 }
@@ -33,7 +33,7 @@ describe("createIntegrityCheckJob", () => {
     await createIntegrityCheckJob(s).run(c);
     expect(s.run).toHaveBeenCalledWith(7);
     expect(s.finishRequest).toHaveBeenCalledWith(7, null);
-    expect(c.log).toHaveBeenCalledWith("info", "integrity checked", { requestId: 7, transfer_unlinked: 2 });
+    expect(c.log).toHaveBeenCalledWith("info", "integrity checked", { requestId: 7, balance_drift: 2 });
   });
 
   it("runs without a request on the nightly slot", async () => {
