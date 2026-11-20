@@ -6,11 +6,22 @@ vi.mock("next/cache", () => ({ refresh: vi.fn() }));
 vi.mock("next/headers", () => ({
   headers: vi.fn(async () => new Headers({ "x-forwarded-for": "203.0.113.5, 10.0.0.1", "user-agent": "UA" })),
 }));
-vi.mock("@/lib/data/context", () => ({ getContext: vi.fn(async () => ({ userId: "user-1" })) }));
+vi.mock("@/lib/data/context", () => ({ getContext: vi.fn(async () => ({ userId: "user-1", householdId: "h1" })) }));
+const CAT = "99999999-8888-4777-8666-555555555555";
+const OTHER = "99999999-8888-4777-8666-444444444444";
+vi.mock("@/lib/data/queries", () => ({
+  listCategories: vi.fn(async () => [
+    { id: CAT, name: "Varie", kind: "expense", icon: null, colorIndex: 1, archived: false },
+    { id: OTHER, name: "Stipendio", kind: "income", icon: null, colorIndex: 2, archived: false },
+  ]),
+}));
+const applyCategoryChoice = vi.fn(async () => 0);
+vi.mock("@/lib/data/category-matches", () => ({ applyCategoryChoice }));
 vi.mock("@/lib/banking/server", () => ({ bankService: vi.fn(() => ({ previewContext })) }));
 vi.mock("@/lib/domain/dates", async (orig) => ({ ...(await orig<object>()), todayISO: () => "2026-11-20" }));
 const rpc = vi.fn();
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc })) }));
+const bankAccountRow = { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_id: "acc1" } }) }) }) };
+vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc, from: () => bankAccountRow })) }));
 const loadExisting = vi.fn(async () => ({
   candidates: [{ id: "t1", bookedOn: "2026-11-10", amountCents: -5000, description: "Mov a", fromRule: false, bankRef: null }],
   reviewRefs: [],
@@ -95,8 +106,22 @@ describe("confirmBankSync", () => {
     expect((await confirmBankSync(ba, "2026-11-01", [])).message).toMatch(/già attivo/);
   });
 
-  it("validates the selection", async () => {
+  it("validates the selection and the category picks", async () => {
     expect((await confirmBankSync(ba, "2026-11-01", ["x".repeat(121)])).ok).toBe(false);
+    expect((await confirmBankSync(ba, "2026-11-01", ["c"], [["c", "not-a-uuid"]])).ok).toBe(false);
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("replays category picks and remembers them for the account", async () => {
+    rpc.mockResolvedValue({ error: null });
+    await confirmBankSync(ba, "2026-11-01", ["b", "c"], [["c", CAT], ["b", OTHER]]);
+    const inserts = rpc.mock.calls[0][1].p_decisions.filter((d: { type: string }) => d.type === "insert");
+    // A category of the wrong direction is dropped.
+    expect(inserts.map((d: { ref: string; category_id: string | null }) => [d.ref, d.category_id])).toEqual([
+      ["b", null],
+      ["c", CAT],
+    ]);
+    expect(applyCategoryChoice).toHaveBeenCalledTimes(1);
+    expect(applyCategoryChoice).toHaveBeenCalledWith(expect.anything(), { householdId: "h1", accountId: "acc1", description: "Mov c", amountCents: -800, categoryId: CAT });
   });
 });

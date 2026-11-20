@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { todayISO } from "@/lib/domain/dates";
+import { applyCategoryChoice, followsMatch } from "@/lib/data/category-matches";
 import { getContext } from "@/lib/data/context";
 import { fetchFeeCategoryId } from "@/lib/data/fee-category";
 import { syncFee } from "@/lib/data/fee-sync";
@@ -38,7 +39,7 @@ export async function updateTransaction(id: string, prev: ActionState, fd: FormD
   const supabase = await createClient();
   const { data: current } = await supabase
     .from("transactions")
-    .select("id, kind, transfer_group_id, account_id, parent_transaction_id, source, created_by")
+    .select("id, kind, transfer_group_id, account_id, parent_transaction_id, source, created_by, category_id")
     .eq("id", id)
     .maybeSingle();
   if (!current) return failure("Movimento non trovato.");
@@ -82,9 +83,36 @@ export async function updateTransaction(id: string, prev: ActionState, fd: FormD
     if (error) return failure(dbErrorMessage(error));
     const feeError = await syncFee(supabase, { ...v, id, householdId: ctx.householdId, source: current.source, createdBy: current.created_by }, v.feeCents);
     if (feeError) return failure(dbErrorMessage(feeError));
+    if (v.kind !== "transfer" && v.categoryId && v.categoryId !== current.category_id) {
+      const choice = { accountId: v.accountId, description: v.description, amountCents: v.amountCents, categoryId: v.categoryId };
+      const propagated = await propagateChoice(supabase, ctx.householdId, choice, current.category_id);
+      if (propagated) {
+        refresh();
+        return success(`Modifiche salvate. Categoria applicata anche a ${propagated === 1 ? "1 movimento identico" : `${propagated} movimenti identici`}.`, prev);
+      }
+    }
   }
   refresh();
   return success("Modifiche salvate.", prev);
+}
+
+/**
+ * Category set on an uncategorised movement, or changed from the matched one: remembered for the
+ * account and applied to identical movements (#91). Failures never undo the saved edit.
+ */
+async function propagateChoice(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  householdId: string,
+  v: { accountId: string; description: string; amountCents: number; categoryId: string },
+  previousCategoryId: string | null,
+): Promise<number> {
+  try {
+    if (!(await followsMatch(supabase, v.accountId, v.description, v.amountCents, previousCategoryId))) return 0;
+    return (await applyCategoryChoice(supabase, { householdId, ...v })) ?? 0;
+  } catch (error) {
+    console.error("[categories] match propagation failed", error instanceof Error ? error.message : "unknown");
+    return 0;
+  }
 }
 
 export async function deleteTransaction(id: string): Promise<ActionState> {

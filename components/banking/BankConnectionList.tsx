@@ -4,6 +4,7 @@ import { Landmark, Unlink } from "lucide-react";
 import { Badge, Card, InlineConfirm, type SelectOption } from "@monetio/ui";
 import { removeBankConnection } from "@/app/actions/bank-links";
 import { useToastAction } from "@/hooks/useToastAction";
+import type { CategoryOption } from "@/components/import/import-view";
 import { awaitsPreview, type BankConnection, consentDaysLeft } from "@/lib/banking/connections";
 import { BankAccountLinkSelect } from "./BankAccountLinkSelect";
 import { BankAccountStatus } from "./BankAccountStatus";
@@ -17,6 +18,7 @@ export function BankConnectionList({
   accountOptions,
   balances = {},
   lastBookedOn = {},
+  categories,
   today,
   now = new Date(),
 }: {
@@ -26,6 +28,8 @@ export function BankConnectionList({
   balances?: Record<string, number>;
   /** Latest recorded movement by account id: default start of a first-sync preview. */
   lastBookedOn?: Record<string, string>;
+  /** Active categories, for new movements in a first-sync preview. */
+  categories?: CategoryOption[];
   /** Today in Rome (ISO), computed at request time by the server page. */
   today: string;
   now?: Date;
@@ -61,7 +65,7 @@ export function BankConnectionList({
                       <BankAccountLinkSelect bankAccountId={a.id} accountId={a.accountId} options={accountOptions} />
                       {a.accountId &&
                         (awaitsPreview(a) && !expired ? (
-                          <BankSyncPreview key={a.accountId} bankAccountId={a.id} defaultFrom={lastBookedOn[a.accountId] ?? today} today={today} />
+                          <BankSyncPreview key={a.accountId} bankAccountId={a.id} defaultFrom={lastBookedOn[a.accountId] ?? today} today={today} categories={categories} />
                         ) : (
                           <BankAccountStatus account={a} monetioBalanceCents={balances[a.accountId]} now={now} />
                         ))}

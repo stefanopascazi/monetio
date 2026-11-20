@@ -3,7 +3,7 @@
 import { addDays } from "../../domain/dates.ts";
 import type { ISODate } from "../../domain/types.ts";
 import type { BalanceResource, TransactionResource } from "../enable-banking/types.ts";
-import { type CategoryHints, withSuggestedCategories } from "./categories.ts";
+import { type CategoryHints, withMatchedCategories } from "./categories.ts";
 import { type Candidate, type Decision, matchMovements, RULE_WINDOW_DAYS } from "./match.ts";
 import { normalizeTransactions, pickBalance } from "./normalize.ts";
 
@@ -29,7 +29,7 @@ export type SyncClient = {
 export type SyncStore = {
   /** Movements of the account from a date, and bank refs already queued for review. */
   loadExisting(accountId: string, from: ISODate): Promise<{ candidates: Candidate[]; reviewRefs: string[] }>;
-  /** Categorised movements and categories the owner sees, for category proposals. */
+  /** Category matches of the account and the household categories. */
   loadCategoryHints?(target: SyncTarget): Promise<CategoryHints>;
   apply(target: SyncTarget, decisions: Decision[]): Promise<void>;
   saveStatus(bankAccountId: string, status: { syncedAt: Date; balance: { cents: number; date: ISODate | null } | null; error: string | null }): Promise<void>;
@@ -91,7 +91,7 @@ export async function planSync(target: SyncTarget, client: SyncClient, store: Pi
   const { candidates, reviewRefs } = await store.loadExisting(target.accountId, addDays(from, -RULE_WINDOW_DAYS));
   const matched = matchMovements(movements, candidates, reviewRefs);
   const hints = matched.some((d) => d.type === "insert") && store.loadCategoryHints ? await store.loadCategoryHints(target) : null;
-  const decisions = hints ? withSuggestedCategories(matched, hints) : matched;
+  const decisions = hints ? withMatchedCategories(matched, hints) : matched;
   const picked = pickBalance(balances);
   return { from, decisions, balance: picked && { cents: picked.cents, date: picked.date }, fetched: items.length, balances: balances.length };
 }

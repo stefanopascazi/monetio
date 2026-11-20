@@ -3,10 +3,12 @@
 import { Amount, Badge } from "@monetio/ui";
 import { dateLabel } from "@/lib/domain/dates";
 import { REVIEW_REASON_LABEL } from "@/lib/banking/reviews";
+import type { CategoryOption } from "@/components/import/import-view";
+import { RowCategory } from "@/components/import/RowCategory";
 import { isSelectable, type PreviewGroup, type PreviewItem } from "@/lib/banking/sync/preview";
 
 const GROUPS: { group: PreviewGroup; title: string; hint: string }[] = [
-  { group: "new", title: "Nuovi", hint: "Non trovati in MonetIO: quelli spuntati vengono aggiunti." },
+  { group: "new", title: "Nuovi", hint: "Non trovati in MonetIO: quelli spuntati vengono aggiunti. La categoria scelta vale anche per i movimenti uguali e il conto la ricorda." },
   { group: "review", title: "Da rivedere", hint: "Simili a movimenti già registrati: quelli spuntati finiscono in \"Da rivedere\"." },
   { group: "matched", title: "Già presenti", hint: "Abbinati a movimenti registrati: ricevono solo il riferimento della banca." },
   { group: "known", title: "Già sincronizzati", hint: "Nessuna modifica." },
@@ -16,11 +18,16 @@ type Props = {
   items: PreviewItem[];
   selected: ReadonlySet<string>;
   onToggle: (ref: string, value: boolean) => void;
+  /** Categories for new movements; without them no picker is shown. */
+  categories?: CategoryOption[];
+  /** Refs whose category the owner picked (others come from the account matches). */
+  picked?: ReadonlySet<string>;
+  onPickCategory?: (ref: string, categoryId: string | null) => void;
   disabled?: boolean;
 };
 
 /** Movements of the first-sync preview, grouped; new and doubtful ones carry a checkbox. */
-export function BankPreviewList({ items, selected, onToggle, disabled }: Props) {
+export function BankPreviewList({ items, selected, onToggle, categories, picked, onPickCategory, disabled }: Props) {
   if (!items.length) return <p className="text-sm text-ink-muted">La banca non ha movimenti da questa data.</p>;
   return (
     <div className="flex flex-col gap-4">
@@ -55,6 +62,20 @@ export function BankPreviewList({ items, selected, onToggle, disabled }: Props) 
                       {dateLabel(i.bookedOn)}
                       {i.reason ? ` · ${REVIEW_REASON_LABEL[i.reason]}` : ""}
                     </span>
+                    {i.group === "new" && categories && onPickCategory && (
+                      <span className="mt-1">
+                        <RowCategory
+                          amountCents={i.amountCents}
+                          value={i.categoryId ?? ""}
+                          suggested={!picked?.has(i.ref)}
+                          suggestedLabel="dal conto"
+                          categories={categories}
+                          disabled={disabled}
+                          label={`Categoria di ${i.description} del ${dateLabel(i.bookedOn)}`}
+                          onChange={(id) => onPickCategory(i.ref, id || null)}
+                        />
+                      </span>
+                    )}
                   </span>
                   <Amount cents={i.amountCents} size="sm" showSign />
                 </li>

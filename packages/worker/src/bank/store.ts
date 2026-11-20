@@ -70,21 +70,13 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
     },
 
     async loadCategoryHints(target) {
-      // Same examples the owner's CSV import learns from: shared accounts and the owner's private ones.
-      const [history, categories] = await Promise.all([
-        sql`
-          select t.description, t.amount_cents, t.category_id
-          from transactions t
-          join accounts a on a.id = t.account_id
-          left join household_members me on me.household_id = a.household_id and me.user_id = ${target.userId}
-          where t.household_id = ${target.householdId} and t.kind in ('income', 'expense') and t.category_id is not null
-            and (a.visibility = 'shared' or a.owner_member_id = me.id)
-          order by t.booked_on desc, t.id
-          limit 3000`,
+      // Matches the users chose for this account (#91).
+      const [matches, categories] = await Promise.all([
+        sql`select description_key, direction, category_id from account_category_matches where account_id = ${target.accountId}`,
         sql`select * from categories where household_id = ${target.householdId}`,
       ]);
       return {
-        history: history.map((r) => ({ description: r.description, amountCents: Number(r.amount_cents), categoryId: r.category_id })),
+        matches: matches.map((r) => ({ key: r.description_key, direction: Number(r.direction) as 1 | -1, categoryId: r.category_id })),
         categories: categories.map(mapCategory),
       };
     },

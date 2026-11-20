@@ -11,7 +11,7 @@ import { lastBookedOnByAccount, listMyBankConnections } from "@/lib/data/bank-co
 import { awaitsPreview } from "@/lib/banking/connections";
 import { todayISO } from "@/lib/domain/dates";
 import { listOpenBankReviews } from "@/lib/data/bank-reviews";
-import { listAccounts } from "@/lib/data/queries";
+import { listAccounts, listCategories } from "@/lib/data/queries";
 import { BankAppCard } from "./BankAppCard";
 import { BankConnectionList } from "./BankConnectionList";
 import { BankCredentialsForm } from "./BankCredentialsForm";
@@ -47,21 +47,23 @@ export async function BanksView({ outcome }: { outcome?: string }) {
     );
   }
 
-  const [connections, banks, accounts, reviews] = await Promise.all([
+  const [connections, banks, accounts, reviews, categories] = await Promise.all([
     listMyBankConnections(),
     loadBankOptions(ctx.userId),
     listAccounts(),
     listOpenBankReviews(),
+    listCategories(),
   ]);
   const pendingIds = connections.flatMap((c) => c.accounts.filter(awaitsPreview).map((a) => a.accountId as string));
   const lastBookedOn = await lastBookedOnByAccount(pendingIds);
   const accountOptions = accounts.filter((a) => !a.archived).map((a) => ({ value: a.id, label: a.name }));
+  const activeCategories = categories.filter((c) => !c.archived).map(({ id, name, kind }) => ({ id, name, kind }));
   const balances = Object.fromEntries(accounts.map((a) => [a.id, a.balanceCents]));
   return (
     <div className="flex flex-col gap-4">
       {alert}
       <BankReviewList reviews={reviews} />
-      <BankConnectionList connections={connections} accountOptions={accountOptions} balances={balances} lastBookedOn={lastBookedOn} today={todayISO()} />
+      <BankConnectionList connections={connections} accountOptions={accountOptions} balances={balances} lastBookedOn={lastBookedOn} categories={activeCategories} today={todayISO()} />
       {banks ? (
         <BankPicker banks={banks} recent={recentBanks(banks, connections.map((c) => c.bankName))} sandbox={app.environment === "sandbox"} />
       ) : (
