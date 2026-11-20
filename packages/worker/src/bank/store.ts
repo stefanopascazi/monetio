@@ -9,7 +9,7 @@ export type BankSyncTarget = SyncTarget & { appId: string; privateKeySealed: str
 export interface BankSyncStore extends SyncStore {
   /** Active consents past their end become "expired"; returns how many. */
   expireConnections(now: Date): Promise<number>;
-  /** Linked bank accounts of active consents whose owner still has an app. */
+  /** Linked bank accounts of active consents whose owner still has an app and confirmed the preview. */
   listTargets(): Promise<BankSyncTarget[]>;
 }
 
@@ -24,13 +24,13 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
 
     async listTargets() {
       const rows = await sql`
-        select ba.id as bank_account_id, ba.uid, c.user_id, c.household_id, ba.account_id, a.opening_date,
+        select ba.id as bank_account_id, ba.uid, c.user_id, c.household_id, ba.account_id, a.opening_date, ba.sync_from,
                ba.last_synced_at, c.created_at as connection_created_at, cr.app_id, cr.private_key_sealed
         from bank_accounts ba
         join bank_connections c on c.id = ba.connection_id
         join accounts a on a.id = ba.account_id and a.household_id = c.household_id
         join bank_credentials cr on cr.user_id = c.user_id
-        where c.status = 'active' and c.valid_until > now() and a.archived_at is null
+        where c.status = 'active' and c.valid_until > now() and a.archived_at is null and ba.sync_confirmed_at is not null
         order by c.user_id, ba.id`;
       return rows.map((r) => ({
         bankAccountId: r.bank_account_id,
@@ -39,6 +39,7 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
         householdId: r.household_id,
         accountId: r.account_id,
         openingDate: iso(r.opening_date),
+        syncFrom: r.sync_from ? iso(r.sync_from) : null,
         lastSyncedAt: r.last_synced_at ? new Date(r.last_synced_at) : null,
         connectionCreatedAt: new Date(r.connection_created_at),
         appId: r.app_id,

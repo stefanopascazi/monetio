@@ -1,12 +1,16 @@
 // Server-side bank linking: opens the person's sealed key, talks to Enable Banking, stores consents.
 // Dependencies are injected so the flow is unit-tested without network or database.
 import { randomBytes } from "node:crypto";
-import type { createEnableBankingClient, EnableBankingConfig } from "./enable-banking/client.ts";
+import type { createEnableBankingClient, EnableBankingConfig, PsuContext } from "./enable-banking/client.ts";
 import type { Aspsp } from "./enable-banking/types.ts";
 import { buildAuthRequest, consentValidUntil, mapSessionAccounts, sessionValidUntil, type LinkedAccountRow } from "./link.ts";
 import { openSecret, sealSecret } from "./secrets.ts";
+import type { SyncTarget } from "./sync/run.ts";
 
-type Client = Pick<ReturnType<typeof createEnableBankingClient>, "listAspsps" | "startAuth" | "createSession" | "deleteSession">;
+type Client = Pick<
+  ReturnType<typeof createEnableBankingClient>,
+  "listAspsps" | "startAuth" | "createSession" | "deleteSession" | "getBalances" | "getTransactions"
+>;
 
 export type CredentialsRecord = { app_id: string; private_key_sealed: string };
 
@@ -18,6 +22,8 @@ export type BankStore = {
   ) => Promise<void>;
   loadConnection: (id: string, userId: string) => Promise<{ id: string; session_id_sealed: string } | null>;
   deleteConnection: (id: string) => Promise<void>;
+  /** The caller's linked bank account still waiting for its first-sync preview (active consent); null otherwise. */
+  loadPendingSyncTarget: (userId: string, bankAccountId: string) => Promise<SyncTarget | null>;
 };
 
 export type BankServiceDeps = {
@@ -35,10 +41,10 @@ export class BankSetupMissing extends Error {
 }
 
 export function createBankService({ masterKey, store, createClient, now = () => new Date() }: BankServiceDeps) {
-  async function clientFor(userId: string): Promise<Client> {
+  async function clientFor(userId: string, psu?: PsuContext): Promise<Client> {
     const creds = await store.loadCredentials(userId);
     if (!creds) throw new BankSetupMissing();
-    return createClient({ appId: creds.app_id, privateKeyPem: openSecret(creds.private_key_sealed, masterKey, userId) });
+    return createClient({ appId: creds.app_id, privateKeyPem: openSecret(creds.private_key_sealed, masterKey, userId), ...(psu ? { psu } : {}) });
   }
 
   return {
@@ -83,6 +89,13 @@ export function createBankService({ masterKey, store, createClient, now = () => 
         accounts,
       );
       return accounts.length;
+    },
+
+    /** Target and bank client for the first-sync preview, read while the person is present. Null when not pending. */
+    previewContext: async (input: { userId: string; bankAccountId: string; psu?: PsuContext }) => {
+      const target = await store.loadPendingSyncTarget(input.userId, input.bankAccountId);
+      if (!target) return null;
+      return { target, client: await clientFor(input.userId, input.psu) };
     },
 
     /** Revokes the consent at the bank (best effort) and forgets it. False when not the caller's. */

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TransactionResource } from "../enable-banking/types";
-import { countDecisions, type SyncStore, type SyncTarget, syncBankAccount, syncFrom } from "./run";
+import { countDecisions, planSync, type SyncStore, type SyncTarget, syncBankAccount, syncFloor, syncFrom } from "./run";
 
 const target: SyncTarget = {
   bankAccountId: "ba1",
@@ -9,6 +9,7 @@ const target: SyncTarget = {
   householdId: "h1",
   accountId: "acc1",
   openingDate: "2026-01-01",
+  syncFrom: null,
   lastSyncedAt: null,
   connectionCreatedAt: new Date("2026-11-18T10:00:00Z"),
 };
@@ -31,6 +32,37 @@ describe("syncFrom", () => {
 
   it("never reads before the account's opening date", () => {
     expect(syncFrom({ ...target, openingDate: "2026-11-01" })).toBe("2026-11-01");
+  });
+
+  it("never reads before the day chosen in the preview, even with the overlap", () => {
+    const confirmed = { ...target, syncFrom: "2026-11-15" as const, lastSyncedAt: new Date("2026-11-18T06:00:00Z") };
+    expect(syncFrom(confirmed)).toBe("2026-11-15");
+  });
+
+  it("reads from the chosen day on the preview, even further back than 30 days", () => {
+    expect(syncFrom({ ...target, syncFrom: "2026-06-01" })).toBe("2026-06-01");
+  });
+});
+
+describe("syncFloor", () => {
+  it("takes the later of opening date and chosen day", () => {
+    expect(syncFloor({ openingDate: "2026-01-01", syncFrom: null })).toBe("2026-01-01");
+    expect(syncFloor({ openingDate: "2026-01-01", syncFrom: "2026-03-01" })).toBe("2026-03-01");
+    expect(syncFloor({ openingDate: "2026-05-01", syncFrom: "2026-03-01" })).toBe("2026-05-01");
+  });
+});
+
+describe("planSync", () => {
+  it("decides without writing and drops movements before the chosen day", async () => {
+    const client = {
+      getBalances: vi.fn(async () => []),
+      getTransactions: vi.fn(async () => [txn("before", "2026-11-01", "5.00"), txn("after", "2026-11-12", "20.00")]),
+    };
+    const store = { loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })) };
+    const plan = await planSync({ ...target, syncFrom: "2026-11-10" }, client, store);
+    expect(client.getTransactions).toHaveBeenCalledWith("u1", "2026-11-10");
+    expect(plan.decisions.map((d) => [d.type, d.movement.ref])).toEqual([["insert", "after"]]);
+    expect(plan).toMatchObject({ from: "2026-11-10", balance: null, fetched: 2, balances: 0 });
   });
 });
 

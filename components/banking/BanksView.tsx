@@ -7,7 +7,9 @@ import { summarizeAspsps } from "@/lib/banking/enable-banking/aspsps";
 import { bankService } from "@/lib/banking/server";
 import { getContext } from "@/lib/data/context";
 import { getMyBankApp } from "@/lib/data/bank-credentials";
-import { listMyBankConnections } from "@/lib/data/bank-connections";
+import { lastBookedOnByAccount, listMyBankConnections } from "@/lib/data/bank-connections";
+import { awaitsPreview } from "@/lib/banking/connections";
+import { todayISO } from "@/lib/domain/dates";
 import { listOpenBankReviews } from "@/lib/data/bank-reviews";
 import { listAccounts } from "@/lib/data/queries";
 import { BankAppCard } from "./BankAppCard";
@@ -51,13 +53,15 @@ export async function BanksView({ outcome }: { outcome?: string }) {
     listAccounts(),
     listOpenBankReviews(),
   ]);
+  const pendingIds = connections.flatMap((c) => c.accounts.filter(awaitsPreview).map((a) => a.accountId as string));
+  const lastBookedOn = await lastBookedOnByAccount(pendingIds);
   const accountOptions = accounts.filter((a) => !a.archived).map((a) => ({ value: a.id, label: a.name }));
   const balances = Object.fromEntries(accounts.map((a) => [a.id, a.balanceCents]));
   return (
     <div className="flex flex-col gap-4">
       {alert}
       <BankReviewList reviews={reviews} />
-      <BankConnectionList connections={connections} accountOptions={accountOptions} balances={balances} />
+      <BankConnectionList connections={connections} accountOptions={accountOptions} balances={balances} lastBookedOn={lastBookedOn} today={todayISO()} />
       {banks ? (
         <BankPicker banks={banks} recent={recentBanks(banks, connections.map((c) => c.bankName))} sandbox={app.environment === "sandbox"} />
       ) : (

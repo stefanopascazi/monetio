@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceGap, consentDaysLeft, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
+import { awaitsPreview, balanceGap, consentDaysLeft, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
 
 describe("mapBankConnection", () => {
   it("maps the row and its accounts", () => {
@@ -22,6 +22,8 @@ describe("mapBankConnection", () => {
             bank_balance_on: null,
             last_synced_at: "2026-11-18T13:19:58Z",
             last_error: null,
+            sync_confirmed_at: "2026-11-18T13:19:58Z",
+            sync_from: "2026-11-01",
           },
         ],
       }),
@@ -43,6 +45,8 @@ describe("mapBankConnection", () => {
           bankBalanceOn: null,
           lastSyncedAt: "2026-11-18T13:19:58Z",
           lastError: null,
+          syncConfirmedAt: "2026-11-18T13:19:58Z",
+          syncFrom: "2026-11-01",
         },
       ],
     });
@@ -75,5 +79,13 @@ describe("balanceGap", () => {
     expect(balanceGap(100, 100)).toBe(0);
     expect(balanceGap(null, 100)).toBeNull();
     expect(balanceGap(100, undefined)).toBeNull();
+  });
+});
+
+describe("awaitsPreview", () => {
+  it("is true only for linked accounts not confirmed yet", () => {
+    expect(awaitsPreview({ accountId: "acc", syncConfirmedAt: null })).toBe(true);
+    expect(awaitsPreview({ accountId: "acc", syncConfirmedAt: "2026-11-20T08:00:00Z" })).toBe(false);
+    expect(awaitsPreview({ accountId: null, syncConfirmedAt: null })).toBe(false);
   });
 });

@@ -15,6 +15,7 @@ const target = (over: Partial<BankSyncTarget>): BankSyncTarget => ({
   householdId: "h1",
   accountId: "acc1",
   openingDate: "2026-01-01",
+  syncFrom: null,
   lastSyncedAt: null,
   connectionCreatedAt: now,
   appId: "app-1",

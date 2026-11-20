@@ -4,9 +4,10 @@ import { Landmark, Unlink } from "lucide-react";
 import { Badge, Card, InlineConfirm, type SelectOption } from "@monetio/ui";
 import { removeBankConnection } from "@/app/actions/bank-links";
 import { useToastAction } from "@/hooks/useToastAction";
-import { type BankConnection, consentDaysLeft } from "@/lib/banking/connections";
+import { awaitsPreview, type BankConnection, consentDaysLeft } from "@/lib/banking/connections";
 import { BankAccountLinkSelect } from "./BankAccountLinkSelect";
 import { BankAccountStatus } from "./BankAccountStatus";
+import { BankSyncPreview } from "./BankSyncPreview";
 
 const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
@@ -15,12 +16,18 @@ export function BankConnectionList({
   connections,
   accountOptions,
   balances = {},
+  lastBookedOn = {},
+  today,
   now = new Date(),
 }: {
   connections: BankConnection[];
   accountOptions: SelectOption[];
   /** MonetIO balance by account id, for the comparison with the bank's. */
   balances?: Record<string, number>;
+  /** Latest recorded movement by account id: default start of a first-sync preview. */
+  lastBookedOn?: Record<string, string>;
+  /** Today in Rome (ISO), computed at request time by the server page. */
+  today: string;
   now?: Date;
 }) {
   const { run } = useToastAction();
@@ -52,7 +59,12 @@ export function BankConnectionList({
                         {a.ibanMasked && <span className="shrink-0 font-mono text-xs text-ink-muted">{a.ibanMasked}</span>}
                       </div>
                       <BankAccountLinkSelect bankAccountId={a.id} accountId={a.accountId} options={accountOptions} />
-                      {a.accountId && <BankAccountStatus account={a} monetioBalanceCents={balances[a.accountId]} />}
+                      {a.accountId &&
+                        (awaitsPreview(a) && !expired ? (
+                          <BankSyncPreview key={a.accountId} bankAccountId={a.id} defaultFrom={lastBookedOn[a.accountId] ?? today} today={today} />
+                        ) : (
+                          <BankAccountStatus account={a} monetioBalanceCents={balances[a.accountId]} now={now} />
+                        ))}
                     </li>
                   ))}
                 </ul>

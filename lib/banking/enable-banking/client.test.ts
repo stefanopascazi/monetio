@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { generateKeyPairSync } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { createEnableBankingClient, EnableBankingError } from "./client";
+import { createEnableBankingClient, EnableBankingError, psuHeaders } from "./client";
 
 const privateKeyPem = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
 
@@ -89,5 +89,21 @@ describe("createEnableBankingClient", () => {
     const error = await client.getApplication().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(EnableBankingError);
     expect(error).toMatchObject({ status: 401, body: "bad kid" });
+  });
+});
+
+describe("psuHeaders", () => {
+  it("marks reads as user-initiated when the person is present", () => {
+    expect(psuHeaders({ ipAddress: "203.0.113.5", userAgent: "Firefox" })).toEqual({ "Psu-Ip-Address": "203.0.113.5", "Psu-User-Agent": "Firefox" });
+    expect(psuHeaders({ ipAddress: "203.0.113.5", userAgent: null })).toEqual({ "Psu-Ip-Address": "203.0.113.5" });
+    expect(psuHeaders(undefined)).toEqual({});
+  });
+
+  it("sends them on every call", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ balances: [] }));
+    const client = createEnableBankingClient({ appId: "app-1", privateKeyPem, fetch: fetchMock, psu: { ipAddress: "203.0.113.5", userAgent: "UA" } });
+    await client.getBalances("acc");
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect((init.headers as Record<string, string>)["Psu-Ip-Address"]).toBe("203.0.113.5");
   });
 });

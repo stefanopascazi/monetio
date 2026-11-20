@@ -13,14 +13,17 @@ const account: BankConnectionAccount = {
   bankBalanceOn: null,
   lastSyncedAt: "2026-11-18T13:19:58Z",
   lastError: null,
+  syncConfirmedAt: "2026-11-18T13:19:58Z",
+  syncFrom: "2026-11-01",
 };
+const now = new Date("2026-11-20T08:00:00Z");
 
 describe("BankAccountStatus", () => {
   it("shows both balances, the gap and the last sync", () => {
-    render(<BankAccountStatus account={account} monetioBalanceCents={-786} />);
+    render(<BankAccountStatus account={account} monetioBalanceCents={-786} now={now} />);
     expect(screen.getByText(/Saldo banca/)).toBeInTheDocument();
     expect(screen.getByText(/Differenza/)).toBeInTheDocument();
-    expect(screen.getByText(/Ultimo aggiornamento 18 nov/)).toBeInTheDocument();
+    expect(screen.getByText(/Ultimo aggiornamento 18 nov.* · Prossimo oggi alle 12:00/)).toBeInTheDocument();
   });
 
   it("marks aligned balances", () => {
@@ -28,12 +31,12 @@ describe("BankAccountStatus", () => {
     expect(screen.getByText("Allineato")).toBeInTheDocument();
   });
 
-  it("shows the sync error and the wait before the first sync", () => {
+  it("shows the sync error and when the next run comes", () => {
     render(
-      <BankAccountStatus account={{ ...account, bankBalanceCents: null, lastSyncedAt: null, lastError: "Banca non raggiungibile" }} monetioBalanceCents={0} />,
+      <BankAccountStatus account={{ ...account, bankBalanceCents: null, lastSyncedAt: null, lastError: "Banca non raggiungibile" }} monetioBalanceCents={0} now={now} />,
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Banca non raggiungibile");
-    expect(screen.getByText(/Non ancora aggiornato/)).toBeInTheDocument();
+    expect(screen.getByText("Prossimo oggi alle 12:00")).toBeInTheDocument();
     expect(screen.queryByText(/Saldo banca/)).toBeNull();
   });
 });
