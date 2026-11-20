@@ -18,9 +18,11 @@ revoke execute on function is_sysadmin from public, anon;
 grant execute on function is_sysadmin to authenticated;
 
 -- Every sysadmin action, append-only. Rows are written only through admin_log().
+-- No foreign key on actor: the trail must outlive the account (the email is kept for that).
 create table admin_audit_log (
   id bigint generated always as identity primary key,
-  actor uuid not null references auth.users(id),
+  actor uuid not null,
+  actor_email text,
   action text not null check (action ~ '^[a-z][a-z0-9_.-]{1,62}$'),
   target text check (length(target) <= 200),
   details jsonb not null default '{}'::jsonb check (pg_column_size(details) <= 4096),
@@ -35,8 +37,8 @@ language plpgsql security definer set search_path = public as $$
 declare v_id bigint;
 begin
   if not is_sysadmin() then raise exception 'not a sysadmin' using errcode = '42501'; end if;
-  insert into admin_audit_log (actor, action, target, details)
-  values (auth.uid(), p_action, p_target, coalesce(p_details, '{}'::jsonb))
+  insert into admin_audit_log (actor, actor_email, action, target, details)
+  values (auth.uid(), (select email from auth.users where id = auth.uid()), p_action, p_target, coalesce(p_details, '{}'::jsonb))
   returning id into v_id;
   return v_id;
 end $$;
