@@ -14,8 +14,9 @@ function setup({ acquired = true, lastSuccess = null as Date | null } = {}) {
   const heartbeat = { ping: vi.fn<Heartbeat["ping"]>(async () => {}) };
   const log = vi.fn();
   const reporter = { capture: vi.fn(), flush: vi.fn(async () => {}), sendTest: vi.fn() };
-  const deps = { locks, heartbeat, reporter, log, holder: "w1", shutdown: new AbortController().signal, now: () => 1_000 };
-  return { deps, locks, heartbeat, reporter, log };
+  const runs = { record: vi.fn(async () => {}) };
+  const deps = { locks, heartbeat, reporter, log, runs, holder: "w1", shutdown: new AbortController().signal, now: () => 1_000 };
+  return { deps, locks, heartbeat, reporter, log, runs };
 }
 
 const job = (run: Job["run"], isDue?: Job["isDue"]): Job => ({ name: "demo", intervalMs: 1_000, timeoutMs: 5_000, run, isDue });
@@ -128,6 +129,37 @@ describe("runJob", () => {
       const { deps, reporter } = setup();
       await runJob(job(async () => Promise.reject(Object.assign(new Error("deadlock"), { code: "40P01" }))), { ...deps, bootedAt: 0 });
       expect(reporter.capture).toHaveBeenCalled();
+    });
+  });
+
+  describe("run history", () => {
+    it("records a successful run", async () => {
+      const { deps, runs } = setup();
+      await runJob(job(async () => {}), deps);
+      expect(runs.record).toHaveBeenCalledWith({ job: "demo", startedAt: new Date(1_000), durationMs: 0, status: "success", error: null, holder: "w1" });
+    });
+
+    it("records a failed run with its error", async () => {
+      const { deps, runs } = setup();
+      await runJob(job(async () => Promise.reject(new Error("boom"))), deps);
+      expect(runs.record).toHaveBeenCalledWith(expect.objectContaining({ status: "failed", error: "boom" }));
+    });
+
+    it("records nothing for skipped or not-due runs", async () => {
+      const held = setup({ acquired: false });
+      await runJob(job(async () => {}), held.deps);
+      const notDue = setup();
+      await runJob(job(async () => {}, () => false), notDue.deps);
+      expect(held.runs.record).not.toHaveBeenCalled();
+      expect(notDue.runs.record).not.toHaveBeenCalled();
+    });
+
+    it("keeps going when the history write fails", async () => {
+      const { deps, heartbeat, log } = setup();
+      deps.runs.record.mockRejectedValueOnce(new Error("db down"));
+      await expect(runJob(job(async () => {}), deps)).resolves.toBeUndefined();
+      expect(log).toHaveBeenCalledWith("warn", "job run not recorded", { job: "demo", error: "db down" });
+      expect(heartbeat.ping).toHaveBeenLastCalledWith("demo", "success");
     });
   });
 });

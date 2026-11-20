@@ -1,0 +1,36 @@
+# Publishes packages/ui to GitHub Packages as @stefanopascazi/monetio-ui, for apps outside this repo
+# (sysadmin console, #47). Trigger: push a tag ui-v<version> matching packages/ui/package.json.
+# Consumers install it under the original name: "@monetio/ui": "npm:@stefanopascazi/monetio-ui@<version>".
+name: ui-package
+
+on:
+  push:
+    tags: ["ui-v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: "@stefanopascazi"
+      - run: npm ci
+      - run: npx vitest run --project ui
+      - name: Check tag matches the package version
+        working-directory: packages/ui
+        run: test "ui-v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - name: Publish under the owner scope
+        working-directory: packages/ui
+        run: |
+          npm pkg set name=@stefanopascazi/monetio-ui publishConfig.registry=https://npm.pkg.github.com
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
