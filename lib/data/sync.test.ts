@@ -6,11 +6,16 @@ vi.mock("../supabase/server", () => ({ createClient: vi.fn() }));
 
 const { bookDuePlanned } = await import("./sync");
 
-/** Query builder recording the chained filters, resolving to `result`. */
-function fakeAdmin(result: { data: unknown; error: unknown }) {
+/** Query builder recording the chained filters, resolving to `result`; `fed` answers bank_fed_account_ids. */
+function fakeAdmin(result: { data: unknown; error: unknown }, fed: string[] = []) {
   const calls: [string, ...unknown[]][] = [];
-  const builder: Record<string, unknown> = {};
-  for (const m of ["from", "update", "eq", "lte", "select"]) {
+  const builder: Record<string, unknown> = {
+    rpc: (...args: unknown[]) => {
+      calls.push(["rpc", ...args]);
+      return Promise.resolve({ data: fed, error: null });
+    },
+  };
+  for (const m of ["from", "update", "eq", "lte", "not", "select"]) {
     builder[m] = (...args: unknown[]) => {
       calls.push([m, ...args]);
       return m === "select" ? Promise.resolve(result) : builder;
@@ -24,6 +29,7 @@ describe("bookDuePlanned", () => {
     const { admin, calls } = fakeAdmin({ data: [{ id: "a" }, { id: "b" }], error: null });
     expect(await bookDuePlanned(admin, "h1", "2026-11-16")).toBe(2);
     expect(calls).toEqual([
+      ["rpc", "bank_fed_account_ids", { p_household: "h1" }],
       ["from", "transactions"],
       ["update", { status: "booked" }],
       ["eq", "household_id", "h1"],
@@ -31,6 +37,12 @@ describe("bookDuePlanned", () => {
       ["lte", "booked_on", "2026-11-16"],
       ["select", "id"],
     ]);
+  });
+
+  it("leaves planned rows of bank-fed accounts to the bank sync", async () => {
+    const { admin, calls } = fakeAdmin({ data: [], error: null }, ["a1", "a2"]);
+    await bookDuePlanned(admin, "h1", "2026-11-16");
+    expect(calls).toContainEqual(["not", "account_id", "in", "(a1,a2)"]);
   });
 
   it("throws database errors", async () => {

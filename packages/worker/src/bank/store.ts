@@ -50,10 +50,10 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
     async loadExisting(accountId, from) {
       const [txns, reviews] = await Promise.all([
         sql`
-          select id, booked_on, amount_cents, description, bank_ref,
+          select id, booked_on, amount_cents, description, coalesce(bank_ref, bank_batch_ref) as bank_ref, counterpart_account_id,
                  (recurring_rule_id is not null or contribution_rule_id is not null) as from_rule
           from transactions
-          where account_id = ${accountId} and status = 'booked' and booked_on >= ${from} and parent_transaction_id is null`,
+          where account_id = ${accountId} and booked_on >= ${from} and parent_transaction_id is null`,
         sql`select bank_ref from bank_sync_reviews where account_id = ${accountId}`,
       ]);
       return {
@@ -64,6 +64,7 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
           description: t.description,
           fromRule: t.from_rule,
           bankRef: t.bank_ref,
+          counterpartId: t.counterpart_account_id,
         })),
         reviewRefs: reviews.map((r) => r.bank_ref),
       };
@@ -93,7 +94,8 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
                       ${m.amountCents}, ${m.bookedOn}, ${m.description}, ${m.ref}, ${d.categoryId ?? null})
               on conflict (account_id, bank_ref) where bank_ref is not null do nothing`;
           } else if (d.type === "reconcile") {
-            await tx`update transactions set bank_ref = ${m.ref}, updated_at = now() where id = ${d.transactionId} and bank_ref is null`;
+            // Shared with confirm_bank_sync: planned rows become booked, batches share the reference.
+            await tx`select reconcile_bank_rows(${target.accountId}, ${d.transactionIds}::uuid[], ${m.ref}, ${m.bookedOn})`;
           } else if (d.type === "review") {
             await tx`
               insert into bank_sync_reviews (household_id, account_id, bank_ref, booked_on, amount_cents, description, reason, candidate_transaction_id)

@@ -23,7 +23,7 @@ const rpc = vi.fn();
 const bankAccountRow = { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { account_id: "acc1" } }) }) }) };
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc, from: () => bankAccountRow })) }));
 const loadExisting = vi.fn(async () => ({
-  candidates: [{ id: "t1", bookedOn: "2026-11-10", amountCents: -5000, description: "Mov a", fromRule: false, bankRef: null }],
+  candidates: [{ id: "t1", bookedOn: "2026-11-10", amountCents: -5000, description: "Mov a", fromRule: false, bankRef: null, counterpartId: null }],
   reviewRefs: [],
 }));
 vi.mock("@/lib/data/bank-sync-store", () => ({ createPreviewSyncStore: () => ({ loadExisting }) }));

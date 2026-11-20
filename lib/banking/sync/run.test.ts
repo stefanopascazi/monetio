@@ -79,7 +79,7 @@ describe("syncBankAccount", () => {
     };
     const store: SyncStore = {
       loadExisting: vi.fn(async () => ({
-        candidates: [{ id: "t1", bookedOn: "2026-11-09", amountCents: -5000, description: "Bolletta", fromRule: true, bankRef: null }],
+        candidates: [{ id: "t1", bookedOn: "2026-11-09", amountCents: -5000, description: "Bolletta", fromRule: true, bankRef: null, counterpartId: null }],
         reviewRefs: ["c"],
       })),
       apply: vi.fn(async () => {}),

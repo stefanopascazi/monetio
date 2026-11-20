@@ -1,7 +1,8 @@
-// Decides what each bank movement does to MonetIO: nothing (already synced), confirms a movement
-// already recorded (typically booked by a rule with an estimated amount), creates a new one, or
+// Decides what each bank movement does to MonetIO: nothing (already synced), confirms one or more
+// movements already recorded (typically by rules, booked or still planned), creates a new one, or
 // goes to the "Da rivedere" queue when the evidence is not conclusive.
 import { normalizeDescription } from "../../import/dedup.ts";
+import { batchCombos, pickBatch } from "./batch.ts";
 import type { ISODate } from "../../domain/types.ts";
 import type { BankMovement } from "./normalize.ts";
 
@@ -12,15 +13,18 @@ export type Candidate = {
   description: string;
   /** Booked by a recurring rule or a contribution: its amount may be an estimate. */
   fromRule: boolean;
-  /** Bank reference already attached by a previous sync; null when never reconciled. */
+  /** Bank reference already attached by a previous sync (alone or in a batch); null when never reconciled. */
   bankRef: string | null;
+  /** Other account of a transfer: movements paid by one cumulative transfer share it. */
+  counterpartId: string | null;
 };
 
 export type ReviewReason = "amount_differs" | "possible_duplicate" | "ambiguous";
 
 export type Decision =
   | { type: "skip"; movement: BankMovement }
-  | { type: "reconcile"; movement: BankMovement; transactionId: string; amountChanged: boolean }
+  /** One movement, or several paid together by this bank movement. */
+  | { type: "reconcile"; movement: BankMovement; transactionIds: string[] }
   | { type: "insert"; movement: BankMovement; categoryId?: string }
   | { type: "review"; movement: BankMovement; reason: ReviewReason; candidateId: string | null };
 
@@ -71,11 +75,29 @@ export function matchMovements(movements: BankMovement[], candidates: Candidate[
     const hit = closest(m, exact);
     if (hit && !hit.tie) {
       used.add(hit.best.id);
-      decisions.push({ type: "reconcile", movement: m, transactionId: hit.best.id, amountChanged: false });
+      decisions.push({ type: "reconcile", movement: m, transactionIds: [hit.best.id] });
       continue;
     }
     if (hit?.tie) {
       decisions.push({ type: "review", movement: m, reason: "ambiguous", candidateId: null });
+      continue;
+    }
+
+    // Several rule movements adding up to the bank amount: one cumulative payment.
+    const batch = pickBatch(
+      batchCombos(
+        m.amountCents,
+        m.bookedOn,
+        free.filter((c) => c.fromRule && dayGap(c.bookedOn, m.bookedOn) <= RULE_WINDOW_DAYS),
+      ),
+    );
+    if (batch === "ambiguous") {
+      decisions.push({ type: "review", movement: m, reason: "ambiguous", candidateId: null });
+      continue;
+    }
+    if (batch) {
+      for (const c of batch) used.add(c.id);
+      decisions.push({ type: "reconcile", movement: m, transactionIds: batch.map((c) => c.id) });
       continue;
     }
 
