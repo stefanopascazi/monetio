@@ -53,3 +53,6 @@ next-env.d.ts
 
 # Real bank exports used for manual import checks
 /*.csv
+
+# personal notes
+bugfix.md
