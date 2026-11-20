@@ -24,7 +24,7 @@ goes through the security-definer functions above, which refuse callers who are 
 - `run_integrity_checks()` reconciles `integrity_anomalies` (new, still open, resolved) and logs `integrity_runs`.
 - Worker job `integrity-check`: nightly after 04:00 Italian time, or within 2 minutes of a console request
   (`admin_request_job('integrity-check')`, audit-logged). The console reads `admin_integrity()`.
-- SQL tests: `npm run test:db` on the local stack (skipped without a database URL).
+- SQL tests: `npm run test:db`, only against a local database (opt-in via `supabase/tests/db-tests.env`); skipped elsewhere, Vercel included.
 
 ## Design system
 

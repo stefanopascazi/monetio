@@ -1,12 +1,14 @@
 // Integrity checks (migration 0039) against a real database, each test in a rolled-back transaction.
-// Run on the local stack: npm run test:db (skipped when no database URL is set, e.g. on Vercel).
+// Run on the local stack: npm run test:db. Skipped everywhere else (see localTestDbUrl).
 import { randomUUID } from "node:crypto";
-import type { Sql, TransactionSql } from "postgres";
+import postgres, { type Sql, type TransactionSql } from "postgres";
 import { afterAll, describe, expect, it } from "vitest";
-import { connect } from "../../scripts/db/connect.ts";
+import { cleanUrl, sslFor } from "../../scripts/db/ssl.ts";
+import { localTestDbUrl } from "./local-db.ts";
 
-const url = process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL;
-const sql: Sql | null = url ? connect() : null;
+const url = localTestDbUrl(process.env);
+// Connects to the vetted local URL only, never to whatever connect() would pick from the environment.
+const sql: Sql | null = url ? postgres(cleanUrl(url), { ssl: sslFor(url), max: 1, onnotice: () => {} }) : null;
 afterAll(async () => {
   await sql?.end();
 });
@@ -191,7 +193,8 @@ describe.skipIf(!sql)("integrity checks", () => {
       const [{ v }] = await tx`select admin_integrity() as v`;
       expect(v.pending_request).not.toBeNull();
       await tx`reset role`;
-      const logs = await tx`select action, target from admin_audit_log where details->>'request_id' = ${String(first)}`;
+      // at = now(): only rows written in this transaction, whatever the local log already holds.
+      const logs = await tx`select action, target from admin_audit_log where details->>'request_id' = ${String(first)} and at = now()`;
       expect(logs).toEqual([{ action: "job.request", target: "integrity-check" }]);
     });
   });

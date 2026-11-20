@@ -34,7 +34,7 @@ export default defineConfig({
       },
       {
         extends: true,
-        // SQL checks on the local stack; skipped without a database URL (npm run test:db loads .env.local).
+        // SQL checks on the local stack only: npm run test:db opts in; skipped elsewhere, Vercel included.
         test: { ...shared, environment: "node", name: "db", include: ["supabase/tests/**/*.test.ts"] },
       },
       {
