@@ -12,6 +12,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:db": "node --env-file=.env.local node_modules/vitest/vitest.mjs run --project db",
     "typecheck": "tsc --noEmit && npm run worker:typecheck",
     "worker:typecheck": "tsc -p packages/worker",
     "worker:build": "node packages/worker/build.ts",

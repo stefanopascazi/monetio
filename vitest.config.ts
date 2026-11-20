@@ -34,6 +34,11 @@ export default defineConfig({
       },
       {
         extends: true,
+        // SQL checks on the local stack; skipped without a database URL (npm run test:db loads .env.local).
+        test: { ...shared, environment: "node", name: "db", include: ["supabase/tests/**/*.test.ts"] },
+      },
+      {
+        extends: true,
         test: {
           ...shared,
           name: "app",

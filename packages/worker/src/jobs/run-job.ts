@@ -42,7 +42,7 @@ export async function runJob(job: Job, deps: RunJobDeps): Promise<void> {
   try {
     if (deps.schemaReady && !(await deps.schemaReady())) return;
     const result = await withJobLock(deps.locks, job.name, deps.holder, job.timeoutMs, async (): Promise<Outcome> => {
-      if (job.isDue && !job.isDue(await deps.locks.lastSuccess(job.name), new Date(started))) return "not-due";
+      if (job.isDue && !(await job.isDue(await deps.locks.lastSuccess(job.name), new Date(started)))) return "not-due";
       await deps.heartbeat.ping(job.name, "start");
       await job.run({ log: deps.log, signal, now: new Date(started) });
       await deps.locks.markSuccess(job.name, deps.holder);

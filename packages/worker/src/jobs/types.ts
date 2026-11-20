@@ -19,6 +19,6 @@ export interface Job {
    * Optional gate checked under the lease against the last successful run (stored in the DB,
    * so it survives restarts). When false the run is skipped silently, without heartbeat.
    */
-  isDue?(lastSuccess: Date | null, now: Date): boolean;
+  isDue?(lastSuccess: Date | null, now: Date): boolean | Promise<boolean>;
   run(ctx: JobContext): Promise<void>;
 }
