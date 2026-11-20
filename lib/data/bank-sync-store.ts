@@ -21,7 +21,10 @@ async function readPages<T>(page: (from: number, to: number) => PromiseLike<{ da
   return out;
 }
 
-/** Read side of the sync, as the signed-in person (RLS): what the preview needs to decide. */
+/**
+ * Read side of the sync, as the signed-in person (RLS): what the preview needs to decide.
+ * Planned movements count too: on a bank-fed account rule movements wait for the bank.
+ */
 export function createPreviewSyncStore(supabase: Client): Pick<SyncStore, "loadExisting" | "loadCategoryHints"> {
   return {
     async loadExisting(accountId: string, from: ISODate) {
@@ -29,9 +32,8 @@ export function createPreviewSyncStore(supabase: Client): Pick<SyncStore, "loadE
         readPages((a, b) =>
           supabase
             .from("transactions")
-            .select("id, booked_on, amount_cents, description, bank_ref, recurring_rule_id, contribution_rule_id")
+            .select("id, booked_on, amount_cents, description, bank_ref, bank_batch_ref, counterpart_account_id, recurring_rule_id, contribution_rule_id")
             .eq("account_id", accountId)
-            .eq("status", "booked")
             .gte("booked_on", from)
             .is("parent_transaction_id", null)
             .order("id")
@@ -46,7 +48,8 @@ export function createPreviewSyncStore(supabase: Client): Pick<SyncStore, "loadE
           amountCents: Number(t.amount_cents),
           description: t.description,
           fromRule: t.recurring_rule_id != null || t.contribution_rule_id != null,
-          bankRef: t.bank_ref,
+          bankRef: t.bank_ref ?? t.bank_batch_ref,
+          counterpartId: t.counterpart_account_id,
         })),
         reviewRefs: reviews.map((r) => r.bank_ref),
       };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DueEntry } from "../domain/schedule";
-import { entryTransaction, feeTransaction, paymentRows, transactionRows } from "./rows";
+import { entryTransaction, feeTransaction, paymentRows, planBankFedRows, transactionRows } from "./rows";
 
 describe("feeTransaction", () => {
   it("links the fee to its payment with the same account, date and status", () => {
@@ -121,5 +121,19 @@ describe("entryTransaction", () => {
       amountCents: -96000,
       source: "contribution",
     });
+  });
+});
+
+describe("planBankFedRows", () => {
+  it("plans only the legs on bank-fed accounts", () => {
+    const rows = [
+      { account_id: "fed", status: "booked" },
+      { account_id: "cash", status: "booked" },
+    ];
+    expect(planBankFedRows(rows, new Set(["fed"]))).toEqual([
+      { account_id: "fed", status: "planned" },
+      { account_id: "cash", status: "booked" },
+    ]);
+    expect(planBankFedRows(rows, new Set())).toBe(rows);
   });
 });

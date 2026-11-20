@@ -31,7 +31,7 @@ export type ConfirmItem = {
   amount_cents: number;
   description: string;
   category_id?: string | null;
-  transaction_id?: string;
+  transaction_ids?: string[];
   reason?: ReviewReason;
   candidate_id?: string | null;
 };
@@ -84,7 +84,7 @@ export function confirmItems(decisions: Decision[], selected: Iterable<string>, 
   for (const d of decisions) {
     const m = d.movement;
     const base = { ref: m.ref, booked_on: m.bookedOn, amount_cents: m.amountCents, description: m.description };
-    if (d.type === "reconcile") out.push({ ...base, type: "reconcile", transaction_id: d.transactionId });
+    if (d.type === "reconcile") out.push({ ...base, type: "reconcile", transaction_ids: d.transactionIds });
     else if (d.type === "skip") continue;
     else if (!chosen.has(m.ref)) out.push({ ...base, type: "exclude" });
     else if (d.type === "insert") out.push({ ...base, type: "insert", category_id: categories?.has(m.ref) ? categories.get(m.ref)! : (d.categoryId ?? null) });

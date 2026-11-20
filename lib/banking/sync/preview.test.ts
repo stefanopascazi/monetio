@@ -9,7 +9,7 @@ const decisions: Decision[] = [
   { type: "insert", movement: mov("n1", "2026-11-10", -1000), categoryId: "cat1" },
   { type: "insert", movement: mov("n2", "2026-11-12", 5000) },
   { type: "review", movement: mov("r1", "2026-11-11", -200), reason: "possible_duplicate", candidateId: "t9" },
-  { type: "reconcile", movement: mov("m1", "2026-11-09", -300), transactionId: "t1", amountChanged: false },
+  { type: "reconcile", movement: mov("m1", "2026-11-09", -300), transactionIds: ["t1"] },
   { type: "skip", movement: mov("k1", "2026-11-08", -400) },
 ];
 
@@ -37,7 +37,7 @@ describe("confirmItems", () => {
       { type: "insert", ref: "n1", booked_on: "2026-11-10", amount_cents: -1000, description: "Mov n1", category_id: "cat1" },
       { type: "exclude", ref: "n2", booked_on: "2026-11-12", amount_cents: 5000, description: "Mov n2" },
       { type: "review", ref: "r1", booked_on: "2026-11-11", amount_cents: -200, description: "Mov r1", reason: "possible_duplicate", candidate_id: "t9" },
-      { type: "reconcile", ref: "m1", booked_on: "2026-11-09", amount_cents: -300, description: "Mov m1", transaction_id: "t1" },
+      { type: "reconcile", ref: "m1", booked_on: "2026-11-09", amount_cents: -300, description: "Mov m1", transaction_ids: ["t1"] },
     ]);
   });
 });

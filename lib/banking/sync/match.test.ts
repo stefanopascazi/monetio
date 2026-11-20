@@ -17,6 +17,7 @@ const cand = (over: Partial<Candidate>): Candidate => ({
   description: "Bolletta luce",
   fromRule: true,
   bankRef: null,
+  counterpartId: null,
   ...over,
 });
 
@@ -28,7 +29,7 @@ describe("matchMovements", () => {
 
   it("reconciles a rule booking with the same amount within 5 days", () => {
     expect(matchMovements([mv({ bookedOn: "2026-11-14" })], [cand({})])).toEqual([
-      { type: "reconcile", movement: mv({ bookedOn: "2026-11-14" }), transactionId: "t1", amountChanged: false },
+      { type: "reconcile", movement: mv({ bookedOn: "2026-11-14" }), transactionIds: ["t1"] },
     ]);
   });
 
@@ -65,11 +66,42 @@ describe("matchMovements", () => {
       [mv({ ref: "x", bookedOn: "2026-11-10" }), mv({ ref: "y", bookedOn: "2026-11-10" })],
       [cand({ id: "far", bookedOn: "2026-11-13" }), cand({ id: "near", bookedOn: "2026-11-10" })],
     );
-    expect(d.map((x) => (x.type === "reconcile" ? x.transactionId : x.type))).toEqual(["near", "far"]);
+    expect(d.map((x) => (x.type === "reconcile" ? x.transactionIds[0] : x.type))).toEqual(["near", "far"]);
   });
 
   it("skips references already waiting for review", () => {
     expect(matchMovements([mv({})], [], ["r1"])[0].type).toBe("skip");
+  });
+
+  it("reconciles a cumulative transfer with the rule movements it pays", () => {
+    const rules = [
+      cand({ id: "a", amountCents: -20000, counterpartId: "joint" }),
+      cand({ id: "b", amountCents: -15000, counterpartId: "joint" }),
+      cand({ id: "c", amountCents: -5000, counterpartId: "savings" }),
+    ];
+    expect(matchMovements([mv({ amountCents: -35000 })], rules)[0]).toEqual({ type: "reconcile", movement: mv({ amountCents: -35000 }), transactionIds: ["a", "b"] });
+  });
+
+  it("does not batch movements toward different accounts or outside the window", () => {
+    const split = [cand({ id: "a", amountCents: -20000, counterpartId: "joint" }), cand({ id: "b", amountCents: -15000, counterpartId: "savings" })];
+    expect(matchMovements([mv({ amountCents: -35000 })], split)[0].type).toBe("insert");
+    const far = [cand({ id: "a", amountCents: -20000 }), cand({ id: "b", amountCents: -15000, bookedOn: "2026-11-20" })];
+    expect(matchMovements([mv({ amountCents: -35000 })], far)[0].type).toBe("insert");
+  });
+
+  it("batches incoming cumulative transfers, skipping movements already reconciled", () => {
+    const rules = [cand({ id: "a", amountCents: 10000 }), cand({ id: "b", amountCents: 10000 }), cand({ id: "x", amountCents: 10000, bankRef: "old" })];
+    expect(matchMovements([mv({ amountCents: 20000 })], rules)[0]).toMatchObject({ type: "reconcile", transactionIds: ["a", "b"] });
+  });
+
+  it("sends a cumulative transfer to review when several combinations fit", () => {
+    const rules = [cand({ id: "a", amountCents: -100 }), cand({ id: "b", amountCents: -100 }), cand({ id: "c", amountCents: -100 })];
+    expect(matchMovements([mv({ amountCents: -200 })], rules)[0]).toMatchObject({ type: "review", reason: "ambiguous" });
+  });
+
+  it("prefers a single exact movement over a batch", () => {
+    const rules = [cand({ id: "one", amountCents: -300 }), cand({ id: "a", amountCents: -100 }), cand({ id: "b", amountCents: -200 })];
+    expect(matchMovements([mv({ amountCents: -300 })], rules)[0]).toMatchObject({ transactionIds: ["one"] });
   });
 
   it("inserts movements with nothing to match", () => {

@@ -63,6 +63,14 @@ export function transactionRows(t: NewTransaction, newId: () => string = () => c
 }
 
 /**
+ * Rule rows on bank-fed accounts stay planned: the bank movement confirms them later.
+ * Each leg follows its own account, so a transfer toward an account without bank books that side.
+ */
+export function planBankFedRows(rows: TransactionInsert[], bankFed: ReadonlySet<string>): TransactionInsert[] {
+  return bankFed.size ? rows.map((r) => (bankFed.has(String(r.account_id)) ? { ...r, status: "planned" } : r)) : rows;
+}
+
+/**
  * Rows for a bonifico/CBill/transfer: the movement plus, when `feeCents` is set, a linked expense
  * row for the fee on the same (paying) account, date and status. A transfer's fee links to its
  * first row, the paying side. Plain transactions pass through unchanged.

@@ -52,6 +52,23 @@ describe("autoBookings", () => {
   });
 });
 
+describe("autoBookings on bank-fed accounts", () => {
+  const fed = { accounts: new Set(["a1", "joint"]), days: 5 };
+
+  it("returns occurrences up to the window ahead when every leg is bank-fed", () => {
+    const r = rule({ amountCents: -5000, dayOfMonth: 9, startDate: "2026-11-01" });
+    expect(autoBookings([r], new Set(), today, "2026-10-01")).toEqual([]);
+    expect(autoBookings([r], new Set(), today, "2026-10-01", undefined, fed).map((e) => e.date)).toEqual(["2026-11-09"]);
+    expect(autoBookings([rule({ amountCents: -1, dayOfMonth: 11, startDate: "2026-11-01" })], new Set(), today, "2026-10-01", undefined, fed)).toEqual([]);
+  });
+
+  it("keeps transfers toward an account without bank on today's limit", () => {
+    const toJoint = rule({ amountCents: -5000, dayOfMonth: 9, startDate: "2026-11-01", kind: "transfer", counterpartAccountId: "joint" });
+    const toCash = rule({ id: "r2", amountCents: -5000, dayOfMonth: 9, startDate: "2026-11-01", kind: "transfer", counterpartAccountId: "cash" });
+    expect(autoBookings([toJoint, toCash], new Set(), today, "2026-10-01", undefined, fed).map((e) => e.ruleId)).toEqual(["r1"]);
+  });
+});
+
 describe("rule entries with fees", () => {
   it("carry payment method and fee of bonifico/CBill rules", () => {
     const r = rule({ id: "b", amountCents: -5000, schedule: "due", dayOfMonth: 20, startDate: "2026-01-01", paymentMethod: "cbill", feeCents: 150 });

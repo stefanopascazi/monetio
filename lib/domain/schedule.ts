@@ -90,15 +90,26 @@ function ruleEntry(r: RecurringRule, date: ISODate, today: ISODate, overrides?: 
 /** Days after today scanned for auto occurrences whose actual date was moved earlier. */
 const AUTO_EARLY_DAYS = 31;
 
-/** Auto rules whose occurrences (actual date when entered) are due by today and not booked yet. */
-export function autoBookings(rules: RecurringRule[], booked: Set<string>, today: ISODate, since: ISODate, overrides?: OverrideMap): DueEntry[] {
+/** Accounts whose movements wait for the bank, and how many days ahead they are recorded as planned. */
+export type BankFedWindow = { accounts: ReadonlySet<string>; days: number };
+
+/** Every leg of the entry is on a bank-fed account, so it may be recorded ahead as planned. */
+const allLegsBankFed = (e: DueEntry, fed: ReadonlySet<string>) => fed.has(e.accountId) && (!e.counterpartAccountId || fed.has(e.counterpartAccountId));
+
+/**
+ * Auto rules whose occurrences (actual date when entered) are due by today and not booked yet.
+ * With `bankFed`, entries touching only bank-fed accounts are also returned up to `days` ahead:
+ * they are stored as planned, so a bank movement arriving a few days early still finds them.
+ */
+export function autoBookings(rules: RecurringRule[], booked: Set<string>, today: ISODate, since: ISODate, overrides?: OverrideMap, bankFed?: BankFedWindow): DueEntry[] {
+  const ahead = bankFed ? addDays(today, bankFed.days) : today;
   return rules
     .filter((r) => r.active && r.schedule === "auto")
     .flatMap((r) =>
       occurrences(r, since, addDays(today, AUTO_EARLY_DAYS))
         .filter((d) => !booked.has(ruleKey(r.id, d, r.frequency)))
         .map((d) => ruleEntry(r, d, today, overrides))
-        .filter((e) => e.date <= today),
+        .filter((e) => e.date <= today || (bankFed && e.date <= ahead && allLegsBankFed(e, bankFed.accounts))),
     );
 }
 
