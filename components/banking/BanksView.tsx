@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
-import { Alert } from "@monetio/ui";
+import { Alert, type TabItem, Tabs } from "@monetio/ui";
 import { bankCallbackUrl, requestOrigin } from "@/lib/banking/bank-app";
 import { recentBanks, type BankOption } from "@/lib/banking/bank-options";
+import { defaultBankTab, reviewsByConnection, SETUP_TAB } from "@/lib/banking/bank-tabs";
 import { LINK_OUTCOME_MESSAGE } from "@/lib/banking/connections";
 import { summarizeAspsps } from "@/lib/banking/enable-banking/aspsps";
 import { bankService } from "@/lib/banking/server";
@@ -14,7 +15,7 @@ import { listOpenBankReviews } from "@/lib/data/bank-reviews";
 import { listRecentBankSyncBatches } from "@/lib/data/bank-sync-batches";
 import { listAccounts, listCategories } from "@/lib/data/queries";
 import { BankAppCard } from "./BankAppCard";
-import { BankConnectionList } from "./BankConnectionList";
+import { BankConnectionPanel } from "./BankConnectionPanel";
 import { BankCredentialsForm } from "./BankCredentialsForm";
 import { BankPicker } from "./BankPicker";
 import { BankReviewList } from "./BankReviewList";
@@ -61,17 +62,49 @@ export async function BanksView({ outcome }: { outcome?: string }) {
   const accountOptions = accounts.filter((a) => !a.archived).map((a) => ({ value: a.id, label: a.name }));
   const activeCategories = categories.filter((c) => !c.archived).map(({ id, name, kind }) => ({ id, name, kind }));
   const balances = Object.fromEntries(accounts.map((a) => [a.id, a.balanceCents]));
+  const today = todayISO();
+  const { byConnection, other } = reviewsByConnection(connections, reviews);
+
+  // One tab per consent, so each bank gets the whole page; app and new link share the last one.
+  const tabs: TabItem[] = connections.map((c) => ({
+    id: c.id,
+    label: c.bankName,
+    count: byConnection[c.id]?.length || undefined,
+    content: (
+      <div className="flex flex-col gap-4">
+        <BankReviewList reviews={byConnection[c.id] ?? []} />
+        <BankConnectionPanel
+          connection={c}
+          accountOptions={accountOptions}
+          balances={balances}
+          lastBookedOn={lastBookedOn}
+          batches={batches}
+          categories={activeCategories}
+          today={today}
+        />
+      </div>
+    ),
+  }));
+  tabs.push({
+    id: SETUP_TAB,
+    label: "Collegamento",
+    content: (
+      <div className="flex flex-col gap-4">
+        {banks ? (
+          <BankPicker banks={banks} recent={recentBanks(banks, connections.map((c) => c.bankName))} sandbox={app.environment === "sandbox"} />
+        ) : (
+          <Alert tone="warning">Elenco delle banche non disponibile: Enable Banking non risponde o il server non è configurato.</Alert>
+        )}
+        <BankAppCard app={app} />
+      </div>
+    ),
+  });
+
   return (
     <div className="flex flex-col gap-4">
       {alert}
-      <BankReviewList reviews={reviews} />
-      <BankConnectionList connections={connections} accountOptions={accountOptions} balances={balances} lastBookedOn={lastBookedOn} batches={batches} categories={activeCategories} today={todayISO()} />
-      {banks ? (
-        <BankPicker banks={banks} recent={recentBanks(banks, connections.map((c) => c.bankName))} sandbox={app.environment === "sandbox"} />
-      ) : (
-        <Alert tone="warning">Elenco delle banche non disponibile: Enable Banking non risponde o il server non è configurato.</Alert>
-      )}
-      <BankAppCard app={app} />
+      <BankReviewList reviews={other} />
+      <Tabs variant="line" aria-label="Banche collegate" tabs={tabs} defaultValue={defaultBankTab(connections, outcome)} />
     </div>
   );
 }

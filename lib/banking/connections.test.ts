@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awaitsPreview, balanceGap, consentDaysLeft, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
+import { awaitsPreview, balanceGap, consentDaysLeft, isConsentExpired, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
 
 describe("mapBankConnection", () => {
   it("maps the row and its accounts", () => {
@@ -64,6 +64,15 @@ describe("consentDaysLeft", () => {
   it("rounds up partial days and never goes negative", () => {
     expect(consentDaysLeft("2026-11-20T09:00:00Z", now)).toBe(2);
     expect(consentDaysLeft("2026-11-01T00:00:00Z", now)).toBe(0);
+  });
+});
+
+describe("isConsentExpired", () => {
+  const now = new Date("2026-11-18T10:00:00Z");
+  it("is expired when not active or past its end", () => {
+    expect(isConsentExpired({ status: "active", validUntil: "2026-12-01T00:00:00Z" }, now)).toBe(false);
+    expect(isConsentExpired({ status: "active", validUntil: "2026-11-01T00:00:00Z" }, now)).toBe(true);
+    expect(isConsentExpired({ status: "revoked", validUntil: "2026-12-01T00:00:00Z" }, now)).toBe(true);
   });
 });
 

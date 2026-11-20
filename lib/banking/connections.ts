@@ -81,6 +81,11 @@ export function consentDaysLeft(validUntil: string, now: Date = new Date()): num
 }
 
 /** Outcome of the bank redirect, read from /dati/banche?esito=… */
+/** Consent revoked, expired, or past its end date. */
+export function isConsentExpired(c: Pick<BankConnection, "status" | "validUntil">, now: Date = new Date()): boolean {
+  return c.status !== "active" || consentDaysLeft(c.validUntil, now) === 0;
+}
+
 export const LINK_OUTCOME_MESSAGE: Record<string, { tone: "success" | "danger" | "warning"; text: string }> = {
   collegata: { tone: "success", text: "Banca collegata. I conti autorizzati sono qui sotto." },
   negata: { tone: "warning", text: "Collegamento annullato: la banca non ha ricevuto il consenso." },

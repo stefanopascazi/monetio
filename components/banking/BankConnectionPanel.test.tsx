@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@monetio/ui";
 import { removeBankConnection } from "@/app/actions/bank-links";
 import type { BankConnection } from "@/lib/banking/connections";
-import { BankConnectionList } from "./BankConnectionList";
+import { BankConnectionPanel } from "./BankConnectionPanel";
 
 vi.mock("@/app/actions/bank-sync", () => ({ previewBankSync: vi.fn(), confirmBankSync: vi.fn() }));
 vi.mock("@/app/actions/bank-sync-batches", () => ({ undoBankSync: vi.fn(), loadBankSyncBatchDetail: vi.fn() }));
@@ -40,9 +40,9 @@ const base: BankConnection = {
 const options = [{ value: "acc-1", label: "Conto casa" }];
 const wrap = (ui: React.ReactNode) => render(<ToastProvider>{ui}</ToastProvider>);
 
-describe("BankConnectionList", () => {
+describe("BankConnectionPanel", () => {
   it("lists the bank, its accounts and the consent end", () => {
-    wrap(<BankConnectionList connections={[base]} accountOptions={options} now={now} today="2026-11-18" />);
+    wrap(<BankConnectionPanel connection={base} accountOptions={options} now={now} today="2026-11-18" />);
     expect(screen.getByText("Mock ASPSP")).toBeInTheDocument();
     expect(screen.getByText("Conto corrente")).toBeInTheDocument();
     expect(screen.getByText("IT60 •••• 3456")).toBeInTheDocument();
@@ -52,18 +52,18 @@ describe("BankConnectionList", () => {
   });
 
   it("flags consents about to expire or expired", () => {
-    const { rerender } = wrap(<BankConnectionList connections={[{ ...base, validUntil: "2026-11-25T10:00:00Z" }]} accountOptions={options} now={now} today="2026-11-18" />);
+    const { rerender } = wrap(<BankConnectionPanel connection={{ ...base, validUntil: "2026-11-25T10:00:00Z" }} accountOptions={options} now={now} today="2026-11-18" />);
     expect(screen.getByText("In scadenza")).toBeInTheDocument();
     rerender(
       <ToastProvider>
-        <BankConnectionList connections={[{ ...base, status: "expired" }]} accountOptions={options} now={now} today="2026-11-18" />
+        <BankConnectionPanel connection={{ ...base, status: "expired" }} accountOptions={options} now={now} today="2026-11-18" />
       </ToastProvider>,
     );
     expect(screen.getByText("Scaduto")).toBeInTheDocument();
   });
 
   it("asks before unlinking", async () => {
-    wrap(<BankConnectionList connections={[base]} accountOptions={options} now={now} today="2026-11-18" />);
+    wrap(<BankConnectionPanel connection={base} accountOptions={options} now={now} today="2026-11-18" />);
     await userEvent.click(screen.getByRole("button", { name: "Scollega" }));
     await userEvent.click(screen.getAllByRole("button", { name: "Scollega" }).at(-1)!);
     expect(removeBankConnection).toHaveBeenCalledWith("c1");
@@ -71,27 +71,27 @@ describe("BankConnectionList", () => {
 
   it("shows the sync status only for linked accounts", () => {
     const linked = { ...base, accounts: [{ ...base.accounts[0], accountId: "acc-1", bankBalanceCents: 1000, syncConfirmedAt: "2026-11-18T09:00:00Z" }] };
-    wrap(<BankConnectionList connections={[linked]} accountOptions={options} balances={{ "acc-1": 1000 }} now={now} today="2026-11-18" />);
+    wrap(<BankConnectionPanel connection={linked} accountOptions={options} balances={{ "acc-1": 1000 }} now={now} today="2026-11-18" />);
     expect(screen.getByText("Allineato")).toBeInTheDocument();
   });
 
   it("shows the sync history of a linked account", () => {
     const linked = { ...base, accounts: [{ ...base.accounts[0], accountId: "acc-1", syncConfirmedAt: "2026-11-18T09:00:00Z" }] };
     const batches = { "acc-1": [{ id: "b1", accountId: "acc-1", kind: "worker" as const, inserted: 1, reconciled: 0, review: 0, createdAt: "2026-11-18T07:00:00Z", undoneAt: null }] };
-    wrap(<BankConnectionList connections={[linked]} accountOptions={options} batches={batches} now={now} today="2026-11-18" />);
-    expect(screen.getByRole("button", { name: /Ultimi aggiornamenti/ })).toBeInTheDocument();
+    wrap(<BankConnectionPanel connection={linked} accountOptions={options} batches={batches} now={now} today="2026-11-18" />);
+    expect(screen.getByRole("region", { name: "Ultimi aggiornamenti" })).toBeInTheDocument();
   });
 
   it("asks for the first-sync preview of a newly linked account, starting from its latest movement", () => {
     const pending = { ...base, accounts: [{ ...base.accounts[0], accountId: "acc-1" }] };
-    wrap(<BankConnectionList connections={[pending]} accountOptions={options} lastBookedOn={{ "acc-1": "2026-11-10" }} now={now} today="2026-11-18" />);
+    wrap(<BankConnectionPanel connection={pending} accountOptions={options} lastBookedOn={{ "acc-1": "2026-11-10" }} now={now} today="2026-11-18" />);
     expect(screen.getByLabelText("Importa dal")).toHaveValue("2026-11-10");
     expect(screen.getByRole("button", { name: "Mostra anteprima" })).toBeInTheDocument();
     expect(screen.queryByText(/Prossimo/)).toBeNull();
   });
 
-  it("renders nothing without connections", () => {
-    const { container } = wrap(<BankConnectionList connections={[]} accountOptions={options} now={now} today="2026-11-18" />);
-    expect(container.textContent).toBe("");
+  it("says when the bank shared no account", () => {
+    wrap(<BankConnectionPanel connection={{ ...base, accounts: [] }} accountOptions={options} now={now} today="2026-11-18" />);
+    expect(screen.getByText("La banca non ha condiviso nessun conto.")).toBeInTheDocument();
   });
 });

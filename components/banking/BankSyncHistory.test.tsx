@@ -23,13 +23,11 @@ const wrap = (ui: React.ReactNode) => render(<ToastProvider>{ui}</ToastProvider>
 describe("BankSyncHistory", () => {
   it("renders nothing without batches", () => {
     const { container } = wrap(<BankSyncHistory batches={[]} />);
-    expect(container.querySelector(".mio-accordion")).toBeNull();
+    expect(container.textContent).toBe("");
   });
 
-  it("lists batches and offers undo only on the newest active one", async () => {
-    const user = userEvent.setup();
+  it("lists batches and offers undo only on the newest active one", () => {
     wrap(<BankSyncHistory batches={batches} />);
-    await user.click(screen.getByRole("button", { name: /Ultimi aggiornamenti/ }));
     expect(screen.getByText("Aggiornamento automatico")).toBeInTheDocument();
     expect(screen.getByText("Primo import")).toBeInTheDocument();
     expect(screen.getByText("2 nuovi · 1 abbinato")).toBeInTheDocument();
@@ -39,7 +37,6 @@ describe("BankSyncHistory", () => {
   it("undoes the batch after confirmation", async () => {
     const user = userEvent.setup();
     wrap(<BankSyncHistory batches={batches} />);
-    await user.click(screen.getByRole("button", { name: /Ultimi aggiornamenti/ }));
     await user.click(screen.getByRole("button", { name: /Annulla aggiornamento/ }));
     expect(screen.getByText(/rileggerà questi giorni/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Sì, annulla" }));
@@ -50,7 +47,6 @@ describe("BankSyncHistory", () => {
   it("marks undone batches and moves undo to the previous one", async () => {
     const user = userEvent.setup();
     wrap(<BankSyncHistory batches={[{ ...batches[0], undoneAt: "2026-11-20T08:00:00Z" }, batches[1]]} />);
-    await user.click(screen.getByRole("button", { name: /Ultimi aggiornamenti/ }));
     expect(screen.getByText("Annullato")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Annulla aggiornamento/ }));
     expect(screen.getByText(/anteprima del primo import/)).toBeInTheDocument();
@@ -59,7 +55,6 @@ describe("BankSyncHistory", () => {
   it("shows the movements of an active batch on demand", async () => {
     const user = userEvent.setup();
     wrap(<BankSyncHistory batches={[{ ...batches[0], undoneAt: "2026-11-20T08:00:00Z" }, batches[1]]} />);
-    await user.click(screen.getByRole("button", { name: /Ultimi aggiornamenti/ }));
     expect(screen.getAllByRole("button", { name: "Vedi movimenti" })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Vedi movimenti" }));
     expect(await screen.findByText("Spesa")).toBeInTheDocument();
