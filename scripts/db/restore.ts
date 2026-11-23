@@ -1,7 +1,7 @@
 // Restores a database backup made by the worker (#48) into a Supabase database (#108).
 // Usage: npm run db:restore -- --list | --backup <latest|YYYY-MM-DD|key> | --file <path> [--identity <file>] [--reset] [--yes]
 // Target: POSTGRES_URL_NON_POOLING (local stack by default; production via scripts/dev/with-env.ts .env.prod).
-// Needs pg_restore/psql 17, age, zstd and rclone: on Windows run it in Docker (see docs/restore.md).
+// Needs pg_restore/psql 18 (at least the pg_dump version on the VPS), age, zstd and rclone: on Windows run it in Docker (see docs/restore.md).
 import "./load-local-env.ts";
 import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

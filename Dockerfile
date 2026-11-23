@@ -11,9 +11,9 @@ FROM deps AS tools
 COPY . .
 CMD ["node", "scripts/db/migrate.ts"]
 
-# Backup restore (#108): db:restore with pg_restore/psql 17, age, zstd and rclone. See docs/restore.md.
+# Backup restore (#108): db:restore with pg_restore/psql 18, age, zstd and rclone. See docs/restore.md.
 FROM tools AS restore
-RUN apk add --no-cache postgresql17-client age zstd rclone
+RUN apk add --no-cache postgresql18-client age zstd rclone
 ENTRYPOINT ["node", "scripts/db/restore.ts"]
 
 # Next.js standalone build. Supabase settings are read at runtime, never baked in.

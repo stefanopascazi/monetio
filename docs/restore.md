@@ -24,7 +24,7 @@ you to type it.
 - An R2 token with read access to the bucket: `BACKUP_REMOTE` plus `RCLONE_CONFIG_R2_*`, as in
   `packages/worker/deploy/worker.env.example`.
 - An up-to-date checkout of `main`: it must contain every migration listed in the backup.
-- Tools: Node 24, `pg_restore` and `psql` 17, `age`, `zstd`, `rclone`. On Windows use Docker (below).
+- Tools: Node 24, `pg_restore` and `psql` 18 (at least the version of `pg_dump` on the VPS, which picks the newest client installed), `age`, `zstd`, `rclone`. On Windows use Docker (below).
 
 ## Command
 
