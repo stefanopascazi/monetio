@@ -1,4 +1,5 @@
-# Monthly restore drill (#48): restores the latest backup into a throwaway Postgres 17 and checks it.
+# Monthly restore drill (#48, #108): restores the latest backup with the production procedure (npm run db:restore)
+# into a throwaway local Supabase stack (Postgres + GoTrue) and checks rows, grants and RLS.
 # Required (environment "backup"): secrets BACKUP_AGE_IDENTITY, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID,
 # R2_SECRET_ACCESS_KEY (read-only token is enough); optional HEALTHCHECK_URL_RESTORE_TEST.
 # Variable BACKUP_REMOTE (e.g. r2:monetio-backups) at repository level.
@@ -15,13 +16,6 @@ jobs:
     runs-on: ubuntu-24.04
     environment: backup
     timeout-minutes: 20
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
     env:
       BACKUP_REMOTE: ${{ vars.BACKUP_REMOTE }}
       BACKUP_AGE_IDENTITY: ${{ secrets.BACKUP_AGE_IDENTITY }}
@@ -31,23 +25,27 @@ jobs:
       RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       RCLONE_CONFIG_R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
       RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
-      PGHOST: localhost
-      PGPORT: "5432"
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      PGDATABASE: postgres
+      # Local stack defaults from docker-compose.dev.yml (throwaway, never exposed).
+      POSTGRES_URL_NON_POOLING: postgres://postgres:monetio-local-password@localhost:54322/postgres?sslmode=disable
       HC_URL: ${{ secrets.HEALTHCHECK_URL_RESTORE_TEST }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       - name: Install tools
         run: |
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-17 age zstd
           sudo bash packages/worker/deploy/install-rclone.sh
+      - name: Start Postgres and GoTrue
+        run: docker compose -f docker-compose.dev.yml up -d --wait db auth
       - name: Restore and verify
         run: |
           [ -z "$HC_URL" ] || curl -fsS -m 10 "$HC_URL/start" || true
-          bash packages/worker/scripts/restore-test.sh
+          npm run db:restore -- --backup latest --max-age-hours 48 --yes
       - name: Report success
         if: success()
         run: '[ -z "$HC_URL" ] || curl -fsS -m 10 "$HC_URL" || true'

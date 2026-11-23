@@ -1,5 +1,5 @@
 import type { Sql } from "postgres";
-import { runPipeline } from "../backup/pipeline.ts";
+import { runPipeline } from "../../../../scripts/db/pipeline.ts";
 import type { WorkerConfig } from "../config.ts";
 import { createAdvisorPurgeJob, createPostgresAdvisorPurgeStore } from "./advisor-purge.ts";
 import { createBackupJob } from "./backup.ts";

@@ -20,6 +20,7 @@
     "ds:tokens": "node packages/ui/scripts/build-tokens.ts",
     "ds:artifact": "node packages/ui/scripts/build-tokens.ts && node packages/ui/scripts/build-artifact.ts",
     "db:migrate": "node scripts/db/migrate.ts",
+    "db:restore": "node scripts/db/restore.ts",
     "db:import": "node scripts/import/run-import.ts",
     "auth:invite": "node scripts/dev/invite.ts",
     "admin:grant": "node scripts/admin/grant.ts",

@@ -105,6 +105,19 @@ services:
     ports:
       - "${GATEWAY_PORT:-8000}:8000"
 
+  # One-off backup restore (#108), never started by `up`: see docs/restore.md.
+  # Secrets and an optional RESTORE_TARGET_URL (another database) come from .env.restore; backup files from ./.restore.
+  restore:
+    build: { context: ., target: restore }
+    profiles: [restore]
+    env_file:
+      - path: .env.restore
+        required: false
+    environment:
+      POSTGRES_URL_NON_POOLING: postgres://postgres:${POSTGRES_PASSWORD:-monetio-local-password}@db:5432/postgres?sslmode=disable
+    volumes:
+      - ./.restore:/restore
+
   mailpit:
     image: axllent/mailpit:v1.27
     restart: unless-stopped
