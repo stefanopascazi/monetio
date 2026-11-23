@@ -38,8 +38,10 @@ jobs:
       - name: Install tools
         run: |
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
-          sudo apt-get install -y postgresql-client-17 age zstd
+          sudo apt-get install -y postgresql-client-18 age zstd
           sudo bash packages/worker/deploy/install-rclone.sh
+          # /usr/bin/pg_restore is Debian's pg_wrapper, which follows the runner's local Postgres 16 cluster.
+          echo /usr/lib/postgresql/18/bin >> "$GITHUB_PATH"
       - name: Start Postgres and GoTrue
         run: docker compose -f docker-compose.dev.yml up -d --wait db auth
       - name: Restore and verify

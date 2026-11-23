@@ -36,6 +36,28 @@ export function dumpedTables(entries: DataEntry[], schema: string): string[] {
   return entries.filter((e) => e.kind === "TABLE DATA" && e.schema === schema).map((e) => e.name);
 }
 
+/** Sequences whose position is in the dump. */
+export function dumpedSequences(entries: DataEntry[], schema: string): string[] {
+  return entries.filter((e) => e.kind === "SEQUENCE SET" && e.schema === schema).map((e) => e.name);
+}
+
+/** Entries minus the given objects of one schema (tables or sequences the target lacks). */
+export function withoutObjects(entries: DataEntry[], schema: string, names: string[]): DataEntry[] {
+  return entries.filter((e) => e.schema !== schema || !names.includes(e.name));
+}
+
+/** Rows in the COPY blocks of a `pg_restore --data-only --file=-` script. */
+export function copyRowCount(sql: string): number {
+  let rows = 0;
+  let inCopy = false;
+  for (const line of sql.split(/\r?\n/)) {
+    if (!inCopy) inCopy = /^COPY .* FROM stdin;$/.test(line);
+    else if (line === "\\.") inCopy = false;
+    else rows++;
+  }
+  return rows;
+}
+
 /** Content of the file passed to `pg_restore --use-list`. */
 export function restoreList(entries: DataEntry[]): string {
   return entries.map((e) => e.line).join("\n") + "\n";

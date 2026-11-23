@@ -1,7 +1,7 @@
 // Restores a database backup made by the worker (#48) into a Supabase database (#108).
 // Usage: npm run db:restore -- --list | --backup <latest|YYYY-MM-DD|key> | --file <path> [--identity <file>] [--reset] [--yes]
 // Target: POSTGRES_URL_NON_POOLING (local stack by default; production via scripts/dev/with-env.ts .env.prod).
-// Needs pg_restore/psql 17, age, zstd and rclone: on Windows run it in Docker (see docs/restore.md).
+// Needs pg_restore/psql 18 (at least the pg_dump version on the VPS), age, zstd and rclone: on Windows run it in Docker (see docs/restore.md).
 import "./load-local-env.ts";
 import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,7 +17,7 @@ import { confirmationMatches, describeTarget, fileFormat, parseRestoreArgs } fro
 import { backupAgeHours, parseBackupListing, pickBackup } from "./restore/backups.ts";
 import { loadScript, qualified } from "./restore/load-script.ts";
 import { parseMigrationRows, planMigrations } from "./restore/migrations.ts";
-import { dataEntries, dumpedTables, SKIPPED_TABLES, stripUnsupportedSettings, restoreList } from "./restore/toc.ts";
+import { copyRowCount, dataEntries, dumpedSequences, dumpedTables, restoreList, SKIPPED_TABLES, stripUnsupportedSettings, withoutObjects } from "./restore/toc.ts";
 import { inspectTarget, publicTables, verifyRestore, wipePublic } from "./restore/target.ts";
 import { capture } from "./restore/tools.ts";
 
@@ -113,7 +113,9 @@ const url = process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL ?? 
 const sql = connect();
 try {
   const file = await fetchDump();
-  const entries = dataEntries(await capture("pg_restore", ["--list", file]));
+  // Debian's pg_wrapper may pick an older client than expected: show which one runs.
+  console.log(`Client: ${(await capture("pg_restore", ["--version"])).trim()}`);
+  let entries = dataEntries(await capture("pg_restore", ["--list", file]));
   const backupMigrations = parseMigrationRows(
     await capture("pg_restore", ["--data-only", "--schema=public", "--table=_migrations", "--file=-", file]),
   );
@@ -122,8 +124,16 @@ try {
 
   const target = await inspectTarget(sql);
   if (!target.authTables.includes("users")) throw new Error("Lo schema auth di destinazione non esiste: serve un progetto Supabase (o lo stack locale) con GoTrue avviato");
+  // Supabase keeps adding auth tables (features we do not use): skip the missing ones only when empty.
   const missingAuth = dumpedTables(entries, "auth").filter((t) => !target.authTables.includes(t));
-  if (missingAuth.length) throw new Error(`Tabelle auth del backup assenti nella destinazione: ${missingAuth.join(", ")}. GoTrue di destinazione più vecchio del backup?`);
+  const withRows: string[] = [];
+  for (const table of missingAuth) {
+    const rows = copyRowCount(await capture("pg_restore", ["--data-only", "--schema=auth", `--table=${table}`, "--file=-", file]));
+    if (rows > 0) withRows.push(`${table} (${rows} righe)`);
+  }
+  if (withRows.length) throw new Error(`Tabelle auth del backup assenti nella destinazione: ${withRows.join(", ")}. GoTrue di destinazione più vecchio del backup?`);
+  if (missingAuth.length) console.warn(`Tabelle auth vuote assenti nella destinazione, saltate: ${missingAuth.join(", ")}`);
+  entries = withoutObjects(entries, "auth", [...missingAuth, ...dumpedSequences(entries, "auth").filter((s) => !target.authSequences.includes(s))]);
   if (target.publicObjects > 0 && !options.reset) {
     throw new Error(`Lo schema public di destinazione non è vuoto (${target.publicObjects} oggetti). Per sovrascriverlo aggiungi --reset.`);
   }

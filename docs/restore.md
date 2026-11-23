@@ -24,7 +24,9 @@ you to type it.
 - An R2 token with read access to the bucket: `BACKUP_REMOTE` plus `RCLONE_CONFIG_R2_*`, as in
   `packages/worker/deploy/worker.env.example`.
 - An up-to-date checkout of `main`: it must contain every migration listed in the backup.
-- Tools: Node 24, `pg_restore` and `psql` 17, `age`, `zstd`, `rclone`. On Windows use Docker (below).
+- Tools: Node 24, `pg_restore` and `psql` 18 (at least the version of `pg_dump` on the VPS, which picks the newest client installed), `age`, `zstd`, `rclone`. On Windows use Docker (below).
+  On Debian/Ubuntu with a local Postgres cluster, `/usr/bin/pg_restore` follows that cluster's version:
+  put `/usr/lib/postgresql/18/bin` first in `PATH`. The script prints the client it uses.
 
 ## Command
 
@@ -100,8 +102,10 @@ Rows written after the backup are lost. Users keep their passwords. They may hav
 
 ## When it fails
 
-- **The target's auth tables are missing**: the target's GoTrue is older than the one in the backup.
-  A current Supabase project avoids this. Locally, update the `supabase/gotrue` image.
+- **Auth tables or columns missing in the target**: the target's GoTrue is older than the one in the backup.
+  Missing auth tables that are empty in the backup are skipped with a warning. Tables with rows, or new columns,
+  stop the restore. A current Supabase project avoids this. Locally and in the drill, update the
+  `supabase/gotrue` image in `docker-compose.dev.yml`.
 - **Migrations missing from the repository**: update the checkout.
 - **Failure during the data load**: the load transaction is rolled back, but the schema has already been
   rebuilt. Fix the cause and run the restore again with `--reset`.

@@ -52,13 +52,15 @@ export interface TargetState {
   /** Our objects in public: 0 on a fresh Supabase project. */
   publicObjects: number;
   authTables: string[];
+  authSequences: string[];
 }
 
 export async function inspectTarget(sql: Sql): Promise<TargetState> {
   const [{ v }] = await sql<{ v: number }[]>`select current_setting('server_version_num')::int as v`;
   const [{ n }] = await sql.unsafe<{ n: string }[]>(PUBLIC_OBJECTS);
   const auth = await sql<{ tablename: string }[]>`select tablename from pg_tables where schemaname = 'auth' order by tablename`;
-  return { serverMajor: Math.floor(v / 10_000), publicObjects: Number(n), authTables: auth.map((r) => r.tablename) };
+  const seqs = await sql<{ relname: string }[]>`select relname from pg_class where relnamespace = 'auth'::regnamespace and relkind = 'S'`;
+  return { serverMajor: Math.floor(v / 10_000), publicObjects: Number(n), authTables: auth.map((r) => r.tablename), authSequences: seqs.map((r) => r.relname) };
 }
 
 export async function wipePublic(sql: Sql) {

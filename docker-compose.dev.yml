@@ -34,7 +34,8 @@ services:
       retries: 20
 
   auth:
-    image: supabase/gotrue:v2.180.0
+    # Keep close to the GoTrue of Supabase cloud: the restore drill loads production auth rows into it.
+    image: supabase/gotrue:v2.198.0
     restart: unless-stopped
     depends_on:
       db: { condition: service_healthy }
