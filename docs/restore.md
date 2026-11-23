@@ -25,6 +25,8 @@ you to type it.
   `packages/worker/deploy/worker.env.example`.
 - An up-to-date checkout of `main`: it must contain every migration listed in the backup.
 - Tools: Node 24, `pg_restore` and `psql` 18 (at least the version of `pg_dump` on the VPS, which picks the newest client installed), `age`, `zstd`, `rclone`. On Windows use Docker (below).
+  On Debian/Ubuntu with a local Postgres cluster, `/usr/bin/pg_restore` follows that cluster's version:
+  put `/usr/lib/postgresql/18/bin` first in `PATH`. The script prints the client it uses.
 
 ## Command
 

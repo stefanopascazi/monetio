@@ -113,6 +113,8 @@ const url = process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL ?? 
 const sql = connect();
 try {
   const file = await fetchDump();
+  // Debian's pg_wrapper may pick an older client than expected: show which one runs.
+  console.log(`Client: ${(await capture("pg_restore", ["--version"])).trim()}`);
   const entries = dataEntries(await capture("pg_restore", ["--list", file]));
   const backupMigrations = parseMigrationRows(
     await capture("pg_restore", ["--data-only", "--schema=public", "--table=_migrations", "--file=-", file]),
