@@ -56,3 +56,6 @@ next-env.d.ts
 
 # personal notes
 bugfix.md
+
+# Backup files for db:restore (docs/restore.md)
+/.restore/

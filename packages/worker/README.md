@@ -40,7 +40,7 @@ Job `backup`, giornaliero dopo le 01:00 UTC. L'ultimo successo è salvato in `jo
 - Retention con le lifecycle rules del bucket: `daily/` 7 giorni, `weekly/` 28, `monthly/` 180.
 - Sulla VPS c'è solo la chiave pubblica `age`. La privata sta nel password manager e nel secret GitHub del test di ripristino.
 - Il job si attiva compilando le variabili `BACKUP_*` e `RCLONE_CONFIG_R2_*` in `/etc/monetio-worker.env` (vedi `deploy/worker.env.example`).
-- Test di ripristino: `.github/workflows/backup-restore-test.yml`, il giorno 3 di ogni mese o a mano. Ripristina l'ultimo backup su Postgres 17 usa e getta ed esegue controlli di coerenza (`scripts/restore-test.sh`).
+- Ripristino: `npm run db:restore`, procedura e disaster recovery in `docs/restore.md` (#108). Il test mensile (`.github/workflows/backup-restore-test.yml`, giorno 3 o a mano) usa lo stesso comando su Postgres e GoTrue usa e getta e verifica conteggi, permessi e RLS.
 
 ## Errori (Sentry, #48)
 

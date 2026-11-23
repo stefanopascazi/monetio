@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { RunPipeline } from "../backup/pipeline.ts";
+import type { RunPipeline } from "../../../../scripts/db/pipeline.ts";
 import { backupSteps, createBackupJob } from "./backup.ts";
 
 const config = { databaseUrl: "postgres://u:secret@db.example.com:5432/postgres", remote: "r2:bucket", ageRecipient: "age1xyz" };

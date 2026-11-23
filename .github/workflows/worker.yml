@@ -8,6 +8,8 @@ on:
     paths:
       - "packages/worker/**"
       - "scripts/db/ssl.ts"
+      - "scripts/db/pg-env.ts"
+      - "scripts/db/pipeline.ts"
       # Shared pure code bundled into the worker (notifications, projections).
       - "lib/domain/**"
       - "lib/data/**"
@@ -19,6 +21,8 @@ on:
     paths:
       - "packages/worker/**"
       - "scripts/db/ssl.ts"
+      - "scripts/db/pg-env.ts"
+      - "scripts/db/pipeline.ts"
       # Shared pure code bundled into the worker (notifications, projections).
       - "lib/domain/**"
       - "lib/data/**"

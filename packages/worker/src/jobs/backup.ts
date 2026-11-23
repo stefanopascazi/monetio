@@ -1,6 +1,6 @@
 import { backupKeys } from "../backup/keys.ts";
-import { pgEnvFromUrl } from "../backup/pg-env.ts";
-import type { PipelineStep, RunPipeline } from "../backup/pipeline.ts";
+import { pgEnvFromUrl } from "../../../../scripts/db/pg-env.ts";
+import type { PipelineStep, RunPipeline } from "../../../../scripts/db/pipeline.ts";
 import { dailyDue } from "./schedule.ts";
 import type { Job } from "./types.ts";
 
