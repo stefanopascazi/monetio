@@ -102,8 +102,10 @@ Rows written after the backup are lost. Users keep their passwords. They may hav
 
 ## When it fails
 
-- **The target's auth tables are missing**: the target's GoTrue is older than the one in the backup.
-  A current Supabase project avoids this. Locally, update the `supabase/gotrue` image.
+- **Auth tables or columns missing in the target**: the target's GoTrue is older than the one in the backup.
+  Missing auth tables that are empty in the backup are skipped with a warning. Tables with rows, or new columns,
+  stop the restore. A current Supabase project avoids this. Locally and in the drill, update the
+  `supabase/gotrue` image in `docker-compose.dev.yml`.
 - **Migrations missing from the repository**: update the checkout.
 - **Failure during the data load**: the load transaction is rolled back, but the schema has already been
   rebuilt. Fix the cause and run the restore again with `--reset`.

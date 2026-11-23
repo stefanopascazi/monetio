@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dataEntries, dumpedTables, stripUnsupportedSettings, restoreList } from "./toc.ts";
+import { copyRowCount, dataEntries, dumpedSequences, dumpedTables, restoreList, stripUnsupportedSettings, withoutObjects } from "./toc.ts";
 
 // Lines as printed by `pg_restore --list` for a worker backup.
 const TOC = [
@@ -32,6 +32,15 @@ describe("dataEntries", () => {
     expect(dumpedTables(entries, "auth")).toEqual(["refresh_tokens", "users"]);
   });
 
+  it("lists dumped sequences per schema", () => {
+    expect(dumpedSequences(entries, "auth")).toEqual(["refresh_tokens_id_seq"]);
+  });
+
+  it("drops objects the target lacks, in that schema only", () => {
+    const kept = withoutObjects(entries, "auth", ["refresh_tokens", "refresh_tokens_id_seq"]);
+    expect(kept.map((e) => `${e.schema}.${e.name}`)).toEqual(["auth.users", "public._migrations", "public.accounts"]);
+  });
+
   it("reuses the original lines for --use-list", () => {
     expect(restoreList(entries).split("\n")[0]).toBe("4436; 0 16470 TABLE DATA auth refresh_tokens supabase_auth_admin");
   });
@@ -46,5 +55,17 @@ describe("stripUnsupportedSettings", () => {
 
   it("leaves the script alone on 17+", () => {
     expect(stripUnsupportedSettings(sql, 17)).toBe(sql);
+  });
+});
+
+describe("copyRowCount", () => {
+  it("counts rows across COPY blocks", () => {
+    const end = "\\.";
+    const sql = ["SET x = 1;", "COPY auth.a (id) FROM stdin;", "1", "2", end, "", "COPY auth.b (id) FROM stdin;", end, "COPY auth.c (id) FROM stdin;", "3", end].join("\n");
+    expect(copyRowCount(sql)).toBe(3);
+  });
+
+  it("is zero without data", () => {
+    expect(copyRowCount("SET x = 1;\n")).toBe(0);
   });
 });
