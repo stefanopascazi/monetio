@@ -144,3 +144,33 @@ export function bankBalanceView(
 export function bankAccountsFor(connections: BankConnection[], accountId: string): { connection: BankConnection; account: BankConnectionAccount }[] {
   return connections.flatMap((connection) => connection.accounts.filter((a) => a.accountId === accountId).map((account) => ({ connection, account })));
 }
+
+export type AccountBankBalances = { currentCents: number; availableCents: number };
+
+/**
+ * Booked and available balance by MonetIO account, only where a live consent gives an available one.
+ * `monetio` (balances by account) stands in for the booked balance when the bank offers none.
+ */
+export function bankBalancesByAccount(connections: BankConnection[], monetio: Record<string, number>, now: Date = new Date()): Record<string, AccountBankBalances> {
+  const out: Record<string, AccountBankBalances> = {};
+  for (const c of connections) {
+    if (isConsentExpired(c, now)) continue;
+    for (const a of c.accounts) {
+      if (!a.accountId || !a.syncConfirmedAt || out[a.accountId]) continue;
+      const view = bankBalanceView(a, monetio[a.accountId]);
+      if (view.currentCents != null && view.availableCents != null) out[a.accountId] = { currentCents: view.currentCents, availableCents: view.availableCents };
+    }
+  }
+  return out;
+}
+
+/**
+ * Projection start balances counting what is already spent: card payments the bank has not booked yet
+ * lower the available balance, so it wins when below MonetIO's. A higher one is left alone (it may
+ * only miss movements recorded by hand ahead of the bank).
+ */
+export function withAvailableBalances(balances: Record<string, number>, bank: Record<string, AccountBankBalances>): Record<string, number> {
+  const out = { ...balances };
+  for (const [id, b] of Object.entries(bank)) if (id in out && b.availableCents < out[id]) out[id] = b.availableCents;
+  return out;
+}
