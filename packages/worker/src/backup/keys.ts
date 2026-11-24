@@ -9,12 +9,18 @@ export interface BackupKeys {
 
 export const BACKUP_SUFFIX = ".dump.zst.age";
 
+/** 2026-11-10T01:00:12.345Z -> monetio-2026-11-10T0100Z.dump.zst.age */
+const fileName = (now: Date) => `monetio-${now.toISOString().slice(0, 16).replace(":", "")}Z${BACKUP_SUFFIX}`;
+
 export function backupKeys(now: Date): BackupKeys {
-  // 2026-11-10T01:00:12.345Z -> 2026-11-10T0100Z
-  const stamp = now.toISOString().slice(0, 16).replace(":", "") + "Z";
-  const file = `monetio-${stamp}${BACKUP_SUFFIX}`;
+  const file = fileName(now);
   const copies: string[] = [];
   if (now.getUTCDay() === 0) copies.push(`weekly/${file}`);
   if (now.getUTCDate() === 1) copies.push(`monthly/${file}`);
   return { daily: `daily/${file}`, copies };
+}
+
+/** On-demand backup from the console (#105): its own prefix, so the daily rotation is untouched (manual/ 30 days). */
+export function manualKey(now: Date): string {
+  return `manual/${fileName(now)}`;
 }

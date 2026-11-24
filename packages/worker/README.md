@@ -37,7 +37,9 @@ I rilasci stanno in `/opt/monetio-worker/releases/<sha>`, con `current` come sym
 
 Job `backup`, giornaliero dopo le 01:00 UTC. L'ultimo successo è salvato in `job_locks.last_success_at`, quindi un riavvio o un deploy non lo rilanciano. La catena è `pg_dump` (schemi `public` e `auth`) | `zstd -3` | `age` | `rclone rcat`, con upload su R2 in streaming e nessun file locale. La domenica e il giorno 1 viene fatta anche una copia lato server in `weekly/` e `monthly/`.
 
-- Retention con le lifecycle rules del bucket: `daily/` 7 giorni, `weekly/` 28, `monthly/` 180.
+- Retention con le lifecycle rules del bucket: `daily/` 7 giorni, `weekly/` 28, `monthly/` 180, `manual/` 30.
+- Backup su richiesta dalla console sysadmin (#105): job `backup-manual`, che prende la richiesta da `admin_job_requests` entro un minuto e carica in `manual/`. È un job separato, quindi non conta come backup giornaliero. La chiave del file finisce nell'esito della richiesta.
+- Elenco per la console: job `backup-list` ogni ora e dopo ogni upload (`rclone lsjson`), salvato in `backup_objects` (solo chiave, dimensione e data). Il token R2 della VPS deve poter elencare il bucket.
 - Sulla VPS c'è solo la chiave pubblica `age`. La privata sta nel password manager e nel secret GitHub del test di ripristino.
 - Il job si attiva compilando le variabili `BACKUP_*` e `RCLONE_CONFIG_R2_*` in `/etc/monetio-worker.env` (vedi `deploy/worker.env.example`).
 - Ripristino: `npm run db:restore`, procedura e disaster recovery in `docs/restore.md` (#108). Il test mensile (`.github/workflows/backup-restore-test.yml`, giorno 3 o a mano) usa lo stesso comando su Postgres e GoTrue usa e getta e verifica conteggi, permessi e RLS.

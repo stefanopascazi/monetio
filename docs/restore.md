@@ -1,8 +1,16 @@
 # Database restore (#108)
 
 The worker backs up `public` and `auth` every night (#48): `pg_dump | zstd | age`, uploaded to R2
-(`daily/` 7 days, `weekly/` 28, `monthly/` 180). `npm run db:restore` restores one of those backups
-into a Supabase database, either a new project or the current one.
+(`daily/` 7 days, `weekly/` 28, `monthly/` 180), plus on-demand backups from the sysadmin console in
+`manual/` (30 days, #105). `npm run db:restore` restores one of those backups into a Supabase database,
+either a new project or the current one.
+
+## Test restore from the console (#105)
+
+The console page Backup dispatches `.github/workflows/backup-restore-test.yml` with the chosen backup.
+The workflow restores it into a throwaway local stack on the runner (never production), and
+`db:restore --report` prints a `RESTORE_REPORT` line with migrations, row counts and the RLS check, which
+the console reads from the job log. The age private key stays in the workflow's secret.
 
 ## What it does
 
