@@ -9,7 +9,7 @@ export interface BankSnapshot {
   /** The user's own consents in the household (only the owner can renew them). */
   consents: BankConsentInfo[];
   /** Open review items on accounts the user sees; `latestAt` changes when new ones arrive. */
-  openReviews: { count: number; latestAt: string | null };
+  openReviews: { count: number; latestAt: string | null; latestAccountId?: string | null };
 }
 
 /** Reminder steps before the end: one notification each, then one when it has ended. */
@@ -50,7 +50,7 @@ export function bankConsentEvents(bank: BankSnapshot, c: Ctx): NotificationEvent
 }
 
 export function bankReviewEvents(bank: BankSnapshot, c: Ctx): NotificationEvent[] {
-  const { count, latestAt } = bank.openReviews;
+  const { count, latestAt, latestAccountId } = bank.openReviews;
   if (!count || !latestAt) return [];
   return [
     {
@@ -58,7 +58,8 @@ export function bankReviewEvents(bank: BankSnapshot, c: Ctx): NotificationEvent[
       dedupKey: key(c, "bank_review", latestAt),
       title: "Movimenti da rivedere",
       body: `${count === 1 ? "1 movimento della banca aspetta" : `${count} movimenti della banca aspettano`} una tua decisione${c.suffix}`,
-      url: "/dati/banche",
+      // Items are handled on the account's "Banca" tab: open the one with the newest item.
+      url: latestAccountId ? `/conti/${latestAccountId}?sezione=banca` : "/conti",
     },
   ];
 }

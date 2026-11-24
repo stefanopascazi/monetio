@@ -1,44 +1,59 @@
 "use client";
 
+import Link from "next/link";
 import { Unlink } from "lucide-react";
 import { Badge, Card, InlineConfirm, type SelectOption } from "@monetio/ui";
 import { removeBankConnection } from "@/app/actions/bank-links";
 import { useToastAction } from "@/hooks/useToastAction";
-import type { CategoryOption } from "@/components/import/import-view";
-import { type BankConnection, consentDaysLeft, isConsentExpired } from "@/lib/banking/connections";
-import type { BankSyncBatch } from "@/lib/banking/sync-batches";
-import { BankAccountPanel } from "./BankAccountPanel";
+import { awaitsPreview, type BankConnection, consentDaysLeft, isConsentExpired } from "@/lib/banking/connections";
+import { BankAccountLinkSelect } from "./BankAccountLinkSelect";
 
 const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
 export type BankConnectionPanelProps = {
   connection: BankConnection;
   accountOptions: SelectOption[];
-  /** MonetIO balance by account id, for the comparison with the bank's. */
-  balances?: Record<string, number>;
-  /** Latest recorded movement by account id: default start of a first-sync preview. */
-  lastBookedOn?: Record<string, string>;
-  /** Latest sync batches by account id, newest first. */
-  batches?: Record<string, BankSyncBatch[]>;
-  /** Active categories, for new movements in a first-sync preview. */
-  categories?: CategoryOption[];
-  /** Today in Rome (ISO), computed at request time by the server page. */
-  today: string;
   now?: Date;
 };
 
-/** One consent given at a bank: its validity, the accounts it covers and how each feeds MonetIO. */
-export function BankConnectionPanel({ connection: c, accountOptions, balances = {}, lastBookedOn = {}, batches = {}, categories, today, now = new Date() }: BankConnectionPanelProps) {
+/**
+ * One consent given at a bank: its validity, the accounts it shares and the MonetIO account each feeds.
+ * Movements, balances and history live on the account page ("Banca" tab).
+ */
+export function BankConnectionPanel({ connection: c, accountOptions, now = new Date() }: BankConnectionPanelProps) {
   const { run } = useToastAction();
   const days = consentDaysLeft(c.validUntil, now);
   const expired = isConsentExpired(c, now);
   return (
-    <div className="flex flex-col gap-4">
-      <Card
-        title={c.bankName}
-        subtitle={expired ? "Consenso scaduto: collega di nuovo la banca" : `Consenso valido fino al ${dateFormat.format(new Date(c.validUntil))} (${days} giorni)`}
-        action={expired ? <Badge tone="danger">Scaduto</Badge> : days <= 14 ? <Badge tone="warning">In scadenza</Badge> : <Badge tone="success">Attivo</Badge>}
-      >
+    <Card
+      title={c.bankName}
+      subtitle={expired ? "Consenso scaduto: collega di nuovo la banca" : `Consenso valido fino al ${dateFormat.format(new Date(c.validUntil))} (${days} giorni)`}
+      action={expired ? <Badge tone="danger">Scaduto</Badge> : days <= 14 ? <Badge tone="warning">In scadenza</Badge> : <Badge tone="success">Attivo</Badge>}
+    >
+      <div className="flex flex-col gap-4 text-sm">
+        {c.accounts.length ? (
+          <ul className="flex flex-col gap-3">
+            {c.accounts.map((a) => (
+              <li key={a.id} className="flex flex-col gap-3 rounded-[14px] bg-surface-raised p-3">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{a.name ?? "Conto"}</p>
+                  {a.ibanMasked && <p className="font-mono text-xs text-ink-muted">{a.ibanMasked}</p>}
+                </div>
+                <BankAccountLinkSelect bankAccountId={a.id} accountId={a.accountId} options={accountOptions} />
+                {a.accountId && (
+                  <p className="text-xs text-ink-muted">
+                    {awaitsPreview(a) && !expired ? "Manca la conferma del primo import: " : "Movimenti e saldi: "}
+                    <Link href={`/conti/${a.accountId}?sezione=banca`} className="font-semibold text-brand-ink underline-offset-2 hover:underline">
+                      apri il conto
+                    </Link>
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-ink-muted">La banca non ha condiviso nessun conto.</p>
+        )}
         <InlineConfirm
           triggerLabel="Scollega"
           triggerIcon={<Unlink />}
@@ -46,25 +61,7 @@ export function BankConnectionPanel({ connection: c, accountOptions, balances = 
           confirmLabel="Scollega"
           onConfirm={() => run(() => removeBankConnection(c.id))}
         />
-      </Card>
-      {c.accounts.length ? (
-        c.accounts.map((a) => (
-          <BankAccountPanel
-            key={a.id}
-            account={a}
-            expired={expired}
-            accountOptions={accountOptions}
-            monetioBalanceCents={a.accountId ? balances[a.accountId] : undefined}
-            defaultFrom={(a.accountId && lastBookedOn[a.accountId]) || today}
-            batches={(a.accountId && batches[a.accountId]) || []}
-            categories={categories}
-            today={today}
-            now={now}
-          />
-        ))
-      ) : (
-        <p className="text-sm text-ink-muted">La banca non ha condiviso nessun conto.</p>
-      )}
-    </div>
+      </div>
+    </Card>
   );
 }
