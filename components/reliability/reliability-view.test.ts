@@ -12,6 +12,13 @@ const data = {
 describe("reliabilityFor", () => {
   it("uses the household for the combined series and the account for its own", () => {
     expect(reliabilityFor(data, "all")).toMatchObject({ level: "medium", score: 60, suggestions: [tip("a"), tip("b")] });
-    expect(reliabilityFor(data, "a")).toEqual({ level: "high", score: 90, suggestions: [tip("a")] });
+    expect(reliabilityFor(data, "a")).toEqual({ level: "high", score: 90, suggestions: [tip("a")], bankSynced: [] });
+  });
+
+  it("names the accounts synced by the bank", () => {
+    const linked = { ...data, accounts: [...data.accounts, { accountId: "b", name: "B", score: 100, level: "high" as const, bankSynced: true }] };
+    expect(reliabilityFor(linked, "all").bankSynced).toEqual(["B"]);
+    expect(reliabilityFor(linked, "b").bankSynced).toEqual(["B"]);
+    expect(reliabilityFor(linked, "a").bankSynced).toEqual([]);
   });
 });

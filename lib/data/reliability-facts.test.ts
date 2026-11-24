@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DueEntry } from "../domain/schedule";
 import type { MonthlyFlow } from "./flows";
-import { accountFacts } from "./reliability-facts";
+import { accountFacts, bankLinkState } from "./reliability-facts";
 
 const flow = (month: string, kind: MonthlyFlow["kind"], totalCents: number, accountId = "a"): MonthlyFlow => ({ accountId, month, kind, totalCents, categoryId: null, counterpartAccountId: null });
 const due = (ruleId: string, overdue: boolean, accountId = "a") => ({ ruleId, overdue, accountId, source: "rule" }) as DueEntry;
@@ -40,11 +40,37 @@ describe("accountFacts", () => {
       openEstimates: 1,
       missingRules: [{ label: "Netflix", amountCents: -1299, frequency: "monthly" }],
       quiet: false,
+      bank: null,
     });
   });
 
   it("defaults missing data to an empty account", () => {
     const [f] = accountFacts({ accounts: [{ id: "a", name: "Nuovo", type: "savings" }], today: "2026-11-11", lastBooked: {}, flows: [], summary: {}, due: [], estimateRuleIds: new Set(), missingRules: {} });
-    expect(f).toMatchObject({ lastBookedOn: null, historyMonths: 0, avgMonthlyExpenseCents: 0, declaredMonthlyExpenseCents: 0, overdueCount: 0, openEstimates: 0, missingRules: [], quiet: true });
+    expect(f).toMatchObject({ lastBookedOn: null, historyMonths: 0, avgMonthlyExpenseCents: 0, declaredMonthlyExpenseCents: 0, overdueCount: 0, openEstimates: 0, missingRules: [], quiet: true, bank: null });
+  });
+
+  it("carries the bank link of each account", () => {
+    const facts = accountFacts({
+      accounts: [{ id: "a", name: "Banca", type: "checking" }, { id: "b", name: "Contanti", type: "cash" }],
+      today: "2026-11-11", lastBooked: {}, flows: [], summary: {}, due: [], estimateRuleIds: new Set(), missingRules: {},
+      bankLinks: { a: "synced" },
+    });
+    expect(facts.map((f) => f.bank)).toEqual(["synced", null]);
+  });
+});
+
+describe("bankLinkState", () => {
+  const now = new Date("2026-11-24T12:00:00Z");
+  const row = { account_id: "a", consent_active: true, last_synced_at: "2026-11-24T11:00:00Z", failing: false };
+
+  it("is synced with a valid consent and a recent, successful sync", () => {
+    expect(bankLinkState(row, now)).toBe("synced");
+  });
+
+  it("is expired when the consent ended, failing when the sync errors or stalls", () => {
+    expect(bankLinkState({ ...row, consent_active: false }, now)).toBe("expired");
+    expect(bankLinkState({ ...row, failing: true }, now)).toBe("failing");
+    expect(bankLinkState({ ...row, last_synced_at: "2026-11-22T11:00:00Z" }, now)).toBe("failing");
+    expect(bankLinkState({ ...row, last_synced_at: null }, now)).toBe("failing");
   });
 });

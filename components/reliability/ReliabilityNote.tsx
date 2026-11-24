@@ -26,7 +26,7 @@ const MEANING: Record<ReliabilityLevel, string> = {
 export function ReliabilityNote({ data, seriesId }: { data: ReliabilityData; seriesId: string }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
-  const { level, score, suggestions } = reliabilityFor(data, seriesId);
+  const { level, score, suggestions, bankSynced } = reliabilityFor(data, seriesId);
   const expandable = suggestions.length > 0;
   const Icon = level === "high" ? ShieldCheck : ShieldAlert;
   const head = (
@@ -40,6 +40,7 @@ export function ReliabilityNote({ data, seriesId }: { data: ReliabilityData; ser
           {MEANING[level]}
           {expandable && ` ${suggestions.length === 1 ? "1 cosa da sistemare" : `${suggestions.length} cose da sistemare`}.`}
         </span>
+        {bankSynced.length > 0 && <span className="text-xs text-ink-muted">Movimenti sincronizzati dalla banca: {bankSynced.join(", ")}.</span>}
       </span>
     </>
   );
