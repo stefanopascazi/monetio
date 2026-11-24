@@ -6,6 +6,8 @@ import { accountMonthRecap } from "../domain/month-recap";
 import { monthlySummary } from "../domain/monthly-summary";
 import { projectBalances, projectedMovements } from "../domain/projection";
 import { projectionDetails } from "../domain/projection-details";
+import { withPendingStart } from "../domain/pending";
+import { loadProjectionPending } from "./bank-balances";
 import { getContext } from "./context";
 import { buildAgenda, buildProjectionInput, decrementCategories, LOOKBACK_DAYS, projectionFlowsSince } from "./projection-input";
 import { listAccounts, listBookedOccurrences, listBookedRows, listCategories, listContributions, listEstimateMovements, listFlows, listOverrides, listRules, listTransactions } from "./queries";
@@ -37,13 +39,19 @@ export const loadAgenda = cache(async () => {
 export const loadProjectionInput = cache(async (months: number) => {
   const agenda = await loadAgenda();
   const current = monthKey(agenda.today);
-  const [accounts, planned, monthFlows, estimateMovements] = await Promise.all([
+  const [accounts, planned, monthFlows, estimateMovements, bank] = await Promise.all([
     listAccounts(),
     listTransactions({ status: "planned", limit: 1000 }),
     listFlows(startOfMonth(projectionFlowsSince(agenda.today))),
     listEstimateMovements(startOfMonth(current), endOfMonth(current), decrementCategories(agenda.rules)),
+    loadProjectionPending(),
   ]);
-  return { agenda, ...buildProjectionInput(agenda, { accounts, planned, monthFlows, estimateMovements }, months) };
+  const built = buildProjectionInput(agenda, { accounts, planned, monthFlows, estimateMovements }, months);
+  // Month ends start from what can be spent: card payments not booked yet are already gone,
+  // and what they cover (a due item, part of an estimate) is not counted again.
+  built.input.balances = withPendingStart(built.input.balances, bank.startCents);
+  built.input.pending = bank.pending;
+  return { agenda, ...built };
 });
 
 /** Month-end balance projection for the visible, non-archived accounts. */
@@ -82,7 +90,9 @@ export const loadCurrentMonthBooked = cache(async (): Promise<{ month: string; r
 /** Still expected movements of an account in a month (current by default), with its balances. */
 export const loadAccountMonthRecap = cache(async (accountId: string, balanceCents: number, month?: string) => {
   const { input } = await loadProjectionInput(RECAP_MONTHS);
-  return accountMonthRecap(projectedMovements(input), accountId, balanceCents, input.today, month ?? monthKey(input.today));
+  // Same start as the month-end on the cards: the available balance when below MonetIO's.
+  const start = input.balances[accountId] ?? balanceCents;
+  return accountMonthRecap(projectedMovements(input), accountId, start, input.today, month ?? monthKey(input.today));
 });
 
 /** Expected month-end balance ("rimanenza") per visible account. */

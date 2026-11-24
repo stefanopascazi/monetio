@@ -1,6 +1,7 @@
 import { feeDescription, feeSource } from "./fees";
 import { contributionAmount, contributionBase } from "./contribution";
 import { addDays, addMonthsToKey, endOfMonth, monthKey, startOfMonth } from "./dates";
+import { type AccountPending, settlePending } from "./pending";
 import { type EstimateMovement, type EstimateUsage, estimatePool, isDecreasing, mergeParts } from "./estimates";
 import { occurrences } from "./recurrence";
 import { contributionKey, type OverrideMap, ruleKey } from "./schedule";
@@ -32,6 +33,8 @@ export interface ProjectionInput {
   cardAccountIds?: Set<string>;
   /** Current month's booked movements that reduce decreasing estimates. */
   estimateMovements?: EstimateMovement[];
+  /** Bank movements not booked yet by account, already out of `balances` (see withPendingStart). */
+  pending?: Record<string, AccountPending>;
 }
 
 export interface ProjectionMonth {
@@ -163,7 +166,8 @@ export function projectedMovements(input: ProjectionInput): Movement[] {
   for (const t of planned) {
     if (t.status === "planned") push(t.bookedOn, t.accountId, t.amountCents, null, t.description, "planned", undefined, t.categoryId, undefined, { txnId: t.id });
   }
-  return out;
+  // Pending bank movements already lowered the start balance: drop what they cover.
+  return input.pending ? settlePending(out, input.pending, today) : out;
 }
 
 /** Month-end balances per account from the current month on. */

@@ -111,8 +111,8 @@ describe("syncBankAccount", () => {
       ["insert", "b"],
       ["skip", "c"],
     ]);
-    expect(counts).toEqual({ inserted: 1, reconciled: 1, review: 0, skipped: 1, from: "2026-10-19", fetched: 4, balances: 1, balanceTypes: ["CLBD"] });
-    expect(store.saveStatus).toHaveBeenCalledWith("ba1", { syncedAt: now, balance: { cents: 95000, date: "2026-11-18" }, available: null, error: null });
+    expect(counts).toEqual({ inserted: 1, reconciled: 1, review: 0, skipped: 1, from: "2026-10-19", fetched: 4, balances: 1, balanceTypes: ["CLBD"], pending: 0 });
+    expect(store.saveStatus).toHaveBeenCalledWith("ba1", { syncedAt: now, balance: { cents: 95000, date: "2026-11-18" }, available: null, pending: [], error: null });
   });
 });
 

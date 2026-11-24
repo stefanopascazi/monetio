@@ -29,6 +29,7 @@ const base: BankConnection = {
       bankBalanceCents: null,
       bankBalanceOn: null,
       bankAvailableCents: null,
+      pendingMovements: null,
       lastSyncedAt: null,
       lastError: null,
       syncConfirmedAt: null,

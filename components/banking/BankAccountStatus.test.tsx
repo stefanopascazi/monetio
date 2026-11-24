@@ -12,6 +12,7 @@ const account: BankConnectionAccount = {
   bankBalanceCents: 3214,
   bankBalanceOn: null,
   bankAvailableCents: null,
+  pendingMovements: null,
   lastSyncedAt: "2026-11-18T13:19:58Z",
   lastError: null,
   syncConfirmedAt: "2026-11-18T13:19:58Z",

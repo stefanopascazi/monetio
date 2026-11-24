@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AccountCard, type AccountType } from "@monetio/ui";
 import { BALANCES_CLASS } from "@/lib/privacy/balance-privacy";
+import type { AccountBankBalances } from "@/lib/banking/connections";
+import { BankBalancesNote } from "./BankBalancesNote";
 import { MonthEndNote } from "./MonthEndNote";
 
 export interface AccountLinkCardProps {
@@ -12,6 +14,8 @@ export interface AccountLinkCardProps {
   members: string[];
   /** Expected month-end balance; omitted when unknown (archived). */
   monthEndCents?: number;
+  /** Booked and available balance from the linked bank, when it gives an available one. */
+  bank?: AccountBankBalances;
   /** Highlights the card and marks the link as the current page. */
   current?: boolean;
   /** False keeps the scroll position (switching inside the accounts section). */
@@ -19,7 +23,7 @@ export interface AccountLinkCardProps {
 }
 
 /** Account card linking to its statement; shared by the home grid and the accounts carousel. */
-export function AccountLinkCard({ href, name, institution, type, balanceCents, members, monthEndCents, current, scroll = true }: AccountLinkCardProps) {
+export function AccountLinkCard({ href, name, institution, type, balanceCents, members, monthEndCents, bank, current, scroll = true }: AccountLinkCardProps) {
   return (
     <Link
       href={href}
@@ -35,7 +39,14 @@ export function AccountLinkCard({ href, name, institution, type, balanceCents, m
         members={members}
         selected={current}
         className={BALANCES_CLASS}
-        footer={monthEndCents !== undefined ? <MonthEndNote cents={monthEndCents} /> : undefined}
+        footer={
+          bank || monthEndCents !== undefined ? (
+            <span className="flex flex-col gap-2">
+              <BankBalancesNote bank={bank} />
+              <MonthEndNote cents={monthEndCents} />
+            </span>
+          ) : undefined
+        }
       />
     </Link>
   );

@@ -1,5 +1,6 @@
 // Enable Banking records turned into MonetIO's shape: signed cents, a date, a readable description,
 // and a stable reference that makes every sync idempotent.
+import type { PendingItem } from "../../domain/pending.ts";
 import type { ISODate } from "../../domain/types.ts";
 import { normalizeIban } from "../identifiers.ts";
 import type { AmountType, BalanceResource, TransactionResource } from "../enable-banking/types.ts";
@@ -69,6 +70,23 @@ export function normalizeTransactions(items: TransactionResource[]): BankMovemen
     out.push({ ref: ref.slice(0, 120), bookedOn, amountCents, description, counterpartyIban: party?.iban ? normalizeIban(party.iban) : null });
   }
   return out;
+}
+
+/** Most pending movements kept per account: enough for a few days of card payments. */
+export const MAX_PENDING = 50;
+
+/** Pending transactions (card payments, holds), newest first; the bank may change or drop them. */
+export function normalizePending(items: TransactionResource[]): PendingItem[] {
+  const out: PendingItem[] = [];
+  for (const t of items) {
+    if (t.status !== "PDNG") continue;
+    const date = t.transaction_date ?? t.value_date ?? t.booking_date;
+    const abs = toCents(t.transaction_amount?.amount ?? "");
+    if (!date || !ISO_DATE.test(date) || abs === null) continue;
+    const incoming = t.credit_debit_indicator === "CRDT";
+    out.push({ amountCents: incoming ? Math.abs(abs) : -Math.abs(abs), date: date.slice(0, 10) as ISODate, description: describe(t, incoming) });
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, MAX_PENDING);
 }
 
 /** ISO 20022 booked balances, best first: movements already accounted for. */

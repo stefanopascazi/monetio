@@ -122,7 +122,7 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
       });
     },
 
-    async saveStatus(bankAccountId, { syncedAt, balance, available, error }) {
+    async saveStatus(bankAccountId, { syncedAt, balance, available, pending, error }) {
       if (error) {
         await sql`update bank_accounts set last_error = ${error.slice(0, 300)} where id = ${bankAccountId}`;
         return;
@@ -130,7 +130,8 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
       await sql`
         update bank_accounts set last_synced_at = ${syncedAt}, last_error = null,
           bank_balance_cents = ${balance?.cents ?? null}, bank_balance_on = ${balance?.date ?? null},
-          bank_available_cents = ${available?.cents ?? null}
+          bank_available_cents = ${available?.cents ?? null},
+          pending_movements = ${pending ? sql.json(pending) : null}
         where id = ${bankAccountId}`;
     },
   };

@@ -8,6 +8,7 @@ import { useDragScroll } from "@/hooks/useDragScroll";
 import { useScrollEdges } from "@/hooks/useScrollEdges";
 import { accountHref, switcherAccounts } from "@/lib/navigation/account-nav";
 import { pageStep } from "@/lib/navigation/carousel";
+import type { AccountBankBalances } from "@/lib/banking/connections";
 import { AccountLinkCard } from "./AccountLinkCard";
 
 export interface CarouselAccount {
@@ -19,6 +20,7 @@ export interface CarouselAccount {
   members: string[];
   archived: boolean;
   monthEndCents?: number;
+  bank?: AccountBankBalances;
 }
 
 export interface AccountCarouselProps {
@@ -72,6 +74,7 @@ export function AccountCarousel({ accounts }: AccountCarouselProps) {
                   balanceCents={a.balanceCents}
                   members={a.members}
                   monthEndCents={a.monthEndCents}
+                  bank={a.bank}
                   current={isCurrent}
                   scroll={false}
                 />

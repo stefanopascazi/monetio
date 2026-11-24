@@ -1,3 +1,4 @@
+import type { AccountBankBalances } from "@/lib/banking/connections";
 import type { AccountWithBalance } from "@/lib/data/queries";
 import type { Member } from "@/lib/domain/types";
 import { AccountLinkCard } from "./AccountLinkCard";
@@ -17,11 +18,14 @@ export function AccountGrid({
   accounts,
   members,
   monthEnd,
+  bank,
 }: {
   accounts: AccountWithBalance[];
   members: Member[];
   /** Expected month-end balance per account; omitted for archived ones. */
   monthEnd?: Record<string, number>;
+  /** Bank balances of linked accounts. */
+  bank?: Record<string, AccountBankBalances>;
 }) {
   return (
     <section
@@ -38,6 +42,7 @@ export function AccountGrid({
           balanceCents={a.balanceCents}
           members={accountMembers(a, members)}
           monthEndCents={monthEnd?.[a.id]}
+          bank={bank?.[a.id]}
         />
       ))}
     </section>
