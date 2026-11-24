@@ -5,7 +5,7 @@ import type { ISODate } from "../../domain/types.ts";
 import type { BalanceResource, TransactionResource } from "../enable-banking/types.ts";
 import { type CategoryHints, withMatchedCategories } from "./categories.ts";
 import { type Candidate, type Decision, matchMovements, RULE_WINDOW_DAYS } from "./match.ts";
-import { normalizeTransactions, pickBalance } from "./normalize.ts";
+import { normalizeTransactions, pickBalances } from "./normalize.ts";
 
 export type SyncTarget = {
   bankAccountId: string;
@@ -32,8 +32,13 @@ export type SyncStore = {
   /** Category matches of the account and the household categories. */
   loadCategoryHints?(target: SyncTarget): Promise<CategoryHints>;
   apply(target: SyncTarget, decisions: Decision[]): Promise<void>;
-  saveStatus(bankAccountId: string, status: { syncedAt: Date; balance: { cents: number; date: ISODate | null } | null; error: string | null }): Promise<void>;
+  saveStatus(bankAccountId: string, status: SyncStatus): Promise<void>;
 };
+
+export type BankBalance = { cents: number; date: ISODate | null };
+
+/** `balance`: booked balance; `available`: what can be spent, pending card payments included. */
+export type SyncStatus = { syncedAt: Date; balance: BankBalance | null; available?: BankBalance | null; error: string | null };
 
 export type SyncCounts = { inserted: number; reconciled: number; review: number; skipped: number };
 
@@ -69,14 +74,17 @@ export function countDecisions(decisions: Decision[]): SyncCounts {
 }
 
 /** Decision counts plus what the bank returned, for the worker log. */
-export type SyncResult = SyncCounts & { from: ISODate; fetched: number; balances: number };
+export type SyncResult = SyncCounts & { from: ISODate; fetched: number; balances: number; balanceTypes: string[] };
 
 export type SyncPlan = {
   from: ISODate;
   decisions: Decision[];
-  balance: { cents: number; date: ISODate | null } | null;
+  balance: BankBalance | null;
+  available: BankBalance | null;
   fetched: number;
   balances: number;
+  /** Balance types offered by the bank, logged to tell booked from available ones. */
+  balanceTypes: string[];
 };
 
 /** Reads the bank and decides what each movement does, without writing anything. */
@@ -92,13 +100,21 @@ export async function planSync(target: SyncTarget, client: SyncClient, store: Pi
   const matched = matchMovements(movements, candidates, reviewRefs);
   const hints = matched.some((d) => d.type === "insert") && store.loadCategoryHints ? await store.loadCategoryHints(target) : null;
   const decisions = hints ? withMatchedCategories(matched, hints) : matched;
-  const picked = pickBalance(balances);
-  return { from, decisions, balance: picked && { cents: picked.cents, date: picked.date }, fetched: items.length, balances: balances.length };
+  const { booked, available } = pickBalances(balances);
+  return {
+    from,
+    decisions,
+    balance: booked && { cents: booked.cents, date: booked.date },
+    available: available && { cents: available.cents, date: available.date },
+    fetched: items.length,
+    balances: balances.length,
+    balanceTypes: balances.map((b) => b.balance_type ?? "?"),
+  };
 }
 
 export async function syncBankAccount(target: SyncTarget, client: SyncClient, store: SyncStore, now: Date): Promise<SyncResult> {
   const plan = await planSync(target, client, store);
   await store.apply(target, plan.decisions);
-  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: plan.balance, error: null });
-  return { ...countDecisions(plan.decisions), from: plan.from, fetched: plan.fetched, balances: plan.balances };
+  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: plan.balance, available: plan.available, error: null });
+  return { ...countDecisions(plan.decisions), from: plan.from, fetched: plan.fetched, balances: plan.balances, balanceTypes: plan.balanceTypes };
 }

@@ -9,6 +9,8 @@ export type BankConnectionAccount = {
   /** Last balance reported by the bank (check only: MonetIO's balance is never overwritten). */
   bankBalanceCents: number | null;
   bankBalanceOn: string | null;
+  /** Spendable balance: also counts card payments the bank has not booked yet. */
+  bankAvailableCents: number | null;
   lastSyncedAt: string | null;
   lastError: string | null;
   /** Null while the first-sync preview waits for the owner's confirmation. */
@@ -44,6 +46,7 @@ type Row = {
         account_id: string | null;
         bank_balance_cents?: number | string | null;
         bank_balance_on?: string | null;
+        bank_available_cents?: number | string | null;
         last_synced_at?: string | null;
         last_error?: string | null;
         sync_confirmed_at?: string | null;
@@ -70,6 +73,7 @@ export function mapBankConnection(row: Row): BankConnection {
       accountId: a.account_id,
       bankBalanceCents: a.bank_balance_cents == null ? null : Number(a.bank_balance_cents),
       bankBalanceOn: a.bank_balance_on ?? null,
+      bankAvailableCents: a.bank_available_cents == null ? null : Number(a.bank_available_cents),
       lastSyncedAt: a.last_synced_at ?? null,
       lastError: a.last_error ?? null,
       syncConfirmedAt: a.sync_confirmed_at ?? null,
@@ -109,4 +113,34 @@ export function awaitsPreview(account: Pick<BankConnectionAccount, "accountId" |
 /** Bank balance minus MonetIO balance; null when either is unknown. Zero means aligned. */
 export function balanceGap(bankCents: number | null, monetioCents: number | null | undefined): number | null {
   return bankCents == null || monetioCents == null ? null : bankCents - monetioCents;
+}
+
+export type BankBalanceView = {
+  /** Booked balance from the bank or, when it offers none, MonetIO's (booked movements only). */
+  currentCents: number | null;
+  availableCents: number | null;
+  /** Available minus current: card payments and holds not booked yet; null or 0 when none. */
+  pendingCents: number | null;
+  /** Bank booked balance minus MonetIO's: a real mismatch; null when the bank offers no booked balance. */
+  gapCents: number | null;
+};
+
+/** Current and available balance as banks show them, with what explains their difference. */
+export function bankBalanceView(
+  account: Pick<BankConnectionAccount, "bankBalanceCents" | "bankAvailableCents">,
+  monetioCents: number | null | undefined,
+): BankBalanceView {
+  const currentCents = account.bankBalanceCents ?? monetioCents ?? null;
+  const availableCents = account.bankAvailableCents;
+  return {
+    currentCents,
+    availableCents,
+    pendingCents: currentCents == null || availableCents == null ? null : availableCents - currentCents,
+    gapCents: balanceGap(account.bankBalanceCents, monetioCents),
+  };
+}
+
+/** Bank accounts feeding a MonetIO account, with the consent they belong to. */
+export function bankAccountsFor(connections: BankConnection[], accountId: string): { connection: BankConnection; account: BankConnectionAccount }[] {
+  return connections.flatMap((connection) => connection.accounts.filter((a) => a.accountId === accountId).map((account) => ({ connection, account })));
 }
