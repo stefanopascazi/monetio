@@ -55,6 +55,35 @@ describe("assessReliability", () => {
   });
 });
 
+describe("bank-linked accounts", () => {
+  const thin = { ...good, lastBookedOn: "2026-10-01", historyMonths: 1 };
+
+  it("asks no history or freshness of an account the bank keeps in sync", () => {
+    const r = assessReliability([{ ...thin, bank: "synced" }], TODAY);
+    expect(r.suggestions).toEqual([]);
+    expect(r.accounts[0]).toMatchObject({ score: 100, bankSynced: true });
+  });
+
+  it("asks to renew an expired consent instead of an import, even with recent data", () => {
+    const r = assessReliability([{ ...thin, bank: "expired" }], TODAY);
+    expect(r.suggestions.map((s) => [s.kind, s.gain, s.href])).toEqual([
+      ["stale", 40, "/dati/banche"],
+      ["history", 20, "/dati/importa"],
+    ]);
+    expect(r.suggestions[0].message).toBe("Rinnova il collegamento bancario di Cointestato: ultimo movimento 41 giorni fa");
+    const fresh = assessReliability([{ ...good, bank: "expired" }], TODAY);
+    expect(fresh.suggestions).toMatchObject([{ kind: "stale", gain: 10 }]);
+    expect(fresh.accounts[0].bankSynced).toBe(false);
+  });
+
+  it("points a failing sync to the account's bank section", () => {
+    const r = assessReliability([{ ...good, bank: "failing" }], TODAY);
+    expect(r.suggestions).toEqual([
+      { kind: "stale", accountId: "a", gain: 10, href: "/conti/a?sezione=banca", message: "Sincronizzazione di Cointestato non riuscita: controlla il collegamento" },
+    ]);
+  });
+});
+
 describe("missing rules and quiet accounts", () => {
   it("names the recurring expenses to turn into rules", () => {
     const rules: MissingRule[] = [

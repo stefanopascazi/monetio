@@ -27,6 +27,11 @@ describe("ReliabilityNote", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("says which accounts the bank keeps in sync", () => {
+    render(<ReliabilityNote data={{ score: 100, level: "high", accounts: [{ accountId: "b", name: "Conto BCC", score: 100, level: "high", bankSynced: true }], suggestions: [] }} seriesId="all" />);
+    expect(screen.getByText("Movimenti sincronizzati dalla banca: Conto BCC.")).toBeInTheDocument();
+  });
+
   it("follows the selected account", () => {
     render(<ReliabilityNote data={{ score: 90, level: "high", accounts, suggestions: [tip] }} seriesId="a" />);
     expect(screen.getByRole("button", { name: /Affidabilità bassa · 40\/100/ })).toBeInTheDocument();

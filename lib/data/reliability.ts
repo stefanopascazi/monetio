@@ -6,9 +6,10 @@ import { assessReliability, type Reliability, type UncertaintyBand } from "../do
 import { detectRecurring } from "../import/recurring";
 import { createClient } from "../supabase/server";
 import { loadAgenda } from "./agenda";
+import { getContext } from "./context";
 import { accountHistory, accountRules } from "./import-db";
 import { listAccounts, listFlows, listLastBookedDates } from "./queries";
-import { accountFacts, HISTORY_WINDOW } from "./reliability-facts";
+import { accountFacts, type BankLinkRow, bankLinkState, HISTORY_WINDOW } from "./reliability-facts";
 import { touchesVisible } from "./rule-visibility";
 
 export interface ReliabilityView extends Reliability {
@@ -25,11 +26,15 @@ export const loadReliability = cache(async (): Promise<ReliabilityView> => {
   const visible = new Set(ids);
   const rules = agenda.rules.filter((r) => touchesVisible(r, visible));
   const contributions = agenda.contributions.filter((c) => visible.has(c.fromAccountId) || visible.has(c.toAccountId));
-  const supabase = await createClient();
+  const [supabase, { householdId }] = await Promise.all([createClient(), getContext()]);
 
-  const [flows, lastBooked, missing] = await Promise.all([
+  const [flows, lastBooked, links, missing] = await Promise.all([
     listFlows(startOfMonth(addMonthsToKey(monthKey(today), -(HISTORY_WINDOW - 1)))),
     listLastBookedDates(ids),
+    supabase.rpc("bank_link_states", { p_household: householdId }).then(({ data, error }) => {
+      if (error) throw error;
+      return (data ?? []) as BankLinkRow[];
+    }),
     // Same detection the import uses to propose rules, run on each account's last 13 months.
     Promise.all(
       ids.map(async (id) => {
@@ -51,6 +56,7 @@ export const loadReliability = cache(async (): Promise<ReliabilityView> => {
     due: agenda.due,
     estimateRuleIds: new Set(rules.filter((r) => r.schedule === "estimate").map((r) => r.id)),
     missingRules: Object.fromEntries(missing),
+    bankLinks: Object.fromEntries(links.map((l) => [l.account_id, bankLinkState(l, new Date())])),
   });
   const reliability = assessReliability(facts, today);
   const levels = new Map(reliability.accounts.map((a) => [a.accountId, a.level]));

@@ -5,6 +5,12 @@ import type { ISODate, RuleFrequency } from "./types";
 
 export type ReliabilityLevel = "high" | "medium" | "low";
 
+/**
+ * How the bank feeds an account: "synced" (consent valid, recent successful sync), "expired" (consent
+ * ended) or "failing" (sync erroring or stuck). Null for accounts kept by hand.
+ */
+export type BankLinkState = "synced" | "expired" | "failing";
+
 /** What the app knows about one account's data quality. */
 export interface AccountFacts {
   accountId: string;
@@ -28,6 +34,8 @@ export interface AccountFacts {
    * coverage do not apply, and it stays out of the household average.
    */
   quiet: boolean;
+  /** Bank link of the account, null or absent when it is kept by hand. */
+  bank?: BankLinkState | null;
 }
 
 /** Recurring expense found in the movements with no rule covering it. */
@@ -55,6 +63,8 @@ export interface AccountReliability {
   name: string;
   score: number;
   level: ReliabilityLevel;
+  /** Movements come from the bank: no history or freshness to ask for. */
+  bankSynced?: boolean;
 }
 
 export interface Reliability {
@@ -74,6 +84,8 @@ const plural = (n: number, one: string, many: string) => (n === 1 ? one : many.r
 
 const EUR = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
 const EVERY: Partial<Record<RuleFrequency, string>> = { weekly: "a settimana", monthly: "al mese", bimonthly: "ogni 2 mesi", quarterly: "ogni 3 mesi", yearly: "all'anno" };
+/** Points lost by a bank link that stopped feeding the account, even while its data is still recent. */
+const BANK_MIN_PENALTY = 10;
 /** Names shown in one suggestion; the rest are counted. */
 const MAX_NAMED = 3;
 
@@ -94,16 +106,17 @@ function penalties(f: AccountFacts, today: ISODate): ReliabilitySuggestion[] {
   add("estimates", Math.min(10, 5 * f.openEstimates), `${plural(f.openEstimates, "1 stima aperta", "# stime aperte")} su ${f.name}: registra la spesa o chiudila`, account);
   if (f.quiet) return out;
 
-  const age = f.lastBookedOn ? daysBetween(f.lastBookedOn, today) : null;
-  const stale = age === null || age > 30 ? 40 : age > 14 ? 25 : age > 7 ? 10 : 0;
-  add(
-    "stale",
-    stale,
-    age === null ? `Aggiorna ${f.name}: nessun movimento registrato` : `Aggiorna ${f.name}: ultimo movimento ${plural(age, "ieri", "# giorni fa")}`,
-    "/dati/importa",
-  );
+  // A synced bank keeps the account complete and fresh on its own.
+  if (f.bank !== "synced") {
+    const age = f.lastBookedOn ? daysBetween(f.lastBookedOn, today) : null;
+    const stale = age === null || age > 30 ? 40 : age > 14 ? 25 : age > 7 ? 10 : 0;
+    const last = age === null ? "nessun movimento registrato" : `ultimo movimento ${plural(age, "ieri", "# giorni fa")}`;
+    if (f.bank === "expired") add("stale", Math.max(BANK_MIN_PENALTY, stale), `Rinnova il collegamento bancario di ${f.name}: ${last}`, "/dati/banche");
+    else if (f.bank === "failing") add("stale", Math.max(BANK_MIN_PENALTY, stale), `Sincronizzazione di ${f.name} non riuscita: controlla il collegamento`, `${account}?sezione=banca`);
+    else add("stale", stale, `Aggiorna ${f.name}: ${last}`, "/dati/importa");
 
-  add("history", f.historyMonths >= 6 ? 0 : f.historyMonths >= 3 ? 10 : 20, `Importa lo storico di ${f.name}: ${plural(f.historyMonths, "1 mese", "# mesi")} di movimenti su 6 consigliati`, "/dati/importa");
+    add("history", f.historyMonths >= 6 ? 0 : f.historyMonths >= 3 ? 10 : 20, `Importa lo storico di ${f.name}: ${plural(f.historyMonths, "1 mese", "# mesi")} di movimenti su 6 consigliati`, "/dati/importa");
+  }
 
   if (f.avgMonthlyExpenseCents > 0) {
     const coverage = Math.min(1, f.declaredMonthlyExpenseCents / f.avgMonthlyExpenseCents);
@@ -127,7 +140,7 @@ export function assessReliability(facts: AccountFacts[], today: ISODate): Reliab
     const own = penalties(f, today);
     suggestions.push(...own);
     const score = Math.max(0, 100 - own.reduce((s, p) => s + p.gain, 0));
-    return { accountId: f.accountId, name: f.name, score, level: levelOf(score) };
+    return { accountId: f.accountId, name: f.name, score, level: levelOf(score), bankSynced: f.bank === "synced" };
   });
   const counted = accounts.filter((_, i) => !facts[i].quiet);
   const pool = counted.length ? counted : accounts;

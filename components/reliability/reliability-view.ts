@@ -3,8 +3,17 @@ import type { Reliability, ReliabilityLevel, ReliabilitySuggestion } from "@/lib
 
 export type ReliabilityData = Pick<Reliability, "score" | "level" | "accounts" | "suggestions">;
 
-export function reliabilityFor(data: ReliabilityData, seriesId: string): { level: ReliabilityLevel; score: number; suggestions: ReliabilitySuggestion[] } {
+export interface SeriesReliability {
+  level: ReliabilityLevel;
+  score: number;
+  suggestions: ReliabilitySuggestion[];
+  /** Names of the accounts whose movements come from the bank. */
+  bankSynced: string[];
+}
+
+export function reliabilityFor(data: ReliabilityData, seriesId: string): SeriesReliability {
   const account = data.accounts.find((a) => a.accountId === seriesId);
-  if (!account) return { level: data.level, score: data.score, suggestions: data.suggestions };
-  return { level: account.level, score: account.score, suggestions: data.suggestions.filter((s) => s.accountId === seriesId) };
+  const synced = (account ? [account] : data.accounts).filter((a) => a.bankSynced).map((a) => a.name);
+  if (!account) return { level: data.level, score: data.score, suggestions: data.suggestions, bankSynced: synced };
+  return { level: account.level, score: account.score, suggestions: data.suggestions.filter((s) => s.accountId === seriesId), bankSynced: synced };
 }
