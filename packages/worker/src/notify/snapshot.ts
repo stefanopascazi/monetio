@@ -159,8 +159,10 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
     const consents = await rows(
       tx`select json_agg(c) as rows from (select id, aspsp_name, valid_until, status from bank_connections where household_id = ${hh} and user_id = ${r.userId}) c`,
     );
-    const [reviews] = await tx<{ count: number; latest: Date | null }[]>`
-      select count(*)::int as count, max(created_at) as latest from bank_sync_reviews where household_id = ${hh} and resolved_at is null`;
+    const [reviews] = await tx<{ count: number; latest: Date | null; latest_account: string | null }[]>`
+      select count(*)::int as count, max(created_at) as latest,
+             (array_agg(account_id order by created_at desc))[1] as latest_account
+      from bank_sync_reviews where household_id = ${hh} and resolved_at is null`;
 
     return {
       userId: r.userId,
@@ -172,7 +174,11 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
       lastBooked,
       bank: {
         consents: consents.map((c) => ({ id: String(c.id), bankName: String(c.aspsp_name), validUntil: String(c.valid_until), status: String(c.status) })),
-        openReviews: { count: reviews?.count ?? 0, latestAt: reviews?.latest ? new Date(reviews.latest).toISOString() : null },
+        openReviews: {
+          count: reviews?.count ?? 0,
+          latestAt: reviews?.latest ? new Date(reviews.latest).toISOString() : null,
+          latestAccountId: reviews?.latest_account ?? null,
+        },
       },
     };
   });

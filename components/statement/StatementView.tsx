@@ -5,6 +5,9 @@ import { RememberAccount } from "@/components/accounts/RememberAccount";
 import { SwipeArea } from "@/components/accounts/SwipeArea";
 import { StreamBlock } from "@/components/common/StreamBlock";
 import { TopBarAction } from "@/components/shell/TopBarAction";
+import { bankAccountsFor } from "@/lib/banking/connections";
+import { listMyBankConnections } from "@/lib/data/bank-connections";
+import { listOpenBankReviews } from "@/lib/data/bank-reviews";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
 import { recapMonth } from "@/lib/data/recap-month";
@@ -25,11 +28,14 @@ import { UncategorisedCard } from "./sections/UncategorisedCard";
  * New movements come from the top bar "+".
  */
 export async function StatementView({ id, searchParams }: { id: string; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [ctx, accounts, sp] = await Promise.all([getContext(), listAccounts(), searchParams]);
+  const [ctx, accounts, sp, connections, reviews] = await Promise.all([getContext(), listAccounts(), searchParams, listMyBankConnections(), listOpenBankReviews()]);
   const account = accounts.find((a) => a.id === id);
   if (!account) notFound();
 
   const today = todayISO();
+  // "Banca" tab: the viewer's own bank feeds this account, or another member's left movements to review.
+  const toReview = reviews.filter((r) => r.accountId === id).length;
+  const hasBank = toReview > 0 || bankAccountsFor(connections, id).length > 0;
   const period = statementPeriod(sp, today, account.openingDate);
   // Chart year follows the selected period; the latest rows show the current year.
   const year = Number((period.kind === "recent" ? today : period.to).slice(0, 4));
@@ -45,20 +51,13 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
       <TopBarAction>
         <AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />
       </TopBarAction>
-      <SwipeArea prevHref={prevHref} nextHref={nextHref} className="flex flex-col gap-4">
-        {/* Bank movements needing a choice come first, in every pane. */}
-        <Suspense fallback={null}>
-          <AccountBankReviews accountId={id} />
-        </Suspense>
+      <SwipeArea prevHref={prevHref} nextHref={nextHref}>
         <AccountPanes
           side={
             <>
               <StreamBlock height={160}>
                 <MonthRecapCard accountId={id} balanceCents={account.balanceCents} today={today} month={recapMonth(sp.proiezione, today)} sp={sp} />
               </StreamBlock>
-              <Suspense fallback={null}>
-                <AccountBankCard accountId={id} balanceCents={account.balanceCents} today={today} />
-              </Suspense>
               <Suspense fallback={null}>
                 <BalanceHistoryCard accountId={id} accountName={account.name} year={year} />
               </Suspense>
@@ -69,6 +68,18 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
               <StatementCard accountId={id} openingDate={account.openingDate} period={period} today={today} />
             </StreamBlock>
           }
+          bank={
+            hasBank ? (
+              <StreamBlock height={240}>
+                <div className="flex flex-col gap-4">
+                  <AccountBankReviews accountId={id} />
+                  <AccountBankCard accountId={id} balanceCents={account.balanceCents} today={today} />
+                </div>
+              </StreamBlock>
+            ) : undefined
+          }
+          bankCount={toReview}
+          openBank={sp.sezione === "banca"}
           uncategorised={
             <StreamBlock height={240}>
               <UncategorisedCard accountId={id} />
