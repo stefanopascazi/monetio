@@ -74,7 +74,7 @@ First login: `npm run db:import -- spese.xlsx --ste-email you@example.com` (opti
 `db:migrate`, `db:import` and `auth:invite` read `.env.local` only for variables not already set, never on Vercel
 (the project variables point them at the production database) and never with an explicit env file.
 
-Production migrations run in the Vercel build (`buildCommand` in `vercel.json`: tests on previews only, build, then `db:migrate`). Production skips tests: it only deploys merged PRs whose preview already passed them.
+Deploys go through GitHub Actions (`.github/workflows/app.yml`, #123): tests on every push, then a Vercel deploy only if they pass (preview for branches, production for `main`). Git deployments are off in `vercel.json`. Production migrations run in the Vercel build (`buildCommand`: build, then `db:migrate`). Secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 Preview deployments share the production database, so `db:migrate` skips them; concurrent runs wait on an advisory lock.
 
 Other stack scripts: `stack:up` (full stack with app and cron), `stack:down`.
