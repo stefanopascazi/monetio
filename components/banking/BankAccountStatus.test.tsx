@@ -15,6 +15,7 @@ const account: BankConnectionAccount = {
   lastError: null,
   syncConfirmedAt: "2026-11-18T13:19:58Z",
   syncFrom: "2026-11-01",
+  syncSlots: null,
 };
 const now = new Date("2026-11-20T08:00:00Z");
 
@@ -24,6 +25,12 @@ describe("BankAccountStatus", () => {
     expect(screen.getByText(/Saldo banca/)).toBeInTheDocument();
     expect(screen.getByText(/Differenza/)).toBeInTheDocument();
     expect(screen.getByText(/Ultimo aggiornamento 18 nov.* · Prossimo oggi alle 12:00/)).toBeInTheDocument();
+  });
+
+  it("shows the bank's daily limit and the next allowed sync", () => {
+    render(<BankAccountStatus account={{ ...account, syncSlots: 2 }} monetioBalanceCents={3214} now={now} />);
+    expect(screen.getByText(/Prossimo oggi alle 18:00/)).toBeInTheDocument();
+    expect(screen.getByText("La banca consente 2 aggiornamenti al giorno.")).toBeInTheDocument();
   });
 
   it("marks aligned balances", () => {

@@ -47,6 +47,7 @@ describe("mapBankConnection", () => {
           lastError: null,
           syncConfirmedAt: "2026-11-18T13:19:58Z",
           syncFrom: "2026-11-01",
+          syncSlots: null,
         },
       ],
     });

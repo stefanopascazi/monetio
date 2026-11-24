@@ -34,6 +34,7 @@ const base: BankConnection = {
       lastError: null,
       syncConfirmedAt: null,
       syncFrom: null,
+      syncSlots: null,
     },
   ],
 };
