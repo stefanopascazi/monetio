@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backupKeys } from "./keys.ts";
+import { backupKeys, manualKey } from "./keys.ts";
 
 describe("backupKeys", () => {
   it("names a weekday backup under daily/ only", () => {
@@ -20,5 +20,11 @@ describe("backupKeys", () => {
 
   it("adds both copies when the 1st is a Sunday", () => {
     expect(backupKeys(new Date("2026-11-01T01:00:00Z")).copies).toHaveLength(2);
+  });
+});
+
+describe("manualKey", () => {
+  it("names an on-demand backup under manual/, to the minute", () => {
+    expect(manualKey(new Date("2026-11-24T15:42:10.123Z"))).toBe("manual/monetio-2026-11-24T1542Z.dump.zst.age");
   });
 });

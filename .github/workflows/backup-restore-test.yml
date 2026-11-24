@@ -3,12 +3,24 @@
 # Required (environment "backup"): secrets BACKUP_AGE_IDENTITY, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID,
 # R2_SECRET_ACCESS_KEY (read-only token is enough); optional HEALTHCHECK_URL_RESTORE_TEST.
 # Variable BACKUP_REMOTE (e.g. r2:monetio-backups) at repository level.
+# The sysadmin console (#105) dispatches it with a chosen backup and a ref that names the run; it reads
+# the RESTORE_REPORT line from the job log. The restore target is always the throwaway local stack.
 name: backup-restore-test
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('restore-drill {0}', inputs.ref) || 'backup-restore-test' }}
 
 on:
   schedule:
     - cron: "0 6 3 * *"
   workflow_dispatch:
+    inputs:
+      backup:
+        description: "Backup: latest, AAAA-MM-GG o chiave (es. manual/monetio-....dump.zst.age)"
+        required: false
+        default: latest
+      ref:
+        description: "Riferimento della richiesta dalla console"
+        required: false
+        default: manual
 
 jobs:
   restore:
@@ -28,6 +40,9 @@ jobs:
       # Local stack defaults from docker-compose.dev.yml (throwaway, never exposed).
       POSTGRES_URL_NON_POOLING: postgres://postgres:monetio-local-password@localhost:54322/postgres?sslmode=disable
       HC_URL: ${{ secrets.HEALTHCHECK_URL_RESTORE_TEST }}
+      # Inputs reach the shell as env values only, never interpolated into the script.
+      RESTORE_BACKUP: ${{ inputs.backup || 'latest' }}
+      SCHEDULED: ${{ github.event_name == 'schedule' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,11 +61,20 @@ jobs:
         run: docker compose -f docker-compose.dev.yml up -d --wait db auth
       - name: Restore and verify
         run: |
-          [ -z "$HC_URL" ] || curl -fsS -m 10 "$HC_URL/start" || true
-          npm run db:restore -- --backup latest --max-age-hours 48 --yes
+          case "$RESTORE_BACKUP" in
+            latest|[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]|daily/*|weekly/*|monthly/*|manual/*) ;;
+            *) echo "Backup non valido: $RESTORE_BACKUP"; exit 1 ;;
+          esac
+          if [ "$SCHEDULED" = "true" ]; then
+            [ -z "$HC_URL" ] || curl -fsS -m 10 "$HC_URL/start" || true
+            npm run db:restore -- --backup latest --max-age-hours 48 --yes --report
+          else
+            npm run db:restore -- --backup "$RESTORE_BACKUP" --yes --report
+          fi
+      # Healthchecks.io tracks the monthly drill only: console drills must not move its schedule.
       - name: Report success
-        if: success()
+        if: success() && github.event_name == 'schedule'
         run: '[ -z "$HC_URL" ] || curl -fsS -m 10 "$HC_URL" || true'
       - name: Report failure
-        if: failure()
+        if: failure() && github.event_name == 'schedule'
         run: '[ -z "$HC_URL" ] || curl -fsS -m 10 "$HC_URL/fail" || true'

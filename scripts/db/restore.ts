@@ -1,5 +1,6 @@
 // Restores a database backup made by the worker (#48) into a Supabase database (#108).
-// Usage: npm run db:restore -- --list | --backup <latest|YYYY-MM-DD|key> | --file <path> [--identity <file>] [--reset] [--yes]
+// Usage: npm run db:restore -- --list | --backup <latest|YYYY-MM-DD|key> | --file <path> [--identity <file>] [--reset] [--yes] [--report]
+// --report prints a final RESTORE_REPORT line (restore/report.ts) for the sysadmin console.
 // Target: POSTGRES_URL_NON_POOLING (local stack by default; production via scripts/dev/with-env.ts .env.prod).
 // Needs pg_restore/psql 18 (at least the pg_dump version on the VPS), age, zstd and rclone: on Windows run it in Docker (see docs/restore.md).
 import "./load-local-env.ts";
@@ -19,12 +20,18 @@ import { loadScript, qualified } from "./restore/load-script.ts";
 import { parseMigrationRows, planMigrations } from "./restore/migrations.ts";
 import { copyRowCount, dataEntries, dumpedSequences, dumpedTables, restoreList, SKIPPED_TABLES, stripUnsupportedSettings, withoutObjects } from "./restore/toc.ts";
 import { inspectTarget, publicTables, verifyRestore, wipePublic } from "./restore/target.ts";
+import { emptyReport, reportLine } from "./restore/report.ts";
 import { capture } from "./restore/tools.ts";
+
+const report = emptyReport();
+let wantsReport = false;
 
 // Operator-facing failures: message only, no stack trace (cleanup in the finally blocks still runs first).
 const fail = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
   console.error(`
-Errore: ${error instanceof Error ? error.message : String(error)}`);
+Errore: ${message}`);
+  if (wantsReport) console.log(reportLine({ ...report, ok: false, error: message }));
   process.exit(1);
 };
 process.on("uncaughtException", fail);
@@ -39,8 +46,10 @@ const { values } = parseArgs({
     reset: { type: "boolean" },
     yes: { type: "boolean" },
     "max-age-hours": { type: "string" },
+    report: { type: "boolean" },
   },
 });
+wantsReport = !!values.report;
 const options = parseRestoreArgs(values);
 const rclone = (...args: string[]): PipelineStep => ({ cmd: "rclone", args: ["--config", "", ...args] });
 
@@ -82,11 +91,13 @@ async function fetchDump(): Promise<string> {
     const backup = pickBackup(await listBackups(), options.source);
     const age = backupAgeHours(backup, new Date());
     console.log(`Backup: ${backup.key} (${age} ore fa)`);
+    report.backup = backup.key;
     if (options.maxAgeHours && age > options.maxAgeHours) throw new Error(`Il backup ha ${age} ore (massimo ${options.maxAgeHours})`);
     await runPipeline([rclone("cat", `${remote()}/${backup.key}`), decrypt(), unzstd], ac.signal);
     return dump;
   }
   console.log(`Backup: ${options.source}`);
+  report.backup = options.source;
   const format = fileFormat(options.source);
   if (format === "dump") return options.source;
   if (format === "zstd") await runPipeline([{ cmd: "zstd", args: ["-d", "-q", "-o", dump, options.source] }], ac.signal);
@@ -121,6 +132,8 @@ try {
   );
   const plan = planMigrations(readdirSync(MIGRATIONS_DIR), backupMigrations);
   console.log(`Migration nel backup: ${plan.before.length} (ultima ${plan.before.at(-1)}), da applicare dopo: ${plan.after.length}`);
+  report.lastMigration = plan.before.at(-1) ?? null;
+  report.migrationsAfter = plan.after.length;
 
   const target = await inspectTarget(sql);
   if (!target.authTables.includes("users")) throw new Error("Lo schema auth di destinazione non esiste: serve un progetto Supabase (o lo stack locale) con GoTrue avviato");
@@ -174,6 +187,7 @@ try {
   if (summary.memberCheck === false) throw new Error("Controllo fallito: un membro non vede il proprio nucleo (permessi o RLS)");
   if (summary.memberCheck === null) console.warn("Nessun membro collegato a un utente: controllo RLS saltato");
   console.log("Ripristino completato.");
+  if (wantsReport) console.log(reportLine({ ...report, ok: true }));
 } finally {
   ac.abort();
   await sql.end();
