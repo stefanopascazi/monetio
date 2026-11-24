@@ -1,5 +1,6 @@
 import { Skeleton } from "@monetio/ui";
 import { loadMonthEndBalances } from "@/lib/data/agenda";
+import { loadBankBalances } from "@/lib/data/bank-balances";
 import { getContext } from "@/lib/data/context";
 import { listAccounts } from "@/lib/data/queries";
 import { AccountCarousel } from "./AccountCarousel";
@@ -7,7 +8,7 @@ import { accountMembers } from "./AccountGrid";
 
 /** Loads the accounts for the carousel; nothing when the household has none (the landing points to the top bar "+"). */
 export async function AccountCarouselSection() {
-  const [ctx, accounts, monthEnd] = await Promise.all([getContext(), listAccounts(), loadMonthEndBalances()]);
+  const [ctx, accounts, monthEnd, bank] = await Promise.all([getContext(), listAccounts(), loadMonthEndBalances(), loadBankBalances()]);
   if (!accounts.length) return null;
   const items = accounts.map((a) => ({
     id: a.id,
@@ -18,6 +19,7 @@ export async function AccountCarouselSection() {
     members: accountMembers(a, ctx.members),
     archived: a.archived,
     monthEndCents: a.archived ? undefined : monthEnd[a.id],
+    bank: a.archived ? undefined : bank[a.id],
   }));
   return <AccountCarousel accounts={items} />;
 }

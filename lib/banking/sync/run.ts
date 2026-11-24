@@ -1,11 +1,12 @@
 // One sync of one bank account: balance, booked movements since the last sync, matching, writes.
 // Network and database are injected: the worker provides them, tests fake them.
 import { addDays } from "../../domain/dates.ts";
+import type { PendingItem } from "../../domain/pending.ts";
 import type { ISODate } from "../../domain/types.ts";
 import type { BalanceResource, TransactionResource } from "../enable-banking/types.ts";
 import { type CategoryHints, withMatchedCategories } from "./categories.ts";
 import { type Candidate, type Decision, matchMovements, RULE_WINDOW_DAYS } from "./match.ts";
-import { normalizeTransactions, pickBalances } from "./normalize.ts";
+import { normalizePending, normalizeTransactions, pickBalances } from "./normalize.ts";
 
 export type SyncTarget = {
   bankAccountId: string;
@@ -38,7 +39,8 @@ export type SyncStore = {
 export type BankBalance = { cents: number; date: ISODate | null };
 
 /** `balance`: booked balance; `available`: what can be spent, pending card payments included. */
-export type SyncStatus = { syncedAt: Date; balance: BankBalance | null; available?: BankBalance | null; error: string | null };
+/** `pending`: movements the bank lists as not booked yet. */
+export type SyncStatus = { syncedAt: Date; balance: BankBalance | null; available?: BankBalance | null; pending?: PendingItem[]; error: string | null };
 
 export type SyncCounts = { inserted: number; reconciled: number; review: number; skipped: number };
 
@@ -74,13 +76,14 @@ export function countDecisions(decisions: Decision[]): SyncCounts {
 }
 
 /** Decision counts plus what the bank returned, for the worker log. */
-export type SyncResult = SyncCounts & { from: ISODate; fetched: number; balances: number; balanceTypes: string[] };
+export type SyncResult = SyncCounts & { from: ISODate; fetched: number; balances: number; balanceTypes: string[]; pending: number };
 
 export type SyncPlan = {
   from: ISODate;
   decisions: Decision[];
   balance: BankBalance | null;
   available: BankBalance | null;
+  pending: PendingItem[];
   fetched: number;
   balances: number;
   /** Balance types offered by the bank, logged to tell booked from available ones. */
@@ -92,9 +95,11 @@ export async function planSync(target: SyncTarget, client: SyncClient, store: Pi
   const from = syncFrom(target);
   const floor = syncFloor(target);
   const [balances, items] = await Promise.all([client.getBalances(target.uid), client.getTransactions(target.uid, from)]);
-  // Some banks return more than asked: the floor is enforced here too.
+  // Some banks return more than asked (Trade Republic: always the latest 100): older movements were
+  // settled by earlier syncs and fall outside the candidates loaded below.
+  const start = from > floor ? from : floor;
   const movements = normalizeTransactions(items)
-    .filter((m) => m.bookedOn >= floor)
+    .filter((m) => m.bookedOn >= start)
     .sort((a, b) => a.bookedOn.localeCompare(b.bookedOn));
   const { candidates, reviewRefs } = await store.loadExisting(target.accountId, addDays(from, -RULE_WINDOW_DAYS));
   const matched = matchMovements(movements, candidates, reviewRefs);
@@ -106,6 +111,7 @@ export async function planSync(target: SyncTarget, client: SyncClient, store: Pi
     decisions,
     balance: booked && { cents: booked.cents, date: booked.date },
     available: available && { cents: available.cents, date: available.date },
+    pending: normalizePending(items),
     fetched: items.length,
     balances: balances.length,
     balanceTypes: balances.map((b) => b.balance_type ?? "?"),
@@ -115,6 +121,6 @@ export async function planSync(target: SyncTarget, client: SyncClient, store: Pi
 export async function syncBankAccount(target: SyncTarget, client: SyncClient, store: SyncStore, now: Date): Promise<SyncResult> {
   const plan = await planSync(target, client, store);
   await store.apply(target, plan.decisions);
-  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: plan.balance, available: plan.available, error: null });
-  return { ...countDecisions(plan.decisions), from: plan.from, fetched: plan.fetched, balances: plan.balances, balanceTypes: plan.balanceTypes };
+  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: plan.balance, available: plan.available, pending: plan.pending, error: null });
+  return { ...countDecisions(plan.decisions), from: plan.from, fetched: plan.fetched, balances: plan.balances, balanceTypes: plan.balanceTypes, pending: plan.pending.length };
 }

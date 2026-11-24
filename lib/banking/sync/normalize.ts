@@ -1,5 +1,6 @@
 // Enable Banking records turned into MonetIO's shape: signed cents, a date, a readable description,
 // and a stable reference that makes every sync idempotent.
+import type { PendingItem } from "../../domain/pending.ts";
 import type { ISODate } from "../../domain/types.ts";
 import { normalizeIban } from "../identifiers.ts";
 import type { AmountType, BalanceResource, TransactionResource } from "../enable-banking/types.ts";
@@ -71,6 +72,23 @@ export function normalizeTransactions(items: TransactionResource[]): BankMovemen
   return out;
 }
 
+/** Most pending movements kept per account: enough for a few days of card payments. */
+export const MAX_PENDING = 50;
+
+/** Pending transactions (card payments, holds), newest first; the bank may change or drop them. */
+export function normalizePending(items: TransactionResource[]): PendingItem[] {
+  const out: PendingItem[] = [];
+  for (const t of items) {
+    if (t.status !== "PDNG") continue;
+    const date = t.transaction_date ?? t.value_date ?? t.booking_date;
+    const abs = toCents(t.transaction_amount?.amount ?? "");
+    if (!date || !ISO_DATE.test(date) || abs === null) continue;
+    const incoming = t.credit_debit_indicator === "CRDT";
+    out.push({ amountCents: incoming ? Math.abs(abs) : -Math.abs(abs), date: date.slice(0, 10) as ISODate, description: describe(t, incoming) });
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date)).slice(0, MAX_PENDING);
+}
+
 /** ISO 20022 booked balances, best first: movements already accounted for. */
 const BOOKED_TYPES = ["CLBD", "ITBD", "OPBD", "PRCD"];
 /** Available balances, best first: they include card payments and holds not booked yet. */
@@ -96,11 +114,12 @@ function firstOf(balances: BalanceResource[], types: string[]): PickedBalance | 
 }
 
 /**
- * Current (booked) and available balance offered by the bank. A balance of unknown type counts as
- * booked only when the bank offers no booked one.
+ * Current (booked) and available balance offered by the bank. A balance of unknown type (e.g. OTHR,
+ * Trade Republic's only one) counts as available when the bank offers no known available type:
+ * single-balance banks expose what can be spent, pending card payments included.
  */
 export function pickBalances(balances: BalanceResource[]): { booked: PickedBalance | null; available: PickedBalance | null } {
   const known = new Set([...BOOKED_TYPES, ...AVAILABLE_TYPES]);
   const unknown = balances.filter((b) => !known.has(b.balance_type ?? "")).map(parseBalance).find((b) => b !== null) ?? null;
-  return { booked: firstOf(balances, BOOKED_TYPES) ?? unknown, available: firstOf(balances, AVAILABLE_TYPES) };
+  return { booked: firstOf(balances, BOOKED_TYPES), available: firstOf(balances, AVAILABLE_TYPES) ?? unknown };
 }

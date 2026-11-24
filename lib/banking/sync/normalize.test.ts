@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TransactionResource } from "../enable-banking/types";
-import { normalizeTransactions, pickBalances, toCents } from "./normalize";
+import { MAX_PENDING, normalizePending, normalizeTransactions, pickBalances, toCents } from "./normalize";
 
 const txn = (over: Partial<TransactionResource>): TransactionResource => ({
   transaction_amount: { currency: "EUR", amount: "12.30" },
@@ -88,13 +88,38 @@ describe("pickBalances", () => {
     expect(pickBalances([{ balance_amount: eur("87.19"), balance_type: "CLAV" }])).toEqual({ booked: null, available: { cents: 8719, currency: "EUR", date: null } });
   });
 
-  it("uses an unknown type as booked only without a booked one", () => {
-    expect(pickBalances([{ balance_amount: eur("5"), balance_type: "OTHR" }]).booked).toEqual({ cents: 500, currency: "EUR", date: null });
-    expect(pickBalances([{ balance_amount: eur("5"), balance_type: "OTHR" }, { balance_amount: eur("6"), balance_type: "ITBD" }]).booked?.cents).toBe(600);
+  it("uses an unknown type as available only without a known available one", () => {
+    expect(pickBalances([{ balance_amount: eur("87.19"), balance_type: "OTHR" }])).toEqual({ booked: null, available: { cents: 8719, currency: "EUR", date: null } });
+    expect(
+      pickBalances([
+        { balance_amount: eur("1"), balance_type: "CLBD" },
+        { balance_amount: eur("2"), balance_type: "ITAV" },
+        { balance_amount: eur("3"), balance_type: "OTHR" },
+      ]),
+    ).toEqual({ booked: { cents: 100, currency: "EUR", date: null }, available: { cents: 200, currency: "EUR", date: null } });
   });
 
   it("returns nothing for no parsable balance", () => {
     expect(pickBalances([])).toEqual({ booked: null, available: null });
     expect(pickBalances([{ balance_amount: eur("x"), balance_type: "CLBD" }])).toEqual({ booked: null, available: null });
+  });
+});
+
+describe("normalizePending", () => {
+  it("keeps pending movements only, signed and dated, newest first", () => {
+    const out = normalizePending([
+      txn({ status: "BOOK", entry_reference: "b" }),
+      txn({ status: "PDNG", booking_date: null, transaction_date: "2026-11-23", creditor: { name: "Esselunga" }, transaction_amount: { currency: "EUR", amount: "10.00" } }),
+      txn({ status: "PDNG", booking_date: null, transaction_date: "2026-11-24", credit_debit_indicator: "CRDT", transaction_amount: { currency: "EUR", amount: "5" } }),
+    ]);
+    expect(out).toEqual([
+      { amountCents: 500, date: "2026-11-24", description: "Movimento bancario" },
+      { amountCents: -1000, date: "2026-11-23", description: "Esselunga" },
+    ]);
+  });
+
+  it("caps the list", () => {
+    const many = Array.from({ length: MAX_PENDING + 5 }, () => txn({ status: "PDNG" }));
+    expect(normalizePending(many)).toHaveLength(MAX_PENDING);
   });
 });

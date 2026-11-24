@@ -4,9 +4,12 @@
 import type { Sql, TransactionSql } from "postgres";
 import { addDays, endOfMonth, monthKey, startOfMonth } from "../../../../lib/domain/dates.ts";
 import type { EstimateMovement } from "../../../../lib/domain/estimates.ts";
+import { withPendingStart } from "../../../../lib/domain/pending.ts";
+import { mapBankConnection, projectionPending } from "../../../../lib/banking/connections.ts";
+import { createMatcher } from "../../../../lib/import/matches.ts";
 import type { OccurrenceOverride } from "../../../../lib/domain/types.ts";
 import { mapFlow } from "../../../../lib/data/flow-math.ts";
-import { attachFees, mapAccount, mapContribution, mapRule, mapTransaction } from "../../../../lib/data/mappers.ts";
+import { attachFees, mapAccount, mapCategory, mapContribution, mapRule, mapTransaction } from "../../../../lib/data/mappers.ts";
 import {
   type AccountWithBalance,
   buildAgenda,
@@ -144,6 +147,10 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
         }))
       : [];
     const projection = buildProjectionInput(agenda, { accounts, planned, monthFlows, estimateMovements }, 1);
+    // Same start as the app: pending bank money of the user's own consents (RLS), matched to what is expected.
+    const pending = await loadPending(tx, hh, accounts, new Date(`${today}T12:00:00Z`));
+    projection.input.balances = withPendingStart(projection.input.balances, pending.startCents);
+    projection.input.pending = pending.pending;
 
     const activeIds = projection.active.map((a) => a.id);
     const lastRows = activeIds.length
@@ -159,8 +166,10 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
     const consents = await rows(
       tx`select json_agg(c) as rows from (select id, aspsp_name, valid_until, status from bank_connections where household_id = ${hh} and user_id = ${r.userId}) c`,
     );
-    const [reviews] = await tx<{ count: number; latest: Date | null }[]>`
-      select count(*)::int as count, max(created_at) as latest from bank_sync_reviews where household_id = ${hh} and resolved_at is null`;
+    const [reviews] = await tx<{ count: number; latest: Date | null; latest_account: string | null }[]>`
+      select count(*)::int as count, max(created_at) as latest,
+             (array_agg(account_id order by created_at desc))[1] as latest_account
+      from bank_sync_reviews where household_id = ${hh} and resolved_at is null`;
 
     return {
       userId: r.userId,
@@ -172,8 +181,44 @@ export async function loadSnapshot(sql: Sql, r: Recipient, today: string): Promi
       lastBooked,
       bank: {
         consents: consents.map((c) => ({ id: String(c.id), bankName: String(c.aspsp_name), validUntil: String(c.valid_until), status: String(c.status) })),
-        openReviews: { count: reviews?.count ?? 0, latestAt: reviews?.latest ? new Date(reviews.latest).toISOString() : null },
+        openReviews: {
+          count: reviews?.count ?? 0,
+          latestAt: reviews?.latest ? new Date(reviews.latest).toISOString() : null,
+          latestAccountId: reviews?.latest_account ?? null,
+        },
       },
     };
   });
+}
+
+/** Pending bank money of the user's linked accounts, items categorised by the account's matches. */
+async function loadPending(tx: TransactionSql, hh: string, accounts: AccountWithBalance[], now: Date) {
+  const connections = (
+    await rows(
+      tx`select json_agg(c) as rows from (
+           select c.id, c.aspsp_name, c.valid_until, c.status, c.created_at, c.last_synced_at,
+                  (select json_agg(json_build_object('id', a.id, 'name', a.name, 'iban_masked', a.iban_masked, 'currency', a.currency,
+                          'account_id', a.account_id, 'bank_balance_cents', a.bank_balance_cents, 'bank_available_cents', a.bank_available_cents,
+                          'pending_movements', a.pending_movements, 'sync_confirmed_at', a.sync_confirmed_at))
+                   from bank_accounts a where a.connection_id = c.id) as bank_accounts
+           from bank_connections c where c.household_id = ${hh}) c`,
+    )
+  ).map((c) => mapBankConnection(c as Parameters<typeof mapBankConnection>[0]));
+  const monetio = Object.fromEntries(accounts.filter((a) => !a.archived).map((a) => [a.id, a.balanceCents]));
+  const listed = [...new Set(connections.flatMap((c) => c.accounts.filter((a) => a.accountId && a.pendingMovements?.length).map((a) => a.accountId as string)))];
+  if (!listed.length) return projectionPending(connections, monetio, () => null, now);
+  const categories = (await rows(tx`select json_agg(c) as rows from categories c where household_id = ${hh}`)).map(mapCategory);
+  const matchRows = await rows(
+    tx`select json_agg(m) as rows from (select account_id, description_key, direction, category_id from account_category_matches where account_id in ${tx(listed)}) m`,
+  );
+  const matchers = new Map(
+    listed.map((id) => [
+      id,
+      createMatcher(
+        matchRows.filter((m) => m.account_id === id).map((m) => ({ key: String(m.description_key), direction: Number(m.direction) as 1 | -1, categoryId: String(m.category_id) })),
+        categories,
+      ),
+    ]),
+  );
+  return projectionPending(connections, monetio, (accountId, item) => matchers.get(accountId)?.(item.description, item.amountCents) ?? null, now);
 }

@@ -43,4 +43,10 @@ describe("bankReviewEvents", () => {
     expect(e.body).toMatch(/^3 movimenti della banca aspettano/);
     expect(bankReviewEvents({ consents: [], openReviews: noReviews }, ctx)).toEqual([]);
   });
+
+  it("opens the Banca tab of the account with the newest item", () => {
+    const [e] = bankReviewEvents({ consents: [], openReviews: { count: 1, latestAt: "2026-11-18T05:00:00Z", latestAccountId: "acc1" } }, ctx);
+    expect(e.url).toBe("/conti/acc1?sezione=banca");
+    expect(bankReviewEvents({ consents: [], openReviews: { count: 1, latestAt: "2026-11-18T05:00:00Z" } }, ctx)[0].url).toBe("/conti");
+  });
 });
