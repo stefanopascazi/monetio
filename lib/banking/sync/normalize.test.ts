@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TransactionResource } from "../enable-banking/types";
-import { normalizeTransactions, pickBalance, toCents } from "./normalize";
+import { normalizeTransactions, pickBalances, toCents } from "./normalize";
 
 const txn = (over: Partial<TransactionResource>): TransactionResource => ({
   transaction_amount: { currency: "EUR", amount: "12.30" },
@@ -72,18 +72,29 @@ describe("normalizeTransactions", () => {
   });
 });
 
-describe("pickBalance", () => {
-  it("prefers the booked closing balance", () => {
+describe("pickBalances", () => {
+  const eur = (amount: string) => ({ currency: "EUR", amount });
+
+  it("splits the booked and the available balance", () => {
     expect(
-      pickBalance([
-        { balance_amount: { currency: "EUR", amount: "90.00" }, balance_type: "ITAV" },
-        { balance_amount: { currency: "EUR", amount: "100.50" }, balance_type: "CLBD", reference_date: "2026-11-17" },
+      pickBalances([
+        { balance_amount: eur("90.00"), balance_type: "ITAV" },
+        { balance_amount: eur("100.50"), balance_type: "CLBD", reference_date: "2026-11-17" },
       ]),
-    ).toEqual({ cents: 10050, currency: "EUR", date: "2026-11-17" });
+    ).toEqual({ booked: { cents: 10050, currency: "EUR", date: "2026-11-17" }, available: { cents: 9000, currency: "EUR", date: null } });
   });
 
-  it("falls back to any parsable balance and returns null when none", () => {
-    expect(pickBalance([{ balance_amount: { currency: "EUR", amount: "5" }, balance_type: "OTHR" }])).toEqual({ cents: 500, currency: "EUR", date: null });
-    expect(pickBalance([])).toBeNull();
+  it("leaves the booked balance empty when the bank offers only the available one", () => {
+    expect(pickBalances([{ balance_amount: eur("87.19"), balance_type: "CLAV" }])).toEqual({ booked: null, available: { cents: 8719, currency: "EUR", date: null } });
+  });
+
+  it("uses an unknown type as booked only without a booked one", () => {
+    expect(pickBalances([{ balance_amount: eur("5"), balance_type: "OTHR" }]).booked).toEqual({ cents: 500, currency: "EUR", date: null });
+    expect(pickBalances([{ balance_amount: eur("5"), balance_type: "OTHR" }, { balance_amount: eur("6"), balance_type: "ITBD" }]).booked?.cents).toBe(600);
+  });
+
+  it("returns nothing for no parsable balance", () => {
+    expect(pickBalances([])).toEqual({ booked: null, available: null });
+    expect(pickBalances([{ balance_amount: eur("x"), balance_type: "CLBD" }])).toEqual({ booked: null, available: null });
   });
 });

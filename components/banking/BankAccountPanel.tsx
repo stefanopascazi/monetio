@@ -14,7 +14,10 @@ type Props = {
   account: BankConnectionAccount;
   /** Consent no longer valid: no preview, status only. */
   expired: boolean;
-  accountOptions: SelectOption[];
+  /** Choice of the MonetIO account to feed; omitted on the account page, where it is fixed. */
+  accountOptions?: SelectOption[];
+  /** Card title; defaults to the bank account name. */
+  title?: string;
   monetioBalanceCents?: number;
   /** Default start of a first-sync preview. */
   defaultFrom: string;
@@ -25,11 +28,11 @@ type Props = {
 };
 
 /** One account shared by the bank: the MonetIO account it feeds, its sync and its history. */
-export function BankAccountPanel({ account: a, expired, accountOptions, monetioBalanceCents, defaultFrom, batches, categories, today, now }: Props) {
+export function BankAccountPanel({ account: a, expired, accountOptions, title, monetioBalanceCents, defaultFrom, batches, categories, today, now }: Props) {
   return (
-    <Card title={a.name ?? "Conto"} subtitle={a.ibanMasked && <span className="font-mono">{a.ibanMasked}</span>} tone="raised">
+    <Card title={title ?? a.name ?? "Conto"} subtitle={a.ibanMasked && <span className="font-mono">{a.ibanMasked}</span>} tone="raised">
       <div className="flex flex-col gap-4 text-sm">
-        <BankAccountLinkSelect bankAccountId={a.id} accountId={a.accountId} options={accountOptions} />
+        {accountOptions && <BankAccountLinkSelect bankAccountId={a.id} accountId={a.accountId} options={accountOptions} />}
         {a.accountId &&
           (awaitsPreview(a) && !expired ? (
             <BankSyncPreview key={a.accountId} bankAccountId={a.id} defaultFrom={defaultFrom} today={today} categories={categories} />

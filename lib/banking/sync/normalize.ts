@@ -71,21 +71,36 @@ export function normalizeTransactions(items: TransactionResource[]): BankMovemen
   return out;
 }
 
-const BALANCE_PREFERENCE = ["CLBD", "ITBD", "ITAV", "CLAV", "XPCD"];
+/** ISO 20022 booked balances, best first: movements already accounted for. */
+const BOOKED_TYPES = ["CLBD", "ITBD", "OPBD", "PRCD"];
+/** Available balances, best first: they include card payments and holds not booked yet. */
+const AVAILABLE_TYPES = ["ITAV", "CLAV", "XPCD", "OPAV", "FWAV"];
 
-/** The most "booked" balance offered by the bank, in cents. */
-export function pickBalance(balances: BalanceResource[]): { cents: number; currency: string; date: ISODate | null } | null {
-  const ranked = [...balances].sort((a, b) => rank(a.balance_type) - rank(b.balance_type));
-  for (const b of ranked) {
-    const cents = toCents((b.balance_amount as AmountType | undefined)?.amount ?? "");
-    if (cents === null) continue;
-    const date = b.reference_date && ISO_DATE.test(b.reference_date) ? (b.reference_date.slice(0, 10) as ISODate) : null;
-    return { cents, currency: b.balance_amount.currency, date };
+export type PickedBalance = { cents: number; currency: string; date: ISODate | null };
+
+function parseBalance(b: BalanceResource): PickedBalance | null {
+  const cents = toCents((b.balance_amount as AmountType | undefined)?.amount ?? "");
+  if (cents === null) return null;
+  const date = b.reference_date && ISO_DATE.test(b.reference_date) ? (b.reference_date.slice(0, 10) as ISODate) : null;
+  return { cents, currency: b.balance_amount.currency, date };
+}
+
+function firstOf(balances: BalanceResource[], types: string[]): PickedBalance | null {
+  for (const type of types) {
+    for (const b of balances) {
+      const parsed = b.balance_type === type ? parseBalance(b) : null;
+      if (parsed) return parsed;
+    }
   }
   return null;
 }
 
-function rank(type?: string | null): number {
-  const i = BALANCE_PREFERENCE.indexOf(type ?? "");
-  return i === -1 ? BALANCE_PREFERENCE.length : i;
+/**
+ * Current (booked) and available balance offered by the bank. A balance of unknown type counts as
+ * booked only when the bank offers no booked one.
+ */
+export function pickBalances(balances: BalanceResource[]): { booked: PickedBalance | null; available: PickedBalance | null } {
+  const known = new Set([...BOOKED_TYPES, ...AVAILABLE_TYPES]);
+  const unknown = balances.filter((b) => !known.has(b.balance_type ?? "")).map(parseBalance).find((b) => b !== null) ?? null;
+  return { booked: firstOf(balances, BOOKED_TYPES) ?? unknown, available: firstOf(balances, AVAILABLE_TYPES) };
 }

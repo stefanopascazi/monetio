@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awaitsPreview, balanceGap, consentDaysLeft, isConsentExpired, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
+import { awaitsPreview, balanceGap, bankAccountsFor, bankBalanceView, consentDaysLeft, isConsentExpired, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
 
 describe("mapBankConnection", () => {
   it("maps the row and its accounts", () => {
@@ -43,6 +43,7 @@ describe("mapBankConnection", () => {
           accountId: null,
           bankBalanceCents: 3214,
           bankBalanceOn: null,
+          bankAvailableCents: null,
           lastSyncedAt: "2026-11-18T13:19:58Z",
           lastError: null,
           syncConfirmedAt: "2026-11-18T13:19:58Z",
@@ -92,10 +93,42 @@ describe("balanceGap", () => {
   });
 });
 
+describe("bankBalanceView", () => {
+  it("explains a lower available balance with pending payments", () => {
+    expect(bankBalanceView({ bankBalanceCents: 9719, bankAvailableCents: 8719 }, 9719)).toEqual({ currentCents: 9719, availableCents: 8719, pendingCents: -1000, gapCents: 0 });
+  });
+
+  it("uses MonetIO's balance as current when the bank offers only the available one", () => {
+    expect(bankBalanceView({ bankBalanceCents: null, bankAvailableCents: 8719 }, 9719)).toEqual({ currentCents: 9719, availableCents: 8719, pendingCents: -1000, gapCents: null });
+  });
+
+  it("keeps a booked mismatch as a gap and no pending without an available balance", () => {
+    expect(bankBalanceView({ bankBalanceCents: 3214, bankAvailableCents: null }, -786)).toEqual({ currentCents: 3214, availableCents: null, pendingCents: null, gapCents: 4000 });
+  });
+});
+
 describe("awaitsPreview", () => {
   it("is true only for linked accounts not confirmed yet", () => {
     expect(awaitsPreview({ accountId: "acc", syncConfirmedAt: null })).toBe(true);
     expect(awaitsPreview({ accountId: "acc", syncConfirmedAt: "2026-11-20T08:00:00Z" })).toBe(false);
     expect(awaitsPreview({ accountId: null, syncConfirmedAt: null })).toBe(false);
+  });
+});
+
+describe("bankAccountsFor", () => {
+  it("finds the bank accounts feeding a MonetIO account across consents", () => {
+    const conn = (id: string, accountIds: (string | null)[]) =>
+      mapBankConnection({
+        id,
+        aspsp_name: id,
+        valid_until: "",
+        status: "active",
+        created_at: "",
+        last_synced_at: null,
+        bank_accounts: accountIds.map((accountId, i) => ({ id: `${id}-${i}`, name: null, iban_masked: null, currency: null, account_id: accountId })),
+      });
+    const found = bankAccountsFor([conn("c1", ["acc1", null]), conn("c2", ["acc2"])], "acc1");
+    expect(found.map((f) => [f.connection.id, f.account.id])).toEqual([["c1", "c1-0"]]);
+    expect(bankAccountsFor([conn("c1", [null])], "acc1")).toEqual([]);
   });
 });

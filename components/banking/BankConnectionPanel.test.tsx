@@ -30,6 +30,7 @@ const base: BankConnection = {
       accountId: null,
       bankBalanceCents: null,
       bankBalanceOn: null,
+      bankAvailableCents: null,
       lastSyncedAt: null,
       lastError: null,
       syncConfirmedAt: null,

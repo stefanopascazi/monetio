@@ -11,6 +11,7 @@ const account: BankConnectionAccount = {
   accountId: "acc1",
   bankBalanceCents: 3214,
   bankBalanceOn: null,
+  bankAvailableCents: null,
   lastSyncedAt: "2026-11-18T13:19:58Z",
   lastError: null,
   syncConfirmedAt: "2026-11-18T13:19:58Z",
@@ -20,10 +21,11 @@ const account: BankConnectionAccount = {
 const now = new Date("2026-11-20T08:00:00Z");
 
 describe("BankAccountStatus", () => {
-  it("shows both balances, the gap and the last sync", () => {
+  it("shows a booked mismatch with MonetIO and the last sync", () => {
     render(<BankAccountStatus account={account} monetioBalanceCents={-786} now={now} />);
-    expect(screen.getByText(/Saldo banca/)).toBeInTheDocument();
+    expect(screen.getByText("Saldo contabile")).toBeInTheDocument();
     expect(screen.getByText(/Differenza/)).toBeInTheDocument();
+    expect(screen.queryByText("Saldo disponibile")).toBeNull();
     expect(screen.getByText(/Ultimo aggiornamento 18 nov.* · Prossimo oggi alle 12:00/)).toBeInTheDocument();
   });
 
@@ -31,6 +33,14 @@ describe("BankAccountStatus", () => {
     render(<BankAccountStatus account={{ ...account, syncSlots: 2 }} monetioBalanceCents={3214} now={now} />);
     expect(screen.getByText(/Prossimo oggi alle 18:00/)).toBeInTheDocument();
     expect(screen.getByText("La banca consente 2 aggiornamenti al giorno.")).toBeInTheDocument();
+  });
+
+  it("explains a lower available balance with pending movements, not as an error", () => {
+    render(<BankAccountStatus account={{ ...account, bankBalanceCents: null, bankAvailableCents: 2214 }} monetioBalanceCents={3214} now={now} />);
+    expect(screen.getByText("Saldo contabile")).toBeInTheDocument();
+    expect(screen.getByText("Saldo disponibile")).toBeInTheDocument();
+    expect(screen.getByText(/Movimenti da contabilizzare/)).toHaveTextContent("pagamenti con carta o operazioni in attesa");
+    expect(screen.queryByText(/Differenza/)).toBeNull();
   });
 
   it("marks aligned balances", () => {
@@ -44,6 +54,6 @@ describe("BankAccountStatus", () => {
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Banca non raggiungibile");
     expect(screen.getByText("Prossimo oggi alle 12:00")).toBeInTheDocument();
-    expect(screen.queryByText(/Saldo banca/)).toBeNull();
+    expect(screen.queryByText("Saldo contabile")).toBeNull();
   });
 });

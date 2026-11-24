@@ -12,6 +12,8 @@ import { statementPeriod } from "@/lib/data/statement-period";
 import { todayISO } from "@/lib/domain/dates";
 import { accountHref, adjacentAccounts, switcherAccounts } from "@/lib/navigation/account-nav";
 import { AccountPanes } from "./AccountPanes";
+import { AccountBankCard } from "./sections/AccountBankCard";
+import { AccountBankReviews } from "./sections/AccountBankReviews";
 import { BalanceHistoryCard } from "./sections/BalanceHistoryCard";
 import { MonthRecapCard } from "./sections/MonthRecapCard";
 import { StatementCard } from "./sections/StatementCard";
@@ -43,13 +45,20 @@ export async function StatementView({ id, searchParams }: { id: string; searchPa
       <TopBarAction>
         <AccountSettings account={account} canMakePrivate={!account.ownerMemberId || account.ownerMemberId === ctx.me.id} />
       </TopBarAction>
-      <SwipeArea prevHref={prevHref} nextHref={nextHref}>
+      <SwipeArea prevHref={prevHref} nextHref={nextHref} className="flex flex-col gap-4">
+        {/* Bank movements needing a choice come first, in every pane. */}
+        <Suspense fallback={null}>
+          <AccountBankReviews accountId={id} />
+        </Suspense>
         <AccountPanes
           side={
             <>
               <StreamBlock height={160}>
                 <MonthRecapCard accountId={id} balanceCents={account.balanceCents} today={today} month={recapMonth(sp.proiezione, today)} sp={sp} />
               </StreamBlock>
+              <Suspense fallback={null}>
+                <AccountBankCard accountId={id} balanceCents={account.balanceCents} today={today} />
+              </Suspense>
               <Suspense fallback={null}>
                 <BalanceHistoryCard accountId={id} accountName={account.name} year={year} />
               </Suspense>
