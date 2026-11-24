@@ -88,9 +88,15 @@ describe("pickBalances", () => {
     expect(pickBalances([{ balance_amount: eur("87.19"), balance_type: "CLAV" }])).toEqual({ booked: null, available: { cents: 8719, currency: "EUR", date: null } });
   });
 
-  it("uses an unknown type as booked only without a booked one", () => {
-    expect(pickBalances([{ balance_amount: eur("5"), balance_type: "OTHR" }]).booked).toEqual({ cents: 500, currency: "EUR", date: null });
-    expect(pickBalances([{ balance_amount: eur("5"), balance_type: "OTHR" }, { balance_amount: eur("6"), balance_type: "ITBD" }]).booked?.cents).toBe(600);
+  it("uses an unknown type as available only without a known available one", () => {
+    expect(pickBalances([{ balance_amount: eur("87.19"), balance_type: "OTHR" }])).toEqual({ booked: null, available: { cents: 8719, currency: "EUR", date: null } });
+    expect(
+      pickBalances([
+        { balance_amount: eur("1"), balance_type: "CLBD" },
+        { balance_amount: eur("2"), balance_type: "ITAV" },
+        { balance_amount: eur("3"), balance_type: "OTHR" },
+      ]),
+    ).toEqual({ booked: { cents: 100, currency: "EUR", date: null }, available: { cents: 200, currency: "EUR", date: null } });
   });
 
   it("returns nothing for no parsable balance", () => {

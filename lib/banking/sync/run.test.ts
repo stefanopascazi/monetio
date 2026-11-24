@@ -66,6 +66,20 @@ describe("planSync", () => {
   });
 });
 
+describe("planSync window", () => {
+  it("drops movements older than the requested day, even after the chosen one", async () => {
+    // Already synced: the bank is asked from lastSyncedAt minus the overlap, but returns older ones too.
+    const client = {
+      getBalances: vi.fn(async () => []),
+      getTransactions: vi.fn(async () => [txn("stale", "2026-11-06", "5.00"), txn("fresh", "2026-11-17", "20.00")]),
+    };
+    const store = { loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })) };
+    const plan = await planSync({ ...target, syncFrom: "2026-11-05", lastSyncedAt: new Date("2026-11-24T07:00:00Z") }, client, store);
+    expect(plan.from).toBe("2026-11-17");
+    expect(plan.decisions.map((d) => d.movement.ref)).toEqual(["fresh"]);
+  });
+});
+
 describe("syncBankAccount", () => {
   it("matches the bank's movements and stores balance and outcome", async () => {
     const client = {

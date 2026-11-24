@@ -96,11 +96,12 @@ function firstOf(balances: BalanceResource[], types: string[]): PickedBalance | 
 }
 
 /**
- * Current (booked) and available balance offered by the bank. A balance of unknown type counts as
- * booked only when the bank offers no booked one.
+ * Current (booked) and available balance offered by the bank. A balance of unknown type (e.g. OTHR,
+ * Trade Republic's only one) counts as available when the bank offers no known available type:
+ * single-balance banks expose what can be spent, pending card payments included.
  */
 export function pickBalances(balances: BalanceResource[]): { booked: PickedBalance | null; available: PickedBalance | null } {
   const known = new Set([...BOOKED_TYPES, ...AVAILABLE_TYPES]);
   const unknown = balances.filter((b) => !known.has(b.balance_type ?? "")).map(parseBalance).find((b) => b !== null) ?? null;
-  return { booked: firstOf(balances, BOOKED_TYPES) ?? unknown, available: firstOf(balances, AVAILABLE_TYPES) };
+  return { booked: firstOf(balances, BOOKED_TYPES), available: firstOf(balances, AVAILABLE_TYPES) ?? unknown };
 }

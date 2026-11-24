@@ -92,9 +92,11 @@ export async function planSync(target: SyncTarget, client: SyncClient, store: Pi
   const from = syncFrom(target);
   const floor = syncFloor(target);
   const [balances, items] = await Promise.all([client.getBalances(target.uid), client.getTransactions(target.uid, from)]);
-  // Some banks return more than asked: the floor is enforced here too.
+  // Some banks return more than asked (Trade Republic: always the latest 100): older movements were
+  // settled by earlier syncs and fall outside the candidates loaded below.
+  const start = from > floor ? from : floor;
   const movements = normalizeTransactions(items)
-    .filter((m) => m.bookedOn >= floor)
+    .filter((m) => m.bookedOn >= start)
     .sort((a, b) => a.bookedOn.localeCompare(b.bookedOn));
   const { candidates, reviewRefs } = await store.loadExisting(target.accountId, addDays(from, -RULE_WINDOW_DAYS));
   const matched = matchMovements(movements, candidates, reviewRefs);
