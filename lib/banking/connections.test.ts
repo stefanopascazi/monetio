@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awaitsPreview, balanceGap, bankAccountsFor, bankBalancesByAccount, bankBalanceView, withAvailableBalances, consentDaysLeft, isConsentExpired, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
+import { awaitsPreview, balanceGap, bankAccountsFor, bankBalancesByAccount, bankBalanceView, projectionPending, consentDaysLeft, isConsentExpired, LINK_OUTCOME_MESSAGE, mapBankConnection } from "./connections";
 
 describe("mapBankConnection", () => {
   it("maps the row and its accounts", () => {
@@ -44,6 +44,7 @@ describe("mapBankConnection", () => {
           bankBalanceCents: 3214,
           bankBalanceOn: null,
           bankAvailableCents: null,
+          pendingMovements: null,
           lastSyncedAt: "2026-11-18T13:19:58Z",
           lastError: null,
           syncConfirmedAt: "2026-11-18T13:19:58Z",
@@ -169,9 +170,41 @@ describe("bankBalancesByAccount", () => {
   });
 });
 
-describe("withAvailableBalances", () => {
-  it("starts from the available balance only when it is lower", () => {
-    const bank = { acc1: { currentCents: 9719, availableCents: 8719 }, acc2: { currentCents: 100, availableCents: 500 }, gone: { currentCents: 0, availableCents: -1 } };
-    expect(withAvailableBalances({ acc1: 9719, acc2: 100, acc3: 50 }, bank)).toEqual({ acc1: 8719, acc2: 100, acc3: 50 });
+describe("projectionPending", () => {
+  const now = new Date("2026-11-24T12:00:00Z");
+  const conn = (pending: { amountCents: number; date: string; description: string }[] | null, available = 8719) =>
+    mapBankConnection({
+      id: "c1",
+      aspsp_name: "Trade Republic",
+      valid_until: "2027-02-19T00:00:00Z",
+      status: "active",
+      created_at: "",
+      last_synced_at: null,
+      bank_accounts: [
+        {
+          id: "ba1",
+          name: null,
+          iban_masked: null,
+          currency: "EUR",
+          account_id: "acc1",
+          bank_available_cents: available,
+          pending_movements: pending as never,
+          sync_confirmed_at: "2026-11-21T09:00:00Z",
+        },
+      ],
+    });
+
+  it("passes listed items with their category and lowers the start by the gap", () => {
+    const item = { amountCents: -1000, date: "2026-11-23", description: "POS Esselunga" };
+    const res = projectionPending([conn([item])], { acc1: 9719 }, (id, i) => (id === "acc1" && i.description.startsWith("POS") ? "cat-spesa" : null), now);
+    expect(res).toEqual({ pending: { acc1: { items: [{ amountCents: -1000, categoryId: "cat-spesa" }] } }, startCents: { acc1: -1000 } });
+  });
+
+  it("falls back to the total when the bank lists nothing", () => {
+    expect(projectionPending([conn(null)], { acc1: 9719 }, () => null, now)).toEqual({ pending: { acc1: { totalCents: -1000 } }, startCents: { acc1: -1000 } });
+  });
+
+  it("ignores accounts whose available balance is not below the booked one", () => {
+    expect(projectionPending([conn([], 9719)], { acc1: 9719 }, () => null, now)).toEqual({ pending: {}, startCents: {} });
   });
 });

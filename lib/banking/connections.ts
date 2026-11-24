@@ -1,4 +1,5 @@
 // Bank consents as the UI shows them.
+import type { AccountPending, PendingItem } from "../domain/pending";
 
 export type BankConnectionAccount = {
   id: string;
@@ -11,6 +12,8 @@ export type BankConnectionAccount = {
   bankBalanceOn: string | null;
   /** Spendable balance: also counts card payments the bank has not booked yet. */
   bankAvailableCents: number | null;
+  /** Movements the bank lists as not booked yet; null before the first sync that read them. */
+  pendingMovements: PendingItem[] | null;
   lastSyncedAt: string | null;
   lastError: string | null;
   /** Null while the first-sync preview waits for the owner's confirmation. */
@@ -47,6 +50,7 @@ type Row = {
         bank_balance_cents?: number | string | null;
         bank_balance_on?: string | null;
         bank_available_cents?: number | string | null;
+        pending_movements?: PendingItem[] | null;
         last_synced_at?: string | null;
         last_error?: string | null;
         sync_confirmed_at?: string | null;
@@ -74,6 +78,7 @@ export function mapBankConnection(row: Row): BankConnection {
       bankBalanceCents: a.bank_balance_cents == null ? null : Number(a.bank_balance_cents),
       bankBalanceOn: a.bank_balance_on ?? null,
       bankAvailableCents: a.bank_available_cents == null ? null : Number(a.bank_available_cents),
+      pendingMovements: Array.isArray(a.pending_movements) ? a.pending_movements : null,
       lastSyncedAt: a.last_synced_at ?? null,
       lastError: a.last_error ?? null,
       syncConfirmedAt: a.sync_confirmed_at ?? null,
@@ -164,13 +169,36 @@ export function bankBalancesByAccount(connections: BankConnection[], monetio: Re
   return out;
 }
 
+export type ProjectionPending = {
+  /** What each account's pending money covers, for the projection (see settlePending). */
+  pending: Record<string, AccountPending>;
+  /** Available minus booked balance by account: lowers the projection start (see withPendingStart). */
+  startCents: Record<string, number>;
+};
+
 /**
- * Projection start balances counting what is already spent: card payments the bank has not booked yet
- * lower the available balance, so it wins when below MonetIO's. A higher one is left alone (it may
- * only miss movements recorded by hand ahead of the bank).
+ * Pending money of the linked accounts for the projection, only where the available balance is below
+ * the booked one. Listed items carry the category `categorize` gives them (the account's matches).
  */
-export function withAvailableBalances(balances: Record<string, number>, bank: Record<string, AccountBankBalances>): Record<string, number> {
-  const out = { ...balances };
-  for (const [id, b] of Object.entries(bank)) if (id in out && b.availableCents < out[id]) out[id] = b.availableCents;
-  return out;
+export function projectionPending(
+  connections: BankConnection[],
+  monetio: Record<string, number>,
+  categorize: (accountId: string, item: PendingItem) => string | null,
+  now: Date = new Date(),
+): ProjectionPending {
+  const pending: Record<string, AccountPending> = {};
+  const startCents: Record<string, number> = {};
+  for (const c of connections) {
+    if (isConsentExpired(c, now)) continue;
+    for (const a of c.accounts) {
+      if (!a.accountId || !a.syncConfirmedAt || a.accountId in pending || !(a.accountId in monetio)) continue;
+      const total = bankBalanceView(a, monetio[a.accountId]).pendingCents;
+      if (total == null || total >= 0) continue;
+      const items = a.pendingMovements ?? [];
+      const accountId = a.accountId;
+      pending[accountId] = items.length ? { items: items.map((i) => ({ amountCents: i.amountCents, categoryId: categorize(accountId, i) })) } : { totalCents: total };
+      startCents[accountId] = total;
+    }
+  }
+  return { pending, startCents };
 }

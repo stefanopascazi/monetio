@@ -20,6 +20,7 @@ const connection: BankConnection = {
       bankBalanceCents: null,
       bankBalanceOn: null,
       bankAvailableCents: 8719,
+      pendingMovements: null,
       lastSyncedAt: "2026-11-24T07:00:00Z",
       lastError: null,
       syncConfirmedAt: "2026-11-21T09:00:00Z",

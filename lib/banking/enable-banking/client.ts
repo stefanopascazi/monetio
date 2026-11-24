@@ -62,12 +62,15 @@ export function createEnableBankingClient(config: EnableBankingConfig) {
     createSession: (code: string) => call<SessionResponse>("POST", "/sessions", { code }),
     getBalances: async (accountUid: string): Promise<BalanceResource[]> =>
       (await get<{ balances: BalanceResource[] }>(`/accounts/${encodeURIComponent(accountUid)}/balances`)).balances ?? [],
-    /** Booked transactions since a date, following continuation keys up to `maxPages`. */
+    /**
+     * Transactions since a date, booked and pending in the same read (no status filter: banks count
+     * every call against the daily limit), following continuation keys up to `maxPages`.
+     */
     getTransactions: async (accountUid: string, dateFrom: string, maxPages = 20): Promise<TransactionResource[]> => {
       const all: TransactionResource[] = [];
       let key: string | null | undefined;
       for (let page = 0; page < maxPages; page++) {
-        const params = new URLSearchParams({ date_from: dateFrom, transaction_status: "BOOK" });
+        const params = new URLSearchParams({ date_from: dateFrom });
         if (key) params.set("continuation_key", key);
         const res = await get<TransactionsResponse>(`/accounts/${encodeURIComponent(accountUid)}/transactions?${params}`);
         all.push(...(res.transactions ?? []));

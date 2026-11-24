@@ -11,7 +11,7 @@ export const listMyBankConnections = cache(async (): Promise<BankConnection[]> =
   const { data, error } = await supabase
     .from("bank_connections")
     .select(
-      "id, aspsp_name, valid_until, status, created_at, last_synced_at, bank_accounts(id, name, iban_masked, currency, account_id, bank_balance_cents, bank_balance_on, bank_available_cents, last_synced_at, last_error, sync_confirmed_at, sync_from, sync_slots)",
+      "id, aspsp_name, valid_until, status, created_at, last_synced_at, bank_accounts(id, name, iban_masked, currency, account_id, bank_balance_cents, bank_balance_on, bank_available_cents, pending_movements, last_synced_at, last_error, sync_confirmed_at, sync_from, sync_slots)",
     )
     .eq("user_id", userId)
     .eq("household_id", householdId)

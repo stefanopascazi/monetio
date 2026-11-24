@@ -67,7 +67,7 @@ describe("createEnableBankingClient", () => {
     const client = createEnableBankingClient({ appId: "app-1", privateKeyPem, baseUrl: "https://api.test", fetch: fetchMock });
     const txns = await client.getTransactions("u 1", "2026-11-01");
     expect(txns.map((t) => t.entry_reference)).toEqual(["a", "b"]);
-    expect(fetchMock.mock.calls[0][0]).toBe("https://api.test/accounts/u%201/transactions?date_from=2026-11-01&transaction_status=BOOK");
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.test/accounts/u%201/transactions?date_from=2026-11-01");
     expect(fetchMock.mock.calls[1][0]).toContain("continuation_key=k2");
   });
 

@@ -6,8 +6,8 @@ import { accountMonthRecap } from "../domain/month-recap";
 import { monthlySummary } from "../domain/monthly-summary";
 import { projectBalances, projectedMovements } from "../domain/projection";
 import { projectionDetails } from "../domain/projection-details";
-import { withAvailableBalances } from "../banking/connections";
-import { loadBankBalances } from "./bank-balances";
+import { withPendingStart } from "../domain/pending";
+import { loadProjectionPending } from "./bank-balances";
 import { getContext } from "./context";
 import { buildAgenda, buildProjectionInput, decrementCategories, LOOKBACK_DAYS, projectionFlowsSince } from "./projection-input";
 import { listAccounts, listBookedOccurrences, listBookedRows, listCategories, listContributions, listEstimateMovements, listFlows, listOverrides, listRules, listTransactions } from "./queries";
@@ -44,11 +44,13 @@ export const loadProjectionInput = cache(async (months: number) => {
     listTransactions({ status: "planned", limit: 1000 }),
     listFlows(startOfMonth(projectionFlowsSince(agenda.today))),
     listEstimateMovements(startOfMonth(current), endOfMonth(current), decrementCategories(agenda.rules)),
-    loadBankBalances(),
+    loadProjectionPending(),
   ]);
   const built = buildProjectionInput(agenda, { accounts, planned, monthFlows, estimateMovements }, months);
-  // Month ends start from what can be spent: card payments not booked yet are already gone.
-  built.input.balances = withAvailableBalances(built.input.balances, bank);
+  // Month ends start from what can be spent: card payments not booked yet are already gone,
+  // and what they cover (a due item, part of an estimate) is not counted again.
+  built.input.balances = withPendingStart(built.input.balances, bank.startCents);
+  built.input.pending = bank.pending;
   return { agenda, ...built };
 });
 
