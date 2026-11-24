@@ -25,7 +25,7 @@ export function BankAccountStatus({ account, monetioBalanceCents, now = new Date
         <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1">
           {view.currentCents != null && (
             <>
-              <dt>Credito attuale</dt>
+              <dt>Saldo contabile</dt>
               <dd className="flex flex-wrap items-center gap-2">
                 <Amount cents={view.currentCents} tone="neutral" size="sm" />
                 {view.gapCents === 0 && (
@@ -38,7 +38,7 @@ export function BankAccountStatus({ account, monetioBalanceCents, now = new Date
           )}
           {view.availableCents != null && (
             <>
-              <dt>Credito disponibile</dt>
+              <dt>Saldo disponibile</dt>
               <dd>
                 <Amount cents={view.availableCents} tone="neutral" size="sm" />
               </dd>

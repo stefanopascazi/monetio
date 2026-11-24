@@ -23,9 +23,9 @@ const now = new Date("2026-11-20T08:00:00Z");
 describe("BankAccountStatus", () => {
   it("shows a booked mismatch with MonetIO and the last sync", () => {
     render(<BankAccountStatus account={account} monetioBalanceCents={-786} now={now} />);
-    expect(screen.getByText("Credito attuale")).toBeInTheDocument();
+    expect(screen.getByText("Saldo contabile")).toBeInTheDocument();
     expect(screen.getByText(/Differenza/)).toBeInTheDocument();
-    expect(screen.queryByText("Credito disponibile")).toBeNull();
+    expect(screen.queryByText("Saldo disponibile")).toBeNull();
     expect(screen.getByText(/Ultimo aggiornamento 18 nov.* · Prossimo oggi alle 12:00/)).toBeInTheDocument();
   });
 
@@ -37,8 +37,8 @@ describe("BankAccountStatus", () => {
 
   it("explains a lower available balance with pending movements, not as an error", () => {
     render(<BankAccountStatus account={{ ...account, bankBalanceCents: null, bankAvailableCents: 2214 }} monetioBalanceCents={3214} now={now} />);
-    expect(screen.getByText("Credito attuale")).toBeInTheDocument();
-    expect(screen.getByText("Credito disponibile")).toBeInTheDocument();
+    expect(screen.getByText("Saldo contabile")).toBeInTheDocument();
+    expect(screen.getByText("Saldo disponibile")).toBeInTheDocument();
     expect(screen.getByText(/Movimenti da contabilizzare/)).toHaveTextContent("pagamenti con carta o operazioni in attesa");
     expect(screen.queryByText(/Differenza/)).toBeNull();
   });
@@ -54,6 +54,6 @@ describe("BankAccountStatus", () => {
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Banca non raggiungibile");
     expect(screen.getByText("Prossimo oggi alle 12:00")).toBeInTheDocument();
-    expect(screen.queryByText("Credito attuale")).toBeNull();
+    expect(screen.queryByText("Saldo contabile")).toBeNull();
   });
 });

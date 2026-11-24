@@ -40,7 +40,7 @@ describe("AccountBankCard", () => {
   it("shows the bank's balances on the linked account, without the link choice", async () => {
     render(await AccountBankCard({ accountId: "acc1", balanceCents: 9719, today: "2026-11-24" }));
     expect(screen.getByText("Trade Republic")).toBeInTheDocument();
-    expect(screen.getByText("Credito disponibile")).toBeInTheDocument();
+    expect(screen.getByText("Saldo disponibile")).toBeInTheDocument();
     expect(screen.getByText(/Movimenti da contabilizzare/)).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).toBeNull();
   });
