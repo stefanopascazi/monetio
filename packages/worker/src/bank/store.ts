@@ -4,13 +4,16 @@ import type { SyncStore, SyncTarget } from "../../../../lib/banking/sync/run.ts"
 import { mapCategory } from "../../../../lib/data/mappers.ts";
 import type { ISODate } from "../../../../lib/domain/types.ts";
 
-export type BankSyncTarget = SyncTarget & { appId: string; privateKeySealed: string };
+/** `syncSlots`: daily slots the bank allows (null = all), learned from its read limit (#112). */
+export type BankSyncTarget = SyncTarget & { appId: string; privateKeySealed: string; syncSlots: number | null };
 
 export interface BankSyncStore extends SyncStore {
   /** Active consents past their end become "expired"; returns how many. */
   expireConnections(now: Date): Promise<number>;
   /** Linked bank accounts of active consents whose owner still has an app and confirmed the preview. */
   listTargets(): Promise<BankSyncTarget[]>;
+  /** Stores how many daily slots the bank allows and clears the read-limit error. */
+  limitSyncSlots(bankAccountId: string, slots: number): Promise<void>;
 }
 
 const iso = (d: Date | string) => (typeof d === "string" ? d : d.toISOString()).slice(0, 10) as ISODate;
@@ -25,7 +28,7 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
     async listTargets() {
       const rows = await sql`
         select ba.id as bank_account_id, ba.uid, c.user_id, c.household_id, ba.account_id, a.opening_date, ba.sync_from,
-               ba.last_synced_at, c.created_at as connection_created_at, cr.app_id, cr.private_key_sealed
+               ba.last_synced_at, c.created_at as connection_created_at, cr.app_id, cr.private_key_sealed, ba.sync_slots
         from bank_accounts ba
         join bank_connections c on c.id = ba.connection_id
         join accounts a on a.id = ba.account_id and a.household_id = c.household_id
@@ -44,7 +47,12 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
         connectionCreatedAt: new Date(r.connection_created_at),
         appId: r.app_id,
         privateKeySealed: r.private_key_sealed,
+        syncSlots: r.sync_slots == null ? null : Number(r.sync_slots),
       }));
+    },
+
+    async limitSyncSlots(bankAccountId, slots) {
+      await sql`update bank_accounts set sync_slots = ${slots}, last_error = null where id = ${bankAccountId}`;
     },
 
     async loadExisting(accountId, from) {

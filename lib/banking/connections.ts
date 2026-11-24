@@ -14,6 +14,8 @@ export type BankConnectionAccount = {
   /** Null while the first-sync preview waits for the owner's confirmation. */
   syncConfirmedAt: string | null;
   syncFrom: string | null;
+  /** Daily syncs the bank allows when fewer than the default slots (#112); null = all. */
+  syncSlots: number | null;
 };
 
 export type BankConnection = {
@@ -46,6 +48,7 @@ type Row = {
         last_error?: string | null;
         sync_confirmed_at?: string | null;
         sync_from?: string | null;
+        sync_slots?: number | string | null;
       }[]
     | null;
 };
@@ -71,6 +74,7 @@ export function mapBankConnection(row: Row): BankConnection {
       lastError: a.last_error ?? null,
       syncConfirmedAt: a.sync_confirmed_at ?? null,
       syncFrom: a.sync_from ?? null,
+      syncSlots: a.sync_slots == null ? null : Number(a.sync_slots),
     })),
   };
 }
