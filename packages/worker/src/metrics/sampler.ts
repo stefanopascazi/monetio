@@ -16,6 +16,8 @@ export interface VpsSample {
   uptimeS: number;
   workerRss: number;
   workerStartedAt: Date;
+  /** Bundle release: a restart with the same release is unexpected, a new one is a deploy. */
+  workerRelease: string | null;
 }
 
 export interface SamplerSources {
@@ -26,6 +28,7 @@ export interface SamplerSources {
   now(): Date;
   /** When this worker process started. */
   startedAt: Date;
+  release: string | null;
 }
 
 /**
@@ -62,6 +65,7 @@ export function createVpsSampler(src: SamplerSources): () => Promise<VpsSample> 
       uptimeS: parseUptime(uptime),
       workerRss: src.rss(),
       workerStartedAt: src.startedAt,
+      workerRelease: src.release,
     };
     prevCpu = cpu;
     prevNet = counters;

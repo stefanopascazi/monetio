@@ -13,9 +13,9 @@ export function createPostgresSampleWriter(sql: Sql): SampleWriter {
   return async (s) => {
     await sql`
       insert into vps_metrics (sampled_at, cpu_pct, load1, load5, load15, mem_total_bytes, mem_used_bytes, swap_total_bytes, swap_used_bytes,
-                               disk_total_bytes, disk_used_bytes, net_rx_bytes, net_tx_bytes, uptime_s, worker_rss_bytes, worker_started_at)
+                               disk_total_bytes, disk_used_bytes, net_rx_bytes, net_tx_bytes, uptime_s, worker_rss_bytes, worker_started_at, worker_release)
       values (${s.sampledAt}, ${s.cpuPct}, ${s.load[0]}, ${s.load[1]}, ${s.load[2]}, ${s.memTotal}, ${s.memUsed}, ${s.swapTotal}, ${s.swapUsed},
-              ${s.diskTotal}, ${s.diskUsed}, ${s.netRx}, ${s.netTx}, ${s.uptimeS}, ${s.workerRss}, ${s.workerStartedAt})
+              ${s.diskTotal}, ${s.diskUsed}, ${s.netRx}, ${s.netTx}, ${s.uptimeS}, ${s.workerRss}, ${s.workerStartedAt}, ${s.workerRelease})
       on conflict (sampled_at) do nothing`;
   };
 }
