@@ -30,12 +30,13 @@ export default defineConfig({
       },
       {
         extends: true,
-        test: { ...shared, environment: "node", name: "worker", include: ["packages/worker/**/*.test.ts"] },
+        test: { ...shared, environment: "node", name: "worker", include: ["packages/worker/**/*.test.ts"], exclude: ["packages/worker/**/*.db.test.ts"] },
       },
       {
         extends: true,
         // SQL checks on the local stack only: npm run test:db opts in; skipped elsewhere, Vercel included.
-        test: { ...shared, environment: "node", name: "db", include: ["supabase/tests/**/*.test.ts"] },
+        // Worker stores are tested next to their code: Vercel never sees packages/worker (.vercelignore).
+        test: { ...shared, environment: "node", name: "db", include: ["supabase/tests/**/*.test.ts", "packages/worker/**/*.db.test.ts"] },
       },
       {
         extends: true,
