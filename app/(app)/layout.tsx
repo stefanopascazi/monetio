@@ -6,6 +6,7 @@ import { BellLink } from "@/components/notifications/BellLink";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { QuickCreateSection } from "@/components/quick-create/QuickCreateSection";
 import { AppNav, AppNavFallback } from "@/components/shell/AppNav";
+import { NavigationFeedback } from "@/components/shell/NavigationFeedback";
 import { TopBar } from "@/components/shell/TopBar";
 import { advisorEnabled } from "@/lib/data/advisor";
 
@@ -28,6 +29,9 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         />
         {children}
       </div>
+      <Suspense fallback={null}>
+        <NavigationFeedback />
+      </Suspense>
       <Suspense fallback={<AppNavFallback />}>
         <AppNav />
       </Suspense>

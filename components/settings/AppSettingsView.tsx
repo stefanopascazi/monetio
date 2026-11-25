@@ -3,8 +3,9 @@ import { getNotificationPrefs } from "@/lib/data/notifications";
 import { listAccounts } from "@/lib/data/queries";
 import { NotificationPrefsForm } from "./NotificationPrefsForm";
 import { NotificationsCard } from "./NotificationsCard";
+import { PerfDiagnosticsCard } from "./PerfDiagnosticsCard";
 
-/** Impostazioni > App: personal preferences (theme, notifications). */
+/** Impostazioni > App: personal preferences (theme, notifications) and on-device diagnostics. */
 export async function AppSettingsView() {
   const [accounts, prefs] = await Promise.all([listAccounts(), getNotificationPrefs()]);
   const watchable = accounts.filter((a) => !a.archived && a.type !== "card").map(({ id, name }) => ({ id, name }));
@@ -16,6 +17,7 @@ export async function AppSettingsView() {
       <NotificationsCard>
         <NotificationPrefsForm prefs={prefs} accounts={watchable} />
       </NotificationsCard>
+      <PerfDiagnosticsCard />
     </section>
   );
 }
