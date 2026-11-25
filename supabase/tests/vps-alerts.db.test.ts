@@ -25,7 +25,10 @@ async function withSysadmin(fn: (tx: TransactionSql, as: (user: string) => Promi
       await tx`delete from vps_metrics`;
       await tx`delete from vps_metrics_hourly`;
       await tx`delete from vps_alerts`;
-      await tx`update vps_alert_state set evaluated_until = null`;
+      await tx`update vps_alert_state set evaluated_until = null where id`;
+      await tx`delete from vps_alert_settings`;
+      await tx`insert into vps_alert_settings default values`;
+      await tx`delete from push_outbox where kind = 'vps_alert'`;
       const as = async (user: string) => {
         await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: user, role: "authenticated" })}, true)`;
         await tx`select set_config('request.jwt.claim.sub', ${user}, true)`;
@@ -102,12 +105,14 @@ describe.skipIf(!sql)("vps alerts console", () => {
       const [{ v }] = await tx`select admin_vps_alerts() as v`;
       expect(v.settings).toMatchObject({ ram_pct: 90, disk_pct: 85, push_enabled: true });
       expect(v.settings.updated_by).toBeUndefined();
+      expect(v.settings.updated_at).toBeNull();
       expect(v.open.map((a: { kind: string }) => a.kind)).toEqual(["ram_high"]);
       expect(v.recent.map((a: { kind: string }) => a.kind)).toEqual(["worker_restart"]);
 
       await tx`select admin_set_vps_alert_settings('{"disk_pct": 80, "push_enabled": false}')`;
       const [{ v: after }] = await tx`select admin_vps_alerts() as v`;
       expect(after.settings).toMatchObject({ disk_pct: 80, push_enabled: false, ram_pct: 90 });
+      expect(after.settings.updated_at).not.toBeNull();
       await expect(tx`select admin_set_vps_alert_settings('{"disk_pct": 5}')`.execute()).rejects.toThrow(/check/);
     });
     await withSysadmin(async (tx, as, admin) => {

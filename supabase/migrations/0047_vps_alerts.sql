@@ -59,7 +59,9 @@ begin
     'generated_at', now(),
     'last_sample_at', (select max(sampled_at) from vps_metrics),
     'stale_after_seconds', 300,
-    'settings', (select to_jsonb(s) - 'id' - 'updated_by' from vps_alert_settings s),
+    -- updated_at only once a sysadmin saved: until then the values are the defaults.
+    'settings', (select to_jsonb(s) - 'id' - 'updated_by' - 'updated_at' || jsonb_build_object('updated_at', case when s.updated_by is not null then s.updated_at end)
+                 from vps_alert_settings s),
     'open', coalesce((
       select jsonb_agg(jsonb_build_object('id', a.id, 'kind', a.kind, 'opened_at', a.opened_at, 'last_seen_at', a.last_seen_at, 'details', a.details)
                        order by a.opened_at)
@@ -94,7 +96,9 @@ begin
     traffic_factor = coalesce((p->>'traffic_factor')::real, traffic_factor),
     traffic_floor_mb = coalesce((p->>'traffic_floor_mb')::integer, traffic_floor_mb),
     push_enabled = coalesce((p->>'push_enabled')::boolean, push_enabled),
-    updated_at = now(), updated_by = auth.uid();
+    updated_at = now(), updated_by = auth.uid()
+  -- One-row table; the WHERE also satisfies pg_safeupdate on PostgREST sessions.
+  where id;
   perform admin_log('vps.settings', null, p);
 end $$;
 revoke execute on function admin_set_vps_alert_settings from public, anon;

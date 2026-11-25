@@ -93,7 +93,7 @@ export function createPostgresVpsAlertStore(sql: Sql | TransactionSql): VpsAlert
             values (${e.kind}, ${e.at}, ${e.at}, ${e.at}, ${tx.json(e.details as never)}) returning id`;
           pushes.push({ id: row!.id, kind: e.kind, phase: "event", details: e.details });
         }
-        if (decision.evaluatedUntil) await tx`update vps_alert_state set evaluated_until = ${decision.evaluatedUntil}`;
+        if (decision.evaluatedUntil) await tx`update vps_alert_state set evaluated_until = ${decision.evaluatedUntil} where id`;
         await tx`delete from vps_alerts where resolved_at < now() - make_interval(days => ${ALERTS_RETENTION_DAYS})`;
 
         if (!settings.push_enabled || !pushes.length) return 0;
