@@ -8,12 +8,12 @@ const vapid = { publicKey: "pub", privateKey: "priv", subject: "mailto:a@example
 
 describe("createJobs", () => {
   it("registers the backup only when configured", () => {
-    expect(createJobs(sql, base).map((j) => j.name)).toEqual(["db-ping", "notify-events", "advisor-purge", "job-runs-purge", "integrity-check"]);
-    expect(createJobs(sql, { ...base, backup: { remote: "r2:b", ageRecipient: "age1x" } }).map((j) => j.name)).toEqual(["db-ping", "backup", "backup-manual", "backup-list", "notify-events", "advisor-purge", "job-runs-purge", "integrity-check"]);
+    expect(createJobs(sql, base).map((j) => j.name)).toEqual(["db-ping", "notify-events", "advisor-purge", "job-runs-purge", "integrity-check", "vps-metrics-rollup"]);
+    expect(createJobs(sql, { ...base, backup: { remote: "r2:b", ageRecipient: "age1x" } }).map((j) => j.name)).toEqual(["db-ping", "backup", "backup-manual", "backup-list", "notify-events", "advisor-purge", "job-runs-purge", "integrity-check", "vps-metrics-rollup"]);
   });
 
   it("registers push delivery only when VAPID keys are configured", () => {
-    expect(createJobs(sql, { ...base, push: vapid }).map((j) => j.name)).toEqual(["db-ping", "push-deliver", "notify-events", "advisor-purge", "job-runs-purge", "integrity-check"]);
+    expect(createJobs(sql, { ...base, push: vapid }).map((j) => j.name)).toEqual(["db-ping", "push-deliver", "notify-events", "advisor-purge", "job-runs-purge", "integrity-check", "vps-metrics-rollup"]);
   });
 
   it("registers bank sync only when the master key is configured", () => {
