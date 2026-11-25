@@ -33,3 +33,29 @@ body {
 @media (min-width: 960px) {
   body:has([data-advisor-panel]) .app-shell { padding-right: 424px; }
 }
+
+/* Link tap feedback (NavigationFeedback): indeterminate bar under the status bar. */
+.mio-nav-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  height: 3px;
+  padding-top: env(safe-area-inset-top);
+  overflow: hidden;
+  pointer-events: none;
+}
+.mio-nav-progress > span {
+  display: block;
+  width: 40%;
+  height: 3px;
+  background: var(--mio-brand);
+  border-radius: 0 3px 3px 0;
+  animation: mio-nav-progress 1.1s ease-in-out infinite;
+}
+@keyframes mio-nav-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mio-nav-progress > span { width: 100%; animation: none; opacity: 0.6; }
+}
