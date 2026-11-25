@@ -1,21 +1,45 @@
 // MonetIO service worker: caches the app shell and static assets, shows web push notifications.
 // Data pages are always fetched from the network (household finances must be fresh);
 // when offline, navigations fall back to the cached offline page.
-const VERSION = "monetio-v1";
+const SHELL_CACHE = "monetio-shell-v2";
+const STATIC_CACHE = "monetio-static-v2";
 const SHELL = ["/offline.html", "/icons/icon.svg", "/icons/icon-192.png"];
+// Build chunks change name on every deploy: without a cap the static cache grows forever.
+const STATIC_MAX = 300;
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Static Routing API (Chromium 123+): requests the worker does not handle skip it entirely,
+  // so RSC payloads, prefetches and server actions never wait for the worker to boot.
+  if (event.addRoutes && typeof URLPattern !== "undefined") {
+    event
+      .addRoutes([
+        { condition: { requestMode: "navigate" }, source: "fetch-event" },
+        { condition: { urlPattern: new URLPattern({ pathname: "/_next/static/*" }) }, source: "fetch-event" },
+        { condition: { urlPattern: new URLPattern({ pathname: "/icons/*" }) }, source: "fetch-event" },
+        { condition: { urlPattern: new URLPattern({}) }, source: "network" },
+      ])
+      .catch(() => {});
+  }
+  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== SHELL_CACHE && k !== STATIC_CACHE).map((k) => caches.delete(k))))
+      // Navigation preload: the page request starts while the worker boots, not after.
+      .then(() => self.registration.navigationPreload?.enable())
       .then(() => self.clients.claim()),
   );
 });
+
+// Drops the oldest entries (insertion order) beyond the cap.
+async function trimCache(name, max) {
+  const cache = await caches.open(name);
+  const keys = await cache.keys();
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - max)).map((k) => cache.delete(k)));
+}
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -24,7 +48,15 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (req.mode === "navigate") {
-    event.respondWith(fetch(req).catch(() => caches.match("/offline.html")));
+    event.respondWith(
+      (async () => {
+        try {
+          return (await event.preloadResponse) || (await fetch(req));
+        } catch {
+          return caches.match("/offline.html");
+        }
+      })(),
+    );
     return;
   }
   // Immutable build assets and icons: cache first.
@@ -34,8 +66,15 @@ self.addEventListener("fetch", (event) => {
         (hit) =>
           hit ||
           fetch(req).then((res) => {
-            const copy = res.clone();
-            caches.open(VERSION).then((c) => c.put(req, copy));
+            if (res.ok) {
+              const copy = res.clone();
+              event.waitUntil(
+                caches
+                  .open(STATIC_CACHE)
+                  .then((c) => c.put(req, copy))
+                  .then(() => trimCache(STATIC_CACHE, STATIC_MAX)),
+              );
+            }
             return res;
           }),
       ),
