@@ -20,7 +20,7 @@ Il codice condiviso arriva dal root (es. `scripts/db/ssl.ts`) e viene incluso ne
 ## Separazione da Vercel
 
 - `.vercelignore` esclude `packages/worker`; `tsconfig.json` del root lo esclude dal typecheck di Next.
-- `vercel.json` (`ignoreCommand`) salta il deploy se il commit tocca solo `packages/worker` o `.github`.
+- Il deploy dell'app (`.github/workflows/app.yml`) non parte se il push tocca solo `packages/worker` o gli altri workflow.
 - Il deploy del worker parte da `.github/workflows/worker.yml` solo per modifiche al worker.
 
 ## Primo setup della VPS

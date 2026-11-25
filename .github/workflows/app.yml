@@ -1,0 +1,55 @@
+# App CI/CD (#123): tests on every push, then a Vercel deploy only when they pass.
+# Branches get a preview, main goes to production. Vercel still builds remotely with its own
+# environment, so production migrations keep running in the build (npm run db:migrate; previews skip them).
+# Git deployments are off in vercel.json: this workflow is the only way in.
+# Required secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID.
+name: app
+
+on:
+  push:
+    branches: ["**"]
+    # Same scope as the old ignoreCommand: worker-only and other workflows' changes do not deploy the app.
+    paths-ignore:
+      - "packages/worker/**"
+      - ".github/workflows/worker.yml"
+      - ".github/workflows/backup-restore-test.yml"
+      - ".github/workflows/ui-package.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: app-${{ github.ref }}
+  # Previews: only the latest push matters. Production: never cancel a running deploy.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      PRODUCTION: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Deploy to Vercel
+        run: |
+          if [ "$PRODUCTION" = "true" ]; then target="--prod"; else target=""; fi
+          url=$(npx --yes vercel@65.14.0 deploy $target --yes --token="$VERCEL_TOKEN")
+          echo "Deploy: $url" >> "$GITHUB_STEP_SUMMARY"
