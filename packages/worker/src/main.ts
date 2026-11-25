@@ -100,6 +100,7 @@ const metrics = existsSync("/proc/stat")
         rss: () => process.memoryUsage.rss(),
         now: () => new Date(),
         startedAt: new Date(Date.now() - process.uptime() * 1000),
+        release: WORKER_RELEASE ?? null,
       }),
       write: createPostgresSampleWriter(sql),
       schemaReady: deps.schemaReady,

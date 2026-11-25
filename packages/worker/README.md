@@ -79,6 +79,14 @@ Il worker campiona la macchina ogni minuto e scrive in `vps_metrics` (migrazione
 
 - Il campionamento gira fuori dalla coda dei job (`src/metrics/loop.ts`): un backup o un sync lunghi non lasciano buchi che sembrerebbero una VPS silenziosa.
 - Parte solo dove esiste `/proc` (VPS, WSL, container); su Windows o macOS resta spento.
-- Nessun processo in più: solo letture di `/proc` e una insert al minuto. Prova locale (node:24 su Docker): RSS del worker 80–85 MB con il campionatore attivo, sotto `MemoryMax=300M`.
+- Nessun processo in più: solo letture di `/proc` e una insert al minuto. RSS del worker con il campionatore attivo: 125 MB in produzione (25 nov 2026), 80–85 MB in locale su node:24; il limite è `MemoryMax=300M`.
 - Job `vps-metrics-rollup`, ogni ora: aggregati orari in `vps_metrics_hourly`, campioni al minuto tenuti 7 giorni, aggregati 35 giorni.
 - Se la VPS si ferma, l'avviso in tempo reale arriva da Healthchecks.io (`db-ping`); la console mostra "heartbeat mancante" dopo 5 minuti senza campioni.
+
+### Allarmi
+
+Job `vps-alerts`, ogni minuto (migrazione 0047). La valutazione è pura (`src/metrics/alerts.ts`), lo store scrive in `vps_alerts` e accoda le push in `push_outbox` (tipo `vps_alert`) per ogni sysadmin.
+
+- Soglie in `vps_alert_settings`, modificabili dalla console: CPU media oltre il 90% per 15 minuti, RAM oltre il 90% per 10 minuti, swap oltre il 50%, disco oltre l'85%, traffico degli ultimi 15 minuti oltre 5 volte la media dei 7 giorni (e oltre 50 MB). Un allarme rientra qualche punto sotto la soglia, per non oscillare.
+- Eventi, registrati una volta sola: silenzio (più di 5 minuti senza campioni, segnalato al ritorno), riavvio del worker con lo stesso rilascio (crash o memoria esaurita; un rilascio nuovo è un deploy), riavvio della macchina.
+- Push all'apertura e al rientro di ogni allarme e per ogni evento, disattivabili dalla console. Allarmi chiusi ed eventi restano 90 giorni.

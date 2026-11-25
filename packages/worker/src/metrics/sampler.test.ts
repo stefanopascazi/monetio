@@ -16,6 +16,7 @@ function sources(files: Record<string, string[]>): SamplerSources {
     rss: () => 50_000_000,
     now: () => new Date("2026-11-25T10:00:00Z"),
     startedAt: new Date("2026-11-25T09:00:00Z"),
+    release: "abc123",
   };
 }
 
@@ -42,6 +43,7 @@ describe("createVpsSampler", () => {
       diskUsed: 3_072_000,
       uptimeS: 3600,
       workerRss: 50_000_000,
+      workerRelease: "abc123",
     });
     const second = await sample();
     expect(second).toMatchObject({ cpuPct: 40, netRx: 600, netTx: 200 });
