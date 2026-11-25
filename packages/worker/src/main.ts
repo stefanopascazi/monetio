@@ -1,5 +1,7 @@
 // Worker entry point (systemd service on the VPS): schedules jobs one at a time until SIGTERM.
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { readFile, statfs } from "node:fs/promises";
 import { hostname } from "node:os";
 import postgres from "postgres";
 import { cleanUrl, sslFor } from "../../../scripts/db/ssl.ts";
@@ -18,6 +20,8 @@ import { createJobs } from "./jobs/registry.ts";
 import { runJob } from "./jobs/run-job.ts";
 import { createPostgresJobRunStore } from "./jobs/runs.ts";
 import { createLogger, errorMessage } from "./logger.ts";
+import { createMetricsLoop, createPostgresSampleWriter } from "./metrics/loop.ts";
+import { createVpsSampler } from "./metrics/sampler.ts";
 import { createSchemaGate, migrationApplied, REQUIRED_MIGRATION } from "./schema.ts";
 import { createSerialQueue } from "./scheduler/queue.ts";
 import { createScheduler } from "./scheduler/scheduler.ts";
@@ -87,10 +91,26 @@ const deps = {
   runs: createPostgresJobRunStore(sql),
 };
 const scheduler = createScheduler({ jobs, queue, tickMs: config.tickMs, runJob: (job) => runJob(job, deps) });
+// Machine metrics for the console (#104); only where /proc exists (the VPS, WSL), not on Windows or macOS.
+const metrics = existsSync("/proc/stat")
+  ? createMetricsLoop({
+      sample: createVpsSampler({
+        readFile: (path) => readFile(path, "utf8"),
+        statfs: (path) => statfs(path),
+        rss: () => process.memoryUsage.rss(),
+        now: () => new Date(),
+        startedAt: new Date(Date.now() - process.uptime() * 1000),
+      }),
+      write: createPostgresSampleWriter(sql),
+      schemaReady: deps.schemaReady,
+      log,
+    })
+  : null;
 
 async function stop(signal: string) {
   log("info", "worker stopping", { signal });
   scheduler.stop();
+  metrics?.stop();
   shutdown.abort();
   await Promise.race([queue.idle(), new Promise((r) => setTimeout(r, SHUTDOWN_GRACE_MS))]);
   await Promise.all([sql.end({ timeout: 5 }), reporter.flush(2_000)]);
@@ -102,3 +122,4 @@ process.once("SIGINT", () => void stop("SIGINT"));
 
 log("info", "worker started", { jobs: jobs.map((j) => j.name), holder: deps.holder, migration: REQUIRED_MIGRATION });
 scheduler.start();
+metrics?.start();

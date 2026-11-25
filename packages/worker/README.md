@@ -72,3 +72,13 @@ Job `notify-events`, giornaliero alle 07:00 UTC (08:00 o 09:00 in Italia). Per o
 - Il job gira anche senza chiavi VAPID: la campanella funziona comunque.
 - Il worker include codice di `lib/` (calcoli condivisi con l'app): `worker.yml` lo ridistribuisce anche quando cambia `lib/domain`, `lib/data`, `lib/notifications` o `lib/banking`.
 - Vercel applica le migration alla fine del build, dopo il deploy del worker: il bundle contiene il nome dell'ultima migration e i job restano in pausa (log `waiting for migration, jobs paused`) finché non risulta in `_migrations`. Come rete di sicurezza, gli errori "tabella/colonna inesistente" sono tollerati per 15 minuti dall'avvio.
+
+## Metriche della VPS (#104)
+
+Il worker campiona la macchina ogni minuto e scrive in `vps_metrics` (migrazione 0046): CPU, carico, RAM, swap, disco della root, traffico di rete (escluso loopback), uptime, RSS e avvio del worker. La console sysadmin le legge con `admin_vps()`.
+
+- Il campionamento gira fuori dalla coda dei job (`src/metrics/loop.ts`): un backup o un sync lunghi non lasciano buchi che sembrerebbero una VPS silenziosa.
+- Parte solo dove esiste `/proc` (VPS, WSL, container); su Windows o macOS resta spento.
+- Nessun processo in più: solo letture di `/proc` e una insert al minuto. Prova locale (node:24 su Docker): RSS del worker 80–85 MB con il campionatore attivo, sotto `MemoryMax=300M`.
+- Job `vps-metrics-rollup`, ogni ora: aggregati orari in `vps_metrics_hourly`, campioni al minuto tenuti 7 giorni, aggregati 35 giorni.
+- Se la VPS si ferma, l'avviso in tempo reale arriva da Healthchecks.io (`db-ping`); la console mostra "heartbeat mancante" dopo 5 minuti senza campioni.
