@@ -112,7 +112,7 @@ describe("syncBankAccount", () => {
       ["skip", "c"],
     ]);
     expect(counts).toEqual({ inserted: 1, reconciled: 1, review: 0, skipped: 1, from: "2026-10-19", fetched: 4, balances: 1, balanceTypes: ["CLBD"], pending: 0 });
-    expect(store.saveStatus).toHaveBeenCalledWith("ba1", { syncedAt: now, balance: { cents: 95000, date: "2026-11-18" }, available: null, pending: [], error: null });
+    expect(store.saveStatus).toHaveBeenCalledWith("ba1", { syncedAt: now, balance: { cents: 95000, date: "2026-11-18" }, available: null, pending: [], ledger: { offsetCents: 0, entries: [] }, error: null });
   });
 });
 
@@ -168,6 +168,56 @@ describe("syncBankAccount inference", () => {
     };
     await syncBankAccount(target, client, store, now);
     expect(store.loadInferenceHistory).not.toHaveBeenCalled();
+  });
+});
+
+describe("syncBankAccount execution dates", () => {
+  const bare = (date: string, amount: string): TransactionResource => ({ booking_date: date, transaction_amount: { currency: "EUR", amount }, credit_debit_indicator: "DBIT", status: "BOOK" });
+  // Trade Republic: a single balance (available), no pending items, no references.
+  const available = (amount: string) => [{ balance_amount: { currency: "EUR", amount }, balance_type: "OTHR" }];
+
+  it("records a payment seen only in the available balance and dates it when the bank books it", async () => {
+    let monetio = 8399;
+    const store: SyncStore = {
+      loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })),
+      apply: vi.fn(async (_t, decisions) => {
+        for (const d of decisions) if (d.type === "insert") monetio += d.movement.amountCents;
+      }),
+      loadBookedBalance: vi.fn(async () => monetio),
+      saveStatus: vi.fn(async () => {}),
+    };
+    const synced = { ...target, lastSyncedAt: new Date("2026-11-26T22:00:00Z") };
+
+    // 27/11 08:00: the toll is out of the available balance, nothing booked yet.
+    await syncBankAccount(synced, { getBalances: vi.fn(async () => available("82.39")), getTransactions: vi.fn(async () => []) }, store, new Date("2026-11-27T07:08:00Z"));
+    const first = vi.mocked(store.saveStatus).mock.calls[0][1].ledger!;
+    expect(first).toEqual({ offsetCents: 0, entries: [{ on: "2026-11-27", amountCents: -160 }] });
+
+    // 28/11 08:00: the bank books it on the 28th.
+    await syncBankAccount(
+      { ...synced, pendingLedger: first },
+      { getBalances: vi.fn(async () => available("82.39")), getTransactions: vi.fn(async () => [bare("2026-11-28", "1.60")]) },
+      store,
+      new Date("2026-11-28T07:08:00Z"),
+    );
+    expect(vi.mocked(store.apply).mock.calls[1][1][0]).toMatchObject({ type: "insert", executedOn: "2026-11-27" });
+    expect(vi.mocked(store.saveStatus).mock.calls[1][1].ledger).toEqual({ offsetCents: 0, entries: [] });
+  });
+
+  it("uses the bank's booked balance for the gap when it offers one", async () => {
+    const store: SyncStore = {
+      loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })),
+      apply: vi.fn(async () => {}),
+      loadBookedBalance: vi.fn(async () => 0),
+      saveStatus: vi.fn(async () => {}),
+    };
+    const balances = [
+      { balance_amount: { currency: "EUR", amount: "100.00" }, balance_type: "CLBD" },
+      { balance_amount: { currency: "EUR", amount: "90.00" }, balance_type: "ITAV" },
+    ];
+    await syncBankAccount(target, { getBalances: vi.fn(async () => balances), getTransactions: vi.fn(async () => []) }, store, now);
+    expect(store.loadBookedBalance).not.toHaveBeenCalled();
+    expect(vi.mocked(store.saveStatus).mock.calls[0][1].ledger).toEqual({ offsetCents: 0, entries: [{ on: "2026-11-18", amountCents: -1000 }] });
   });
 });
 

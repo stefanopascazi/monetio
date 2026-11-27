@@ -30,6 +30,28 @@ async function withAccount(fn: (tx: TransactionSql, f: { hh: string; acc: string
     });
 }
 
+describe.skipIf(!sql)("bank sync store execution dates", () => {
+  it("reads the booked balance and stores the pending ledger", async () => {
+    await withAccount(async (tx, { hh, acc }) => {
+      await tx`update accounts set opening_balance_cents = 5223 where id = ${acc}`;
+      await tx`insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description)
+        values (${hh}, ${acc}, 'income', 'booked', 'manual', 3176, '2026-11-20', 'x'), (${hh}, ${acc}, 'expense', 'planned', 'manual', -999, '2026-11-30', 'y')`;
+      const store = createPostgresBankSyncStore(tx as unknown as Sql);
+      expect(await store.loadBookedBalance!(acc)).toBe(8399);
+
+      const [{ id: user }] = await tx<{ id: string }[]>`select id from auth.users limit 1`;
+      const [{ id: conn }] = await tx<{ id: string }[]>`
+        insert into bank_connections (user_id, household_id, aspsp_name, aspsp_country, session_id_sealed, valid_until)
+        values (${user}, ${hh}, 'Trade Republic', 'DE', 'v1.a.b.c', now() + interval '1 day') returning id`;
+      const [{ id: ba }] = await tx<{ id: string }[]>`insert into bank_accounts (connection_id, uid, account_id) values (${conn}, ${acc}, ${acc}) returning id`;
+      const ledger = { offsetCents: 0, entries: [{ on: "2026-11-27" as const, amountCents: -160 }] };
+      await store.saveStatus(ba, { syncedAt: new Date(), balance: null, available: { cents: 8239, date: null }, pending: [], ledger, error: null });
+      const [row] = await tx`select pending_ledger from bank_accounts where id = ${ba}`;
+      expect(row.pending_ledger).toEqual(ledger);
+    });
+  });
+});
+
 describe.skipIf(!sql)("bank sync store inference history", () => {
   it("returns only categorised movements set by people with the requested amounts", async () => {
     await withAccount(async (tx, { hh, acc, auto, extra }) => {

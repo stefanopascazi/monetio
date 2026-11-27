@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { parseLedger } from "../../../../lib/banking/sync/execution.ts";
 import { GENERIC_BANK_DESCRIPTION } from "../../../../lib/import/matches.ts";
 import type { Decision } from "../../../../lib/banking/sync/match.ts";
 import type { SyncStore, SyncTarget } from "../../../../lib/banking/sync/run.ts";
@@ -29,7 +30,7 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
     async listTargets() {
       const rows = await sql`
         select ba.id as bank_account_id, ba.uid, c.user_id, c.household_id, ba.account_id, a.opening_date, ba.sync_from,
-               ba.last_synced_at, c.created_at as connection_created_at, cr.app_id, cr.private_key_sealed, ba.sync_slots
+               ba.last_synced_at, c.created_at as connection_created_at, cr.app_id, cr.private_key_sealed, ba.sync_slots, ba.pending_ledger
         from bank_accounts ba
         join bank_connections c on c.id = ba.connection_id
         join accounts a on a.id = ba.account_id and a.household_id = c.household_id
@@ -49,6 +50,7 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
         appId: r.app_id,
         privateKeySealed: r.private_key_sealed,
         syncSlots: r.sync_slots == null ? null : Number(r.sync_slots),
+        pendingLedger: parseLedger(r.pending_ledger),
       }));
     },
 
@@ -112,9 +114,9 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
           const m = d.movement;
           if (d.type === "insert") {
             const rows = await tx`
-              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description, bank_ref, category_id, bank_sync_batch_id, inferred_from)
+              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, bank_booked_on, description, bank_ref, category_id, bank_sync_batch_id, inferred_from)
               values (${target.householdId}, ${target.accountId}, ${m.amountCents >= 0 ? "income" : "expense"}, 'booked', 'bank',
-                      ${m.amountCents}, ${m.bookedOn}, ${d.inferred?.description ?? m.description}, ${m.ref}, ${d.categoryId ?? null}, ${batch},
+                      ${m.amountCents}, ${d.executedOn ?? m.bookedOn}, ${m.bookedOn}, ${d.inferred?.description ?? m.description}, ${m.ref}, ${d.categoryId ?? null}, ${batch},
                       ${d.inferred?.count ?? null})
               on conflict (account_id, bank_ref) where bank_ref is not null do nothing
               returning id`;
@@ -136,7 +138,12 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
       });
     },
 
-    async saveStatus(bankAccountId, { syncedAt, balance, available, pending, error }) {
+    async loadBookedBalance(accountId) {
+      const [row] = await sql`select balance_cents from account_balances where account_id = ${accountId}`;
+      return Number(row?.balance_cents ?? 0);
+    },
+
+    async saveStatus(bankAccountId, { syncedAt, balance, available, pending, ledger, error }) {
       if (error) {
         await sql`update bank_accounts set last_error = ${error.slice(0, 300)} where id = ${bankAccountId}`;
         return;
@@ -145,7 +152,8 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
         update bank_accounts set last_synced_at = ${syncedAt}, last_error = null,
           bank_balance_cents = ${balance?.cents ?? null}, bank_balance_on = ${balance?.date ?? null},
           bank_available_cents = ${available?.cents ?? null},
-          pending_movements = ${pending ? sql.json(pending) : null}
+          pending_movements = ${pending ? sql.json(pending) : null},
+          pending_ledger = ${ledger ? sql.json(ledger) : null}
         where id = ${bankAccountId}`;
     },
   };
