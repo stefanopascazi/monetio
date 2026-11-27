@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { txn } from "../domain/fixtures";
-import { FORMER_MEMBER, HIDDEN_ACCOUNT, creatorName, hiddenAccountName, toTxnView } from "./views";
+import { FORMER_MEMBER, HIDDEN_ACCOUNT, SOURCE_LABEL, creatorName, hiddenAccountName, inferredNote, toTxnView } from "./views";
 
 describe("toTxnView", () => {
   const accounts = [{ id: "a1", name: "Cointestato" }];
@@ -50,5 +50,19 @@ describe("hiddenAccountName", () => {
     expect(hiddenAccountName("Asha")).toBe("Conto privato di Asha");
     expect(hiddenAccountName(" ")).toBe(HIDDEN_ACCOUNT);
     expect(hiddenAccountName(null)).toBe(HIDDEN_ACCOUNT);
+  });
+});
+
+describe("inferred bank movements", () => {
+  it("carries the inferred count and names the bank as origin", () => {
+    const v = toTxnView(txn({ amountCents: -160, bookedOn: "2026-11-26", source: "bank", inferredFrom: 9 }), [], []);
+    expect(v.inferredFrom).toBe(9);
+    expect(SOURCE_LABEL[v.source]).toBe("Dalla banca");
+    expect(toTxnView(txn({ amountCents: -1, bookedOn: "2026-11-26" }), [], []).inferredFrom).toBeNull();
+  });
+
+  it("explains where description and category come from", () => {
+    expect(inferredNote(9)).toContain("9 movimenti simili");
+    expect(inferredNote(1)).toContain("1 movimento simile");
   });
 });

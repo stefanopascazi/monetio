@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Category } from "../domain/types";
-import { createMatcher, directionOf, isIdentical, matchKey, propagationTargets, uncategorisedGroups } from "./matches";
+import { createMatcher, directionOf, GENERIC_BANK_DESCRIPTION, isGenericDescription, isIdentical, matchKey, propagationTargets, uncategorisedGroups } from "./matches";
 
 const cat = (id: string, kind: Category["kind"], archived = false): Category => ({ id, name: id, kind, icon: null, colorIndex: 1, archived });
 
@@ -30,6 +30,12 @@ describe("matchKey", () => {
   it("is empty when only codes are left", () => {
     expect(matchKey("123 456/78")).toBe("");
   });
+
+  it("is empty for the generic description of bank movements without details", () => {
+    expect(matchKey(GENERIC_BANK_DESCRIPTION)).toBe("");
+    expect(matchKey("MOVIMENTO  bancario")).toBe("");
+    expect(matchKey("Movimento bancario Steam")).toBe("movimento bancario steam");
+  });
 });
 
 describe("isIdentical", () => {
@@ -37,6 +43,7 @@ describe("isIdentical", () => {
     expect(isIdentical({ description: "Netflix 01/11", amountCents: -1399 }, { description: "NETFLIX", amountCents: -999 })).toBe(true);
     expect(isIdentical({ description: "Netflix", amountCents: -1399 }, { description: "Netflix", amountCents: 1399 })).toBe(false);
     expect(isIdentical({ description: "123", amountCents: -1 }, { description: "456", amountCents: -1 })).toBe(false);
+    expect(isIdentical({ description: GENERIC_BANK_DESCRIPTION, amountCents: -160 }, { description: GENERIC_BANK_DESCRIPTION, amountCents: -1000 })).toBe(false);
   });
 
   it("treats zero as an expense", () => {
@@ -98,5 +105,12 @@ describe("uncategorisedGroups", () => {
       { key: "linkem spa", direction: -1, description: "Linkem Spa", count: 1, totalCents: -2990 },
       { key: "google play", direction: 1, description: "Google Play", count: 1, totalCents: 499 },
     ]);
+  });
+});
+
+describe("isGenericDescription", () => {
+  it("recognises the placeholder whatever the case and spacing", () => {
+    expect(isGenericDescription(" movimento   BANCARIO ")).toBe(true);
+    expect(isGenericDescription("Autostrada")).toBe(false);
   });
 });

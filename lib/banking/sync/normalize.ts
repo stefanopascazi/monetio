@@ -2,6 +2,7 @@
 // and a stable reference that makes every sync idempotent.
 import type { PendingItem } from "../../domain/pending.ts";
 import type { ISODate } from "../../domain/types.ts";
+import { GENERIC_BANK_DESCRIPTION } from "../../import/matches.ts";
 import { normalizeIban } from "../identifiers.ts";
 import type { AmountType, BalanceResource, TransactionResource } from "../enable-banking/types.ts";
 
@@ -42,7 +43,7 @@ function describe(t: TransactionResource, incoming: boolean): string {
   const party = (incoming ? t.debtor?.name : t.creditor?.name)?.trim();
   // Many banks repeat the counterparty inside the remittance text.
   const showParty = party && !remittance.toLowerCase().includes(party.toLowerCase());
-  const text = [showParty ? party : "", remittance].filter(Boolean).join(" · ") || t.note?.trim() || "Movimento bancario";
+  const text = [showParty ? party : "", remittance].filter(Boolean).join(" · ") || t.note?.trim() || GENERIC_BANK_DESCRIPTION;
   return text.replace(/\s+/g, " ").slice(0, 300);
 }
 

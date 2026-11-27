@@ -134,6 +134,43 @@ describe("syncBankAccount category matches", () => {
   });
 });
 
+describe("syncBankAccount inference", () => {
+  const bare = (date: string, amount: string): TransactionResource => ({ booking_date: date, transaction_amount: { currency: "EUR", amount }, credit_debit_indicator: "DBIT", status: "BOOK" });
+  const categories = [{ id: "auto", name: "Auto", kind: "expense" as const, icon: null, colorIndex: 1 as const, archived: false }];
+
+  it("loads history for the amounts of detail-less movements and infers them", async () => {
+    const client = { getBalances: vi.fn(async () => []), getTransactions: vi.fn(async () => [bare("2026-11-12", "1.60"), bare("2026-11-12", "10.00")]) };
+    const store: SyncStore = {
+      loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })),
+      loadCategoryHints: vi.fn(async () => ({ matches: [], categories })),
+      loadInferenceHistory: vi.fn(async () => [
+        { bookedOn: "2026-11-01" as const, amountCents: -160, description: "Autostrada", categoryId: "auto" },
+        { bookedOn: "2026-11-05" as const, amountCents: -160, description: "Autostrada", categoryId: "auto" },
+      ]),
+      apply: vi.fn(async () => {}),
+      saveStatus: vi.fn(async () => {}),
+    };
+    await syncBankAccount(target, client, store, now);
+    expect(store.loadInferenceHistory).toHaveBeenCalledWith("acc1", [-160, -1000], "2025-10-19");
+    const decisions = vi.mocked(store.apply).mock.calls[0][1];
+    expect(decisions.find((d) => d.movement.amountCents === -160)).toMatchObject({ type: "insert", categoryId: "auto", inferred: { description: "Autostrada", count: 2 } });
+    expect(decisions.find((d) => d.movement.amountCents === -1000)).not.toHaveProperty("inferred");
+  });
+
+  it("skips the history when every new movement has a real description", async () => {
+    const client = { getBalances: vi.fn(async () => []), getTransactions: vi.fn(async () => [txn("x", "2026-11-12", "30.00")]) };
+    const store: SyncStore = {
+      loadExisting: vi.fn(async () => ({ candidates: [], reviewRefs: [] })),
+      loadCategoryHints: vi.fn(async () => ({ matches: [], categories })),
+      loadInferenceHistory: vi.fn(async () => []),
+      apply: vi.fn(async () => {}),
+      saveStatus: vi.fn(async () => {}),
+    };
+    await syncBankAccount(target, client, store, now);
+    expect(store.loadInferenceHistory).not.toHaveBeenCalled();
+  });
+});
+
 describe("countDecisions", () => {
   it("counts by type", () => {
     const m = { ref: "r", bookedOn: "2026-11-01", amountCents: 1, description: "", counterpartyIban: null } as const;

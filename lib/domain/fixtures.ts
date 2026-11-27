@@ -21,6 +21,7 @@ export function txn(p: Partial<Transaction> & Pick<Transaction, "amountCents" | 
     source: "manual",
     createdBy: null,
     skipEstimates: false,
+    inferredFrom: null,
     ...p,
   };
 }

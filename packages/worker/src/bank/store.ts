@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { GENERIC_BANK_DESCRIPTION } from "../../../../lib/import/matches.ts";
 import type { Decision } from "../../../../lib/banking/sync/match.ts";
 import type { SyncStore, SyncTarget } from "../../../../lib/banking/sync/run.ts";
 import { mapCategory } from "../../../../lib/data/mappers.ts";
@@ -90,6 +91,18 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
       };
     },
 
+    async loadInferenceHistory(accountId, amounts, from) {
+      // Evidence set by people only: no rule bookings, no other inferred or detail-less movement.
+      const rows = await sql`
+        select booked_on, amount_cents, description, category_id
+        from transactions
+        where account_id = ${accountId} and booked_on >= ${from} and amount_cents in ${sql(amounts)}
+          and parent_transaction_id is null and kind in ('income', 'expense') and category_id is not null
+          and recurring_rule_id is null and contribution_rule_id is null and inferred_from is null
+          and description <> ${GENERIC_BANK_DESCRIPTION}`;
+      return rows.map((r) => ({ bookedOn: iso(r.booked_on), amountCents: Number(r.amount_cents), description: r.description, categoryId: r.category_id }));
+    },
+
     async apply(target: SyncTarget, decisions: Decision[]) {
       // All decisions of one account land together or not at all, recorded as one undoable batch (#88).
       await sql.begin(async (tx) => {
@@ -99,9 +112,10 @@ export function createPostgresBankSyncStore(sql: Sql): BankSyncStore {
           const m = d.movement;
           if (d.type === "insert") {
             const rows = await tx`
-              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description, bank_ref, category_id, bank_sync_batch_id)
+              insert into transactions (household_id, account_id, kind, status, source, amount_cents, booked_on, description, bank_ref, category_id, bank_sync_batch_id, inferred_from)
               values (${target.householdId}, ${target.accountId}, ${m.amountCents >= 0 ? "income" : "expense"}, 'booked', 'bank',
-                      ${m.amountCents}, ${m.bookedOn}, ${m.description}, ${m.ref}, ${d.categoryId ?? null}, ${batch})
+                      ${m.amountCents}, ${m.bookedOn}, ${d.inferred?.description ?? m.description}, ${m.ref}, ${d.categoryId ?? null}, ${batch},
+                      ${d.inferred?.count ?? null})
               on conflict (account_id, bank_ref) where bank_ref is not null do nothing
               returning id`;
             counts.inserted += rows.length;

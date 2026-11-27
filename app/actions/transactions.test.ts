@@ -46,6 +46,14 @@ beforeEach(() => {
   parsed.mockReturnValue({ ok: true, value });
 });
 
+describe("updateTransaction inferred movements", () => {
+  it("clears the inferred flag once the movement is saved", async () => {
+    current.category_id = "abb";
+    await save();
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ inferred_from: null, description: "Netflix" }));
+  });
+});
+
 describe("updateTransaction category propagation", () => {
   it("applies a category set on an uncategorised movement to identical ones", async () => {
     followsMatch.mockResolvedValue(true);
