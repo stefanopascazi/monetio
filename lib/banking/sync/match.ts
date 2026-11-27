@@ -25,7 +25,8 @@ export type Decision =
   | { type: "skip"; movement: BankMovement }
   /** One movement, or several paid together by this bank movement. */
   | { type: "reconcile"; movement: BankMovement; transactionIds: string[] }
-  | { type: "insert"; movement: BankMovement; categoryId?: string }
+  /** `inferred`: description taken from the account history for a movement without details (#132). */
+  | { type: "insert"; movement: BankMovement; categoryId?: string; inferred?: { description: string; count: number } }
   | { type: "review"; movement: BankMovement; reason: ReviewReason; candidateId: string | null };
 
 /** Days a rule booking may sit from the real bank date (weekends, value dates). */

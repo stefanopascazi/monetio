@@ -18,6 +18,8 @@ describe("mappers", () => {
     const t = mapTransaction({ id: "t", account_id: "a", kind: "expense", status: "booked", amount_cents: -100, booked_on: "2026-11-01", description: "x", source: "manual" });
     expect(t).toMatchObject({ amountCents: -100, counterpartAccountId: null, recurringRuleId: null, occurrenceDate: null, createdBy: null });
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: 1, booked_on: "2026-11-01", description: "x", created_by: "u1" }).createdBy).toBe("u1");
+    expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -160, booked_on: "2026-11-01", description: "Autostrada", inferred_from: 9 }).inferredFrom).toBe(9);
+    expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -160, booked_on: "2026-11-01", description: "x" }).inferredFrom).toBeNull();
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -65, booked_on: "2026-11-01", description: "x", payment_method: "cbill", parent_transaction_id: "p" })).toMatchObject({ paymentMethod: "cbill", parentTransactionId: "p" });
     expect(t).toMatchObject({ paymentMethod: null, parentTransactionId: null, feeCents: null });
   });

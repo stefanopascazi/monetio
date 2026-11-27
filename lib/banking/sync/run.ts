@@ -5,6 +5,7 @@ import type { PendingItem } from "../../domain/pending.ts";
 import type { ISODate } from "../../domain/types.ts";
 import type { BalanceResource, TransactionResource } from "../enable-banking/types.ts";
 import { type CategoryHints, withMatchedCategories } from "./categories.ts";
+import { genericAmounts, type HistoryMovement, INFER_HISTORY_DAYS, withInferredDetails } from "./infer.ts";
 import { type Candidate, type Decision, matchMovements, RULE_WINDOW_DAYS } from "./match.ts";
 import { normalizePending, normalizeTransactions, pickBalances } from "./normalize.ts";
 
@@ -32,6 +33,8 @@ export type SyncStore = {
   loadExisting(accountId: string, from: ISODate): Promise<{ candidates: Candidate[]; reviewRefs: string[] }>;
   /** Category matches of the account and the household categories. */
   loadCategoryHints?(target: SyncTarget): Promise<CategoryHints>;
+  /** Categorised movements of the account with these amounts from a date, evidence for inference (#132). */
+  loadInferenceHistory?(accountId: string, amounts: number[], from: ISODate): Promise<HistoryMovement[]>;
   apply(target: SyncTarget, decisions: Decision[]): Promise<void>;
   saveStatus(bankAccountId: string, status: SyncStatus): Promise<void>;
 };
@@ -91,7 +94,11 @@ export type SyncPlan = {
 };
 
 /** Reads the bank and decides what each movement does, without writing anything. */
-export async function planSync(target: SyncTarget, client: SyncClient, store: Pick<SyncStore, "loadExisting" | "loadCategoryHints">): Promise<SyncPlan> {
+export async function planSync(
+  target: SyncTarget,
+  client: SyncClient,
+  store: Pick<SyncStore, "loadExisting" | "loadCategoryHints" | "loadInferenceHistory">,
+): Promise<SyncPlan> {
   const from = syncFrom(target);
   const floor = syncFloor(target);
   const [balances, items] = await Promise.all([client.getBalances(target.uid), client.getTransactions(target.uid, from)]);
@@ -104,7 +111,10 @@ export async function planSync(target: SyncTarget, client: SyncClient, store: Pi
   const { candidates, reviewRefs } = await store.loadExisting(target.accountId, addDays(from, -RULE_WINDOW_DAYS));
   const matched = matchMovements(movements, candidates, reviewRefs);
   const hints = matched.some((d) => d.type === "insert") && store.loadCategoryHints ? await store.loadCategoryHints(target) : null;
-  const decisions = hints ? withMatchedCategories(matched, hints) : matched;
+  const categorised = hints ? withMatchedCategories(matched, hints) : matched;
+  const amounts = genericAmounts(categorised);
+  const history = hints && amounts.length && store.loadInferenceHistory ? await store.loadInferenceHistory(target.accountId, amounts, addDays(from, -INFER_HISTORY_DAYS)) : [];
+  const decisions = hints ? withInferredDetails(categorised, history, hints.categories) : categorised;
   const { booked, available } = pickBalances(balances);
   return {
     from,

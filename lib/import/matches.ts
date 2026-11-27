@@ -12,15 +12,25 @@ export interface CategoryMatch {
   categoryId: string;
 }
 
+/** Description of bank movements that came with no detail at all (#132): it identifies nothing. */
+export const GENERIC_BANK_DESCRIPTION = "Movimento bancario";
+
+const GENERIC_KEY = normalizeDescription(GENERIC_BANK_DESCRIPTION);
+
+/** True for the placeholder description of bank movements without details. */
+export const isGenericDescription = (description: string) => normalizeDescription(description) === GENERIC_KEY;
+
 /**
  * Normalised description without the parts that change between identical movements: any word holding
- * a digit (dates, card numbers, mandate and CRO codes, instalment numbers). Empty = nothing to match on.
+ * a digit (dates, card numbers, mandate and CRO codes, instalment numbers). Empty = nothing to match on,
+ * also for the generic bank placeholder: different payments must never share its category.
  */
 export function matchKey(description: string): string {
-  return normalizeDescription(description)
+  const key = normalizeDescription(description)
     .split(" ")
     .filter((t) => t && !/\d/.test(t))
     .join(" ");
+  return key === GENERIC_KEY ? "" : key;
 }
 
 export const directionOf = (amountCents: number): Direction => (amountCents > 0 ? 1 : -1);

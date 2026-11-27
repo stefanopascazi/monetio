@@ -29,8 +29,14 @@ export interface TxnView {
   createdByName: string | null;
   /** Kept out of decreasing estimates. */
   skipEstimates: boolean;
+  /** Similar movements its description and category were inferred from; null/absent when not inferred. */
+  inferredFrom?: number | null;
   balanceAfterCents?: number;
 }
+
+/** Why an inferred bank movement reads the way it does (#132). */
+export const inferredNote = (count: number) =>
+  `La banca non ha inviato dettagli: descrizione e categoria vengono da ${count === 1 ? "1 movimento simile" : `${count} movimenti simili`}. Salva per confermarle.`;
 
 export const HIDDEN_ACCOUNT = "Conto privato";
 export const FORMER_MEMBER = "Ex membro";
@@ -76,6 +82,7 @@ export function toTxnView(
     feeCents: t.feeCents,
     createdByName: creatorName(t.createdBy, members),
     skipEstimates: t.skipEstimates,
+    inferredFrom: t.inferredFrom,
     balanceAfterCents: t.balanceAfterCents,
   };
 }
@@ -85,4 +92,5 @@ export const SOURCE_LABEL: Record<Transaction["source"], string> = {
   import: "Importato dal foglio",
   rule: "Da ricorrenza",
   contribution: "Da quota automatica",
+  bank: "Dalla banca",
 };

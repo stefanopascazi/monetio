@@ -69,11 +69,13 @@ export interface Transaction {
   recurringRuleId: string | null;
   contributionRuleId: string | null;
   occurrenceDate: ISODate | null;
-  source: "manual" | "import" | "rule" | "contribution";
+  source: "manual" | "import" | "rule" | "contribution" | "bank";
   /** Auth user id of whoever entered it; null for imports and automatic bookings. */
   createdBy: string | null;
   /** Kept out of decreasing estimates even when its category matches. */
   skipEstimates: boolean;
+  /** Bank movement without details whose description and category came from this many similar ones (#132). */
+  inferredFrom: number | null;
 }
 
 export interface RecurringRule {

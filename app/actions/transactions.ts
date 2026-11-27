@@ -45,7 +45,8 @@ export async function updateTransaction(id: string, prev: ActionState, fd: FormD
   if (!current) return failure("Movimento non trovato.");
   if (current.parent_transaction_id) return failure(FEE_LOCKED);
 
-  const shared = { category_id: v.categoryId, booked_on: v.bookedOn, description: v.description, notes: v.notes, status: v.status };
+  // Saving the movement confirms or corrects what was inferred: the "dedotto" flag goes away (#132).
+  const shared = { category_id: v.categoryId, booked_on: v.bookedOn, description: v.description, notes: v.notes, status: v.status, inferred_from: null };
   if (current.transfer_group_id) {
     // Keep both sides of a transfer in sync; account pair and direction stay as they were.
     const { data: sides } = await supabase
