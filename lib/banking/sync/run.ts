@@ -1,10 +1,11 @@
 // One sync of one bank account: balance, booked movements since the last sync, matching, writes.
 // Network and database are injected: the worker provides them, tests fake them.
-import { addDays } from "../../domain/dates.ts";
+import { addDays, todayISO } from "../../domain/dates.ts";
 import type { PendingItem } from "../../domain/pending.ts";
 import type { ISODate } from "../../domain/types.ts";
 import type { BalanceResource, TransactionResource } from "../enable-banking/types.ts";
 import { type CategoryHints, withMatchedCategories } from "./categories.ts";
+import { assignExecutionDates, EMPTY_LEDGER, nextLedger, type PendingLedger } from "./execution.ts";
 import { genericAmounts, type HistoryMovement, INFER_HISTORY_DAYS, withInferredDetails } from "./infer.ts";
 import { type Candidate, type Decision, matchMovements, RULE_WINDOW_DAYS } from "./match.ts";
 import { normalizePending, normalizeTransactions, pickBalances } from "./normalize.ts";
@@ -21,6 +22,8 @@ export type SyncTarget = {
   syncFrom: ISODate | null;
   lastSyncedAt: Date | null;
   connectionCreatedAt: Date;
+  /** Pending outflows seen by earlier syncs, to date movements when they are booked (#133). */
+  pendingLedger?: PendingLedger | null;
 };
 
 export type SyncClient = {
@@ -36,6 +39,8 @@ export type SyncStore = {
   /** Categorised movements of the account with these amounts from a date, evidence for inference (#132). */
   loadInferenceHistory?(accountId: string, amounts: number[], from: ISODate): Promise<HistoryMovement[]>;
   apply(target: SyncTarget, decisions: Decision[]): Promise<void>;
+  /** MonetIO booked balance of the account, read after `apply`. */
+  loadBookedBalance?(accountId: string): Promise<number>;
   saveStatus(bankAccountId: string, status: SyncStatus): Promise<void>;
 };
 
@@ -43,7 +48,8 @@ export type BankBalance = { cents: number; date: ISODate | null };
 
 /** `balance`: booked balance; `available`: what can be spent, pending card payments included. */
 /** `pending`: movements the bank lists as not booked yet. */
-export type SyncStatus = { syncedAt: Date; balance: BankBalance | null; available?: BankBalance | null; pending?: PendingItem[]; error: string | null };
+/** `ledger`: pending outflows to keep for the next sync (#133). */
+export type SyncStatus = { syncedAt: Date; balance: BankBalance | null; available?: BankBalance | null; pending?: PendingItem[]; ledger?: PendingLedger; error: string | null };
 
 export type SyncCounts = { inserted: number; reconciled: number; review: number; skipped: number };
 
@@ -87,6 +93,8 @@ export type SyncPlan = {
   balance: BankBalance | null;
   available: BankBalance | null;
   pending: PendingItem[];
+  /** Ledger left once the new movements took their execution dates. */
+  ledger: PendingLedger;
   fetched: number;
   balances: number;
   /** Balance types offered by the bank, logged to tell booked from available ones. */
@@ -114,7 +122,9 @@ export async function planSync(
   const categorised = hints ? withMatchedCategories(matched, hints) : matched;
   const amounts = genericAmounts(categorised);
   const history = hints && amounts.length && store.loadInferenceHistory ? await store.loadInferenceHistory(target.accountId, amounts, addDays(from, -INFER_HISTORY_DAYS)) : [];
-  const decisions = hints ? withInferredDetails(categorised, history, hints.categories) : categorised;
+  const inferred = hints ? withInferredDetails(categorised, history, hints.categories) : categorised;
+  const dated = assignExecutionDates(inferred, target.pendingLedger ?? EMPTY_LEDGER);
+  const decisions = dated.decisions;
   const { booked, available } = pickBalances(balances);
   return {
     from,
@@ -122,15 +132,24 @@ export async function planSync(
     balance: booked && { cents: booked.cents, date: booked.date },
     available: available && { cents: available.cents, date: available.date },
     pending: normalizePending(items),
+    ledger: dated.ledger,
     fetched: items.length,
     balances: balances.length,
     balanceTypes: balances.map((b) => b.balance_type ?? "?"),
   };
 }
 
+/** Available minus booked balance (the bank's, else MonetIO's after the sync); null when unknown. */
+async function pendingGap(target: SyncTarget, plan: SyncPlan, store: SyncStore): Promise<number | null> {
+  if (!plan.available) return null;
+  if (plan.balance) return plan.available.cents - plan.balance.cents;
+  return store.loadBookedBalance ? plan.available.cents - (await store.loadBookedBalance(target.accountId)) : null;
+}
+
 export async function syncBankAccount(target: SyncTarget, client: SyncClient, store: SyncStore, now: Date): Promise<SyncResult> {
   const plan = await planSync(target, client, store);
   await store.apply(target, plan.decisions);
-  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: plan.balance, available: plan.available, pending: plan.pending, error: null });
+  const ledger = nextLedger({ ledger: plan.ledger, pending: plan.pending, gapCents: await pendingGap(target, plan, store), today: todayISO(now) });
+  await store.saveStatus(target.bankAccountId, { syncedAt: now, balance: plan.balance, available: plan.available, pending: plan.pending, ledger, error: null });
   return { ...countDecisions(plan.decisions), from: plan.from, fetched: plan.fetched, balances: plan.balances, balanceTypes: plan.balanceTypes, pending: plan.pending.length };
 }

@@ -88,6 +88,7 @@ export function mapTransaction(r: Row): Transaction {
     createdBy: str(r.created_by),
     skipEstimates: Boolean(r.skip_estimates),
     inferredFrom: r.inferred_from == null ? null : num(r.inferred_from),
+    bankBookedOn: str(r.bank_booked_on),
   };
 }
 

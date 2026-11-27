@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { txn } from "../domain/fixtures";
-import { FORMER_MEMBER, HIDDEN_ACCOUNT, SOURCE_LABEL, creatorName, hiddenAccountName, inferredNote, toTxnView } from "./views";
+import { FORMER_MEMBER, HIDDEN_ACCOUNT, SOURCE_LABEL, creatorName, executionNote, hiddenAccountName, inferredNote, toTxnView } from "./views";
 
 describe("toTxnView", () => {
   const accounts = [{ id: "a1", name: "Cointestato" }];
@@ -64,5 +64,16 @@ describe("inferred bank movements", () => {
   it("explains where description and category come from", () => {
     expect(inferredNote(9)).toContain("9 movimenti simili");
     expect(inferredNote(1)).toContain("1 movimento simile");
+  });
+});
+
+describe("execution dates of bank movements", () => {
+  it("shows the bank booking day only when it differs from the execution day", () => {
+    expect(toTxnView(txn({ amountCents: -160, bookedOn: "2026-11-25", bankBookedOn: "2026-11-26" }), [], []).bankBookedOn).toBe("2026-11-26");
+    expect(toTxnView(txn({ amountCents: -160, bookedOn: "2026-11-26", bankBookedOn: "2026-11-26" }), [], []).bankBookedOn).toBeNull();
+  });
+
+  it("names both days", () => {
+    expect(executionNote("2026-11-25", "2026-11-26")).toBe("eseguito il 25 nov 2026, contabilizzato dalla banca il 26 nov 2026.");
   });
 });

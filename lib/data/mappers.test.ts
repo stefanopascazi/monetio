@@ -20,6 +20,8 @@ describe("mappers", () => {
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: 1, booked_on: "2026-11-01", description: "x", created_by: "u1" }).createdBy).toBe("u1");
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -160, booked_on: "2026-11-01", description: "Autostrada", inferred_from: 9 }).inferredFrom).toBe(9);
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -160, booked_on: "2026-11-01", description: "x" }).inferredFrom).toBeNull();
+    expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -160, booked_on: "2026-11-25", description: "x", bank_booked_on: "2026-11-26" }).bankBookedOn).toBe("2026-11-26");
+    expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -160, booked_on: "2026-11-25", description: "x" }).bankBookedOn).toBeNull();
     expect(mapTransaction({ id: "t", account_id: "a", amount_cents: -65, booked_on: "2026-11-01", description: "x", payment_method: "cbill", parent_transaction_id: "p" })).toMatchObject({ paymentMethod: "cbill", parentTransactionId: "p" });
     expect(t).toMatchObject({ paymentMethod: null, parentTransactionId: null, feeCents: null });
   });

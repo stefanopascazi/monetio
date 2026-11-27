@@ -5,7 +5,7 @@ import { Button, InlineConfirm } from "@monetio/ui";
 import { confirmPlanned, deleteTransaction, updateTransaction } from "@/app/actions/transactions";
 import type { NamedRef } from "@/components/common/options";
 import { useToastAction } from "@/hooks/useToastAction";
-import { inferredNote, SOURCE_LABEL, type TxnView } from "@/lib/data/views";
+import { executionNote, inferredNote, SOURCE_LABEL, type TxnView } from "@/lib/data/views";
 import { editDefaults } from "./edit-defaults";
 import { TransactionForm } from "./TransactionForm";
 
@@ -26,6 +26,12 @@ export function TransactionDetails({ t, accounts, categories, onDone }: { t: Txn
           <div>
             <dt className="inline text-ink-muted">Inserito da: </dt>
             <dd className="inline">{t.createdByName}</dd>
+          </div>
+        )}
+        {t.bankBookedOn && (
+          <div className="sm:col-span-2">
+            <dt className="inline text-ink-muted">Date: </dt>
+            <dd className="inline">{executionNote(t.bookedOn, t.bankBookedOn)}</dd>
           </div>
         )}
         {t.inferredFrom != null && (

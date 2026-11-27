@@ -1,4 +1,5 @@
 // Serializable view models passed from Server to Client Components.
+import { dateLabel } from "../domain/dates";
 import type { Account, Category, Member, PaymentMethod, Transaction } from "../domain/types";
 
 export interface TxnView {
@@ -31,12 +32,17 @@ export interface TxnView {
   skipEstimates: boolean;
   /** Similar movements its description and category were inferred from; null/absent when not inferred. */
   inferredFrom?: number | null;
+  /** Bank booking day when it differs from the day the movement was made (#133). */
+  bankBookedOn?: string | null;
   balanceAfterCents?: number;
 }
 
 /** Why an inferred bank movement reads the way it does (#132). */
 export const inferredNote = (count: number) =>
   `La banca non ha inviato dettagli: descrizione e categoria vengono da ${count === 1 ? "1 movimento simile" : `${count} movimenti simili`}. Salva per confermarle.`;
+
+/** Execution and booking day of a bank movement booked later than it was made (#133). */
+export const executionNote = (bookedOn: string, bankBookedOn: string) => `eseguito il ${dateLabel(bookedOn)}, contabilizzato dalla banca il ${dateLabel(bankBookedOn)}.`;
 
 export const HIDDEN_ACCOUNT = "Conto privato";
 export const FORMER_MEMBER = "Ex membro";
@@ -83,6 +89,7 @@ export function toTxnView(
     createdByName: creatorName(t.createdBy, members),
     skipEstimates: t.skipEstimates,
     inferredFrom: t.inferredFrom,
+    bankBookedOn: t.bankBookedOn && t.bankBookedOn !== t.bookedOn ? t.bankBookedOn : null,
     balanceAfterCents: t.balanceAfterCents,
   };
 }

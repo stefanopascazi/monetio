@@ -76,6 +76,8 @@ export interface Transaction {
   skipEstimates: boolean;
   /** Bank movement without details whose description and category came from this many similar ones (#132). */
   inferredFrom: number | null;
+  /** Day the bank booked it, when it came from the bank; `bookedOn` is the day it was made (#133). */
+  bankBookedOn: ISODate | null;
 }
 
 export interface RecurringRule {
